@@ -234,19 +234,45 @@ export default function VideoPlayer({ movie, onClose }) {
     return `${minutes}:${paddedSeconds}`;
   };
 
-  // Build the embed source URL for vidsrc.sbs
+  // Server Selection States
+  const [activeServer, setActiveServer] = useState('pro-multi'); // 'pro-multi' | 'vidsrc-me' | 'embed-su' | '2embed'
+
+  const SERVERS = [
+    { id: 'pro-multi', name: 'Server 1 (Pro Multi)' },
+    { id: 'vidsrc-me', name: 'Server 2 (VidSrc Fast)' },
+    { id: 'embed-su', name: 'Server 3 (Ultra HD)' },
+    { id: '2embed', name: 'Server 4 (Multi-Lang)' }
+  ];
+
+  // Build the embed source URL based on active server & TMDB ID
   const getEmbedUrl = () => {
-    if (movie.type === 'SHOW') {
-      return `https://vidsrc.sbs/embed/tv/${movie.tmdbId}/${season}/${episode}`;
+    const isShow = movie.type === 'SHOW';
+    if (activeServer === 'vidsrc-me') {
+      return isShow
+        ? `https://vidsrc.me/embed/tv?tmdb=${movie.tmdbId}&season=${season}&episode=${episode}`
+        : `https://vidsrc.me/embed/movie?tmdb=${movie.tmdbId}`;
     }
-    return `https://vidsrc.sbs/embed/movie/${movie.tmdbId}`;
+    if (activeServer === 'embed-su') {
+      return isShow
+        ? `https://embed.su/embed/tv/${movie.tmdbId}/${season}/${episode}`
+        : `https://embed.su/embed/movie/${movie.tmdbId}`;
+    }
+    if (activeServer === '2embed') {
+      return isShow
+        ? `https://www.2embed.cc/embedtv/${movie.tmdbId}&s=${season}&e=${episode}`
+        : `https://www.2embed.cc/embed/${movie.tmdbId}`;
+    }
+    // Default Pro Multi (vidsrc.sbs)
+    return isShow
+      ? `https://vidsrc.sbs/embed/tv/${movie.tmdbId}/${season}/${episode}`
+      : `https://vidsrc.sbs/embed/movie/${movie.tmdbId}`;
   };
 
   // ----------------------------------------------------
   // Render Method
   // ----------------------------------------------------
   if (movie.tmdbId) {
-    // Return Iframe Player with custom float controls for vidsrc.sbs
+    // Return Iframe Player with custom float controls for multi-server playback
     return (
       <div
         ref={playerRef}
@@ -255,6 +281,7 @@ export default function VideoPlayer({ movie, onClose }) {
         style={{ background: '#000' }}
       >
         <iframe
+          key={`${activeServer}-${season}-${episode}`}
           src={getEmbedUrl()}
           className="custom-player-video"
           allowFullScreen
@@ -286,11 +313,35 @@ export default function VideoPlayer({ movie, onClose }) {
             <ArrowLeft size={30} color="#fff" />
           </button>
           <div className="player-title" style={{ color: '#fff', fontSize: '1.4rem', fontWeight: '700', marginLeft: '15px' }}>
-            {movie.title}
+            {movie.title} {movie.vj && <span style={{ background: '#e50914', color: '#fff', fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', marginLeft: '10px', verticalAlign: 'middle' }}>{movie.vj}</span>}
+          </div>
+
+          {/* Streaming Server Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '30px', zIndex: '20' }}>
+            <span style={{ fontSize: '0.85rem', color: '#e50914', fontWeight: 'bold' }}>SERVER:</span>
+            <select
+              value={activeServer}
+              onChange={(e) => setActiveServer(e.target.value)}
+              style={{
+                background: '#181818',
+                border: '1px solid #e50914',
+                color: '#fff',
+                padding: '8px 14px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '700',
+                outline: 'none'
+              }}
+            >
+              {SERVERS.map((srv) => (
+                <option key={srv.id} value={srv.id}>{srv.name}</option>
+              ))}
+            </select>
           </div>
 
           {movie.type === 'SHOW' && (
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginLeft: '40px', zIndex: '20' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginLeft: '25px', zIndex: '20' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.85rem', color: '#bbb', fontWeight: 'bold' }}>SEASON</span>
                 <select
