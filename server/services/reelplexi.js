@@ -25,11 +25,11 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     return null; // Signals fallback mode
   }
 
-  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  if (cleanEndpoint.startsWith('/account')) {
-    cleanEndpoint = `/v1${cleanEndpoint}`;
+  let path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!path.startsWith('/v1')) {
+    path = `/v1${path}`;
   }
-  const url = new URL(`${REELPLEXI_BASE_URL}${cleanEndpoint}`);
+  const url = new URL(`https://api.reelplexi.com${path}`);
   Object.keys(queryParams).forEach(key => {
     if (queryParams[key] !== undefined && queryParams[key] !== null) {
       url.searchParams.append(key, queryParams[key]);
