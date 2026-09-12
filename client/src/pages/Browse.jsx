@@ -155,7 +155,7 @@ export default function Browse() {
           {searchLoading ? (
             <div style={{ color: '#aaa' }}>Searching database...</div>
           ) : searchResults.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '40px 10px' }}>
+            <div className="movie-grid-container">
               {searchResults.map((movie) => (
                 <MovieCard
                   key={movie.id}
