@@ -754,8 +754,8 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 4%;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  padding: 22px 6%;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
   transition: background-color 0.4s ease;
 }
 
@@ -772,7 +772,7 @@ a {
 .nav-links {
   list-style: none;
   display: flex;
-  gap: 20px;
+  gap: 24px;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -912,13 +912,13 @@ a {
 /* Hero Billboard section */
 .billboard-hero {
   position: relative;
-  height: 85vh;
+  height: 88vh;
   width: 100%;
   background-size: cover;
   background-position: center center;
   display: flex;
   align-items: center;
-  padding: 0 4%;
+  padding: 0 6%;
   overflow: hidden;
 }
 
@@ -928,8 +928,8 @@ a {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%),
-              linear-gradient(to top, var(--netflix-black) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.4) 100%);
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%),
+              linear-gradient(to top, var(--netflix-black) 0%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.4) 100%);
   z-index: 1;
 }
 
@@ -952,13 +952,13 @@ a {
 .billboard-info {
   position: relative;
   z-index: 2;
-  max-width: 600px;
-  margin-top: 50px;
+  max-width: 640px;
+  margin-top: 60px;
 }
 
 .billboard-title {
   font-family: var(--font-family);
-  font-size: 4.5rem;
+  font-size: 4.8rem;
   letter-spacing: -1.5px;
   font-weight: 900;
   margin-bottom: 20px;
@@ -1053,8 +1053,8 @@ a {
 
 /* Movie row slider */
 .movie-row-container {
-  padding: 20px 0 20px 4%;
-  margin-top: -12vh;
+  padding: 32px 0 32px 6%;
+  margin-top: -10vh;
   position: relative;
   z-index: 3;
 }
@@ -1064,9 +1064,9 @@ a {
 }
 
 .movie-row-title {
-  font-size: 1.4vw;
+  font-size: 1.4rem;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   color: #e5e5e5;
   transition: color 0.2s ease;
 }
@@ -1084,10 +1084,10 @@ a {
 
 .movie-cards-track {
   display: flex;
-  gap: 8px;
+  gap: 14px;
   overflow-x: scroll;
   scroll-behavior: smooth;
-  padding: 10px 0;
+  padding: 16px 0;
 }
 
 .movie-cards-track::-webkit-scrollbar {
