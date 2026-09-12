@@ -40,7 +40,7 @@ router.get('/:profileId', async (req, res) => {
 
 // Update or add watch progress bookmark
 router.post('/progress', async (req, res) => {
-  const { profileId, movieId, progressSeconds } = req.body;
+  const { profileId, movieId, progressSeconds, movieDetails } = req.body;
 
   if (!profileId || !movieId || progressSeconds === undefined) {
     return res.status(400).json({ error: 'profileId, movieId, and progressSeconds are required' });
@@ -55,25 +55,55 @@ router.post('/progress', async (req, res) => {
       return res.status(404).json({ error: 'Profile not found or unauthorized' });
     }
 
-    // If movieId is a ReelPlexi item, check if local movie record exists, else return success
-    if (typeof movieId === 'string' && movieId.startsWith('rp_')) {
-      const localMovie = await prisma.movie.findUnique({ where: { id: movieId } });
-      if (!localMovie) {
-        return res.json({ success: true, movieId, progressSeconds: parseInt(progressSeconds, 10), isReelplexi: true });
+    let targetMovieId = movieId;
+
+    // Ensure movie exists in SQLite DB for Foreign Key integrity
+    const existingMovie = await prisma.movie.findUnique({ where: { id: targetMovieId } });
+    
+    if (!existingMovie) {
+      const title = movieDetails?.title || 'Ugandan VJ Translated Film';
+      const description = movieDetails?.description || 'Luganda audio translation by Ugandan VJ';
+      const thumbnailUrl = movieDetails?.thumbnailUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80';
+      const backdropUrl = movieDetails?.backdropUrl || thumbnailUrl;
+      const videoUrl = movieDetails?.videoUrl || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8';
+
+      try {
+        await prisma.movie.create({
+          data: {
+            id: targetMovieId,
+            title,
+            description,
+            thumbnailUrl,
+            backdropUrl,
+            videoUrl,
+            tmdbId: movieDetails?.tmdbId || null,
+            duration: movieDetails?.duration || '2h 15m',
+            releaseYear: movieDetails?.releaseYear || 2024,
+            rating: movieDetails?.rating || 'PG-13',
+            genres: movieDetails?.genres || 'Action, Drama',
+            type: movieDetails?.type || 'MOVIE',
+            category: movieDetails?.category || 'Ugandan VJ Exclusives',
+            vj: movieDetails?.vj || 'VJ Junior',
+            originCountry: 'UG',
+            region: movieDetails?.region || 'east-african'
+          }
+        });
+      } catch (err) {
+        // Fallback if concurrent insert happened
       }
     }
 
-    // Create or update watch progress
+    // Upsert watch history progress linked to account profile
     const record = await prisma.watchHistory.upsert({
       where: {
-        profileId_movieId: { profileId, movieId }
+        profileId_movieId: { profileId, movieId: targetMovieId }
       },
       update: {
         progressSeconds: parseInt(progressSeconds, 10)
       },
       create: {
         profileId,
-        movieId,
+        movieId: targetMovieId,
         progressSeconds: parseInt(progressSeconds, 10)
       },
       include: {

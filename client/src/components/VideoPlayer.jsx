@@ -45,7 +45,21 @@ export default function VideoPlayer({ movie, onClose }) {
       await api.post('/history/progress', {
         profileId: currentProfile.id,
         movieId: movie.id,
-        progressSeconds: seconds
+        progressSeconds: Math.floor(seconds),
+        movieDetails: {
+          title: movie.title,
+          description: movie.description,
+          thumbnailUrl: movie.thumbnailUrl,
+          backdropUrl: movie.backdropUrl,
+          videoUrl: movie.videoUrl,
+          duration: movie.duration,
+          releaseYear: movie.releaseYear,
+          rating: movie.rating,
+          genres: movie.genres,
+          type: movie.type,
+          vj: movie.vj,
+          region: movie.region
+        }
       });
     } catch (err) {
       console.error('Error saving progress bookmark:', err);
