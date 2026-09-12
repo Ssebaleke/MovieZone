@@ -1845,6 +1845,37 @@ a {
   font-weight: 600;
 }
 
+/* Desktop Mega Dropdown (4-5 Columns of VJs) */
+.nav-dropdown-menu.vj-mega-dropdown {
+  width: 650px;
+  min-width: 650px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 12px;
+}
+
+@media (min-width: 1200px) {
+  .nav-dropdown-menu.vj-mega-dropdown {
+    width: 780px;
+    min-width: 780px;
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.nav-dropdown-menu.vj-mega-dropdown .dropdown-item {
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* VJ Translator Badge */
 .vj-pill-badge {
   position: absolute;
@@ -1997,8 +2028,8 @@ a {
   position: absolute;
   top: 42px;
   left: 0;
-  width: 240px;
-  max-height: 320px;
+  width: 310px;
+  max-height: 350px;
   background: rgba(18, 18, 18, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
@@ -2038,6 +2069,24 @@ a {
   overflow-y: auto;
   max-height: 250px;
   padding: 4px 0;
+}
+
+.vj-dropdown-options-list.multi-column {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.vj-dropdown-options-list.multi-column .vj-option-item {
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vj-option-item {

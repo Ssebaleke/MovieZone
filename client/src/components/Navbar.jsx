@@ -169,7 +169,7 @@ export default function Navbar({
                   )}
                 </div>
 
-                <div className="vj-dropdown-options-list">
+                <div className="vj-dropdown-options-list multi-column">
                   {filteredVjs.map((vj) => (
                     <div
                       key={vj.name}
@@ -203,12 +203,12 @@ export default function Navbar({
               Home
             </li>
 
-            {/* Ugandan VJs Desktop Dropdown */}
+            {/* Ugandan VJs Desktop Mega Dropdown (4-5 Columns) */}
             <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
               </span>
-              <div className="nav-dropdown-menu" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+              <div className="nav-dropdown-menu vj-mega-dropdown">
                 {vjsList.map((vj) => (
                   <div
                     key={vj.name}
@@ -220,6 +220,7 @@ export default function Navbar({
                       navigate('/browse');
                     }}
                   >
+                    <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} style={{ marginRight: '6px' }} />
                     {vj.name}
                   </div>
                 ))}
@@ -419,7 +420,7 @@ export default function Navbar({
                 </div>
 
                 {isDrawerVjOpen && (
-                  <ul className="mobile-nested-dropdown-list">
+                  <ul className="mobile-nested-dropdown-list vj-columns-grid">
                     {vjsList.map((vj) => (
                       <li
                         key={vj.name}
