@@ -16,6 +16,12 @@ export default function Navbar({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Drawer expandable dropdown toggles
+  const [isDrawerVjOpen, setIsDrawerVjOpen] = useState(false);
+  const [isDrawerRegionOpen, setIsDrawerRegionOpen] = useState(false);
+
+  // Top mobile header dropdown toggle
   const [isMobileVjDropdownOpen, setIsMobileVjDropdownOpen] = useState(false);
   const [vjSearchTerm, setVjSearchTerm] = useState('');
 
@@ -107,7 +113,7 @@ export default function Navbar({
     <>
       <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="nav-left">
-          {/* Mobile Hamburger Toggle Button */}
+          {/* Mobile Hamburger Navigation Bar Icon */}
           <button
             className="mobile-menu-toggle-btn"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -134,7 +140,7 @@ export default function Navbar({
             <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
           </div>
 
-          {/* Clean Mobile Dropdown Select Button for Ugandan VJs */}
+          {/* Mobile Header Dropdown Selector Pill */}
           <div className="mobile-header-vj-select-wrapper" ref={vjDropdownRef}>
             <button
               className="mobile-vj-select-btn"
@@ -146,7 +152,7 @@ export default function Navbar({
               <ChevronDown size={14} color="#aaa" className={`vj-chevron ${isMobileVjDropdownOpen ? 'open' : ''}`} />
             </button>
 
-            {/* Mobile Glassmorphism Dropdown Popup */}
+            {/* Popup dropdown */}
             {isMobileVjDropdownOpen && (
               <div className="mobile-vj-dropdown-popup">
                 <div className="vj-dropdown-search-box">
@@ -183,9 +189,6 @@ export default function Navbar({
                       {activeVJ === vj.value && <Check size={14} color="#fff" />}
                     </div>
                   ))}
-                  {filteredVjs.length === 0 && (
-                    <div className="vj-option-empty">No VJ found</div>
-                  )}
                 </div>
               </div>
             )}
@@ -200,7 +203,7 @@ export default function Navbar({
               Home
             </li>
 
-            {/* Ugandan VJs Dropdown Menu */}
+            {/* Ugandan VJs Desktop Dropdown */}
             <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
@@ -251,7 +254,6 @@ export default function Navbar({
               Trending
             </li>
 
-            {/* Multi-Region Dropdown */}
             <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
@@ -355,7 +357,7 @@ export default function Navbar({
         </div>
       </header>
 
-      {/* Slide-Out Mobile Navigation Drawer */}
+      {/* Slide-Out Mobile Navigation Drawer (Opened via Nav Bar Icon ☰) */}
       {isMobileMenuOpen && (
         <div className="mobile-drawer-overlay" onClick={() => setIsMobileMenuOpen(false)}>
           <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
@@ -376,7 +378,7 @@ export default function Navbar({
               </button>
             </div>
 
-            {/* Mobile Search input inside drawer */}
+            {/* Search inside navbar icon drawer */}
             <div className="mobile-drawer-search">
               <Search size={18} color="#aaa" />
               <input
@@ -392,9 +394,9 @@ export default function Navbar({
               )}
             </div>
 
-            {/* Main Navigation Links */}
+            {/* Navigation Links inside Navbar Icon Menu */}
             <div className="mobile-section-title">
-              <Film size={16} color="#fff" /> Categories & Features
+              <Film size={16} color="#fff" /> Navigation & Categories
             </div>
             <ul className="mobile-nav-list">
               <li
@@ -403,6 +405,42 @@ export default function Navbar({
               >
                 <Home size={18} /> Home
               </li>
+
+              {/* Expandable Ugandan VJs Dropdown Menu inside Navbar Icon Drawer */}
+              <li className="mobile-nav-dropdown-item">
+                <div
+                  className={`mobile-nav-dropdown-header ${isDrawerVjOpen || activeVJ ? 'active' : ''}`}
+                  onClick={() => setIsDrawerVjOpen(!isDrawerVjOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Mic size={18} color="#e50914" /> Ugandan VJs
+                  </span>
+                  <ChevronDown size={16} className={`vj-chevron ${isDrawerVjOpen ? 'open' : ''}`} />
+                </div>
+
+                {isDrawerVjOpen && (
+                  <ul className="mobile-nested-dropdown-list">
+                    {vjsList.map((vj) => (
+                      <li
+                        key={vj.name}
+                        className={activeVJ === vj.value ? 'selected' : ''}
+                        onClick={() => {
+                          setActiveVJ(vj.value);
+                          setActiveTab('vj');
+                          onSearchChange('');
+                          setIsMobileMenuOpen(false);
+                          navigate('/browse');
+                        }}
+                      >
+                        <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} />
+                        {vj.name}
+                        {activeVJ === vj.value && <Check size={14} color="#fff" style={{ marginLeft: 'auto' }} />}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+
               <li
                 className={activeTab === 'series' ? 'active' : ''}
                 onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
@@ -427,6 +465,42 @@ export default function Navbar({
               >
                 <Flame size={18} /> Trending Now
               </li>
+
+              {/* Expandable Regions Dropdown Menu inside Navbar Icon Drawer */}
+              <li className="mobile-nav-dropdown-item">
+                <div
+                  className={`mobile-nav-dropdown-header ${isDrawerRegionOpen || activeRegion ? 'active' : ''}`}
+                  onClick={() => setIsDrawerRegionOpen(!isDrawerRegionOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Globe size={18} color="#46d369" /> Select Region
+                  </span>
+                  <ChevronDown size={16} className={`vj-chevron ${isDrawerRegionOpen ? 'open' : ''}`} />
+                </div>
+
+                {isDrawerRegionOpen && (
+                  <ul className="mobile-nested-dropdown-list">
+                    {REGIONS_LIST.map((reg) => (
+                      <li
+                        key={reg.name}
+                        className={activeRegion === reg.slug ? 'selected' : ''}
+                        onClick={() => {
+                          setActiveRegion(reg.slug);
+                          setActiveTab('regions');
+                          onSearchChange('');
+                          setIsMobileMenuOpen(false);
+                          navigate('/browse');
+                        }}
+                      >
+                        <Globe size={12} color={activeRegion === reg.slug ? '#fff' : '#46d369'} />
+                        {reg.name}
+                        {activeRegion === reg.slug && <Check size={14} color="#fff" style={{ marginLeft: 'auto' }} />}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+
               <li
                 className={location.pathname === '/mylist' ? 'active' : ''}
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/mylist'); }}
@@ -434,28 +508,6 @@ export default function Navbar({
                 <User size={18} /> My Watchlist
               </li>
             </ul>
-
-            {/* Multi-Region Selector */}
-            <div className="mobile-section-title" style={{ marginTop: '20px' }}>
-              <Globe size={16} color="#46d369" /> Select Region
-            </div>
-            <div className="mobile-vj-chips-grid">
-              {REGIONS_LIST.map((reg) => (
-                <button
-                  key={reg.name}
-                  className={`mobile-vj-chip ${activeRegion === reg.slug ? 'selected' : ''}`}
-                  onClick={() => {
-                    setActiveRegion(reg.slug);
-                    setActiveTab('regions');
-                    onSearchChange('');
-                    setIsMobileMenuOpen(false);
-                    navigate('/browse');
-                  }}
-                >
-                  {reg.name}
-                </button>
-              ))}
-            </div>
 
             {/* Mobile Footer Actions */}
             <div className="mobile-drawer-footer">
@@ -479,7 +531,10 @@ export default function Navbar({
 
         <div
           className={`mobile-bottom-tab ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}
-          onClick={() => setIsMobileVjDropdownOpen(!isMobileVjDropdownOpen)}
+          onClick={() => {
+            setIsMobileMenuOpen(true);
+            setIsDrawerVjOpen(true);
+          }}
         >
           <Mic size={20} color="#e50914" />
           <span>VJs</span>
