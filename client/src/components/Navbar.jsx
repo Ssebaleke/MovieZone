@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -16,10 +16,13 @@ export default function Navbar({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileVjDropdownOpen, setIsMobileVjDropdownOpen] = useState(false);
+  const [vjSearchTerm, setVjSearchTerm] = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
   const searchInputRef = useRef(null);
+  const vjDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +42,17 @@ export default function Navbar({
     if (profile) setCurrentProfile(JSON.parse(profile));
   }, []);
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (vjDropdownRef.current && !vjDropdownRef.current.contains(e.target)) {
+        setIsMobileVjDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSignOut = () => {
     localStorage.removeItem('netflix_token');
     localStorage.removeItem('netflix_user');
@@ -52,7 +66,8 @@ export default function Navbar({
     { name: 'VJ Emmy', value: 'VJ Emmy' },
     { name: 'VJ Ice P', value: 'VJ Ice P' },
     { name: 'VJ Jingo', value: 'VJ Jingo' },
-    { name: 'VJ Mark', value: 'VJ Mark' }
+    { name: 'VJ Mark', value: 'VJ Mark' },
+    { name: 'VJ KIIWA', value: 'VJ KIIWA' }
   ]);
 
   useEffect(() => {
@@ -84,6 +99,10 @@ export default function Navbar({
     { name: 'Anime (Japanese)', slug: 'anime' }
   ];
 
+  const filteredVjs = vjsList.filter(vj => 
+    vj.name.toLowerCase().includes(vjSearchTerm.toLowerCase())
+  );
+
   return (
     <>
       <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
@@ -95,7 +114,7 @@ export default function Navbar({
             aria-label="Toggle navigation menu"
             type="button"
           >
-            {isMobileMenuOpen ? <X size={26} color="#fff" /> : <Menu size={26} color="#fff" />}
+            {isMobileMenuOpen ? <X size={24} color="#fff" /> : <Menu size={24} color="#fff" />}
           </button>
 
           {/* Logo */}
@@ -108,10 +127,68 @@ export default function Navbar({
               setActiveRegion('');
               onSearchChange('');
               setIsMobileMenuOpen(false);
+              setIsMobileVjDropdownOpen(false);
               navigate('/browse');
             }}
           >
             <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
+          </div>
+
+          {/* Clean Mobile Dropdown Select Button for Ugandan VJs */}
+          <div className="mobile-header-vj-select-wrapper" ref={vjDropdownRef}>
+            <button
+              className="mobile-vj-select-btn"
+              onClick={() => setIsMobileVjDropdownOpen(!isMobileVjDropdownOpen)}
+              type="button"
+            >
+              <Mic size={13} color="#e50914" />
+              <span className="vj-btn-label">{activeVJ || 'All VJs'}</span>
+              <ChevronDown size={14} color="#aaa" className={`vj-chevron ${isMobileVjDropdownOpen ? 'open' : ''}`} />
+            </button>
+
+            {/* Mobile Glassmorphism Dropdown Popup */}
+            {isMobileVjDropdownOpen && (
+              <div className="mobile-vj-dropdown-popup">
+                <div className="vj-dropdown-search-box">
+                  <Search size={14} color="#aaa" />
+                  <input
+                    type="text"
+                    placeholder="Search Ugandan VJs..."
+                    value={vjSearchTerm}
+                    onChange={(e) => setVjSearchTerm(e.target.value)}
+                    autoFocus
+                  />
+                  {vjSearchTerm && (
+                    <X size={14} color="#aaa" onClick={() => setVjSearchTerm('')} style={{ cursor: 'pointer' }} />
+                  )}
+                </div>
+
+                <div className="vj-dropdown-options-list">
+                  {filteredVjs.map((vj) => (
+                    <div
+                      key={vj.name}
+                      className={`vj-option-item ${activeVJ === vj.value ? 'selected' : ''}`}
+                      onClick={() => {
+                        setActiveVJ(vj.value);
+                        setActiveTab('vj');
+                        onSearchChange('');
+                        setIsMobileVjDropdownOpen(false);
+                        navigate('/browse');
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} />
+                        {vj.name}
+                      </span>
+                      {activeVJ === vj.value && <Check size={14} color="#fff" />}
+                    </div>
+                  ))}
+                  {filteredVjs.length === 0 && (
+                    <div className="vj-option-empty">No VJ found</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop Navigation Links */}
@@ -123,7 +200,7 @@ export default function Navbar({
               Home
             </li>
 
-            {/* Ugandan VJs Dropdown */}
+            {/* Ugandan VJs Dropdown Menu */}
             <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
@@ -315,30 +392,8 @@ export default function Navbar({
               )}
             </div>
 
-            {/* Ugandan VJs Mobile Section */}
-            <div className="mobile-section-title">
-              <Mic size={16} color="#e50914" /> Ugandan VJ Translators
-            </div>
-            <div className="mobile-vj-chips-grid">
-              {vjsList.map((vj) => (
-                <button
-                  key={vj.name}
-                  className={`mobile-vj-chip ${activeVJ === vj.value ? 'selected' : ''}`}
-                  onClick={() => {
-                    setActiveVJ(vj.value);
-                    setActiveTab('vj');
-                    onSearchChange('');
-                    setIsMobileMenuOpen(false);
-                    navigate('/browse');
-                  }}
-                >
-                  {vj.name}
-                </button>
-              ))}
-            </div>
-
             {/* Main Navigation Links */}
-            <div className="mobile-section-title" style={{ marginTop: '20px' }}>
+            <div className="mobile-section-title">
               <Film size={16} color="#fff" /> Categories & Features
             </div>
             <ul className="mobile-nav-list">
@@ -424,7 +479,7 @@ export default function Navbar({
 
         <div
           className={`mobile-bottom-tab ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}
-          onClick={() => setIsMobileMenuOpen(true)}
+          onClick={() => setIsMobileVjDropdownOpen(!isMobileVjDropdownOpen)}
         >
           <Mic size={20} color="#e50914" />
           <span>VJs</span>

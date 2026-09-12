@@ -1942,33 +1942,128 @@ a {
   color: #bbb;
 }
 
-/* Mobile Navigation Bar & Drawer Styles */
-.mobile-menu-toggle-btn {
+/* Mobile Header VJ Select Pill & Dropdown Popup */
+.mobile-header-vj-select-wrapper {
   display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  align-items: center;
-  justify-content: center;
-  margin-right: 8px;
+  position: relative;
+  margin-left: 8px;
 }
 
 @media (max-width: 768px) {
-  .mobile-menu-toggle-btn {
+  .mobile-header-vj-select-wrapper {
     display: flex;
+    align-items: center;
   }
-  .desktop-only-links, .desktop-only-icon, .notifications-btn {
-    display: none !important;
-  }
-  .navbar-header {
-    padding: 10px 14px;
-    height: 56px;
-    background: rgba(18, 18, 18, 0.98) !important;
-  }
-  .logo-svg {
-    height: 30px !important;
-  }
+}
+
+.mobile-vj-select-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.mobile-vj-select-btn:active {
+  background: rgba(229, 9, 20, 0.25);
+  border-color: #e50914;
+}
+
+.vj-btn-label {
+  max-width: 85px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vj-chevron {
+  transition: transform 0.2s ease;
+}
+
+.vj-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Mobile VJ Dropdown Popup Sheet */
+.mobile-vj-dropdown-popup {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  width: 240px;
+  max-height: 320px;
+  background: rgba(18, 18, 18, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(16px);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInDown 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.vj-dropdown-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vj-dropdown-search-box input {
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+.vj-dropdown-options-list {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 4px 0;
+}
+
+.vj-option-item {
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  color: #ccc;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vj-option-item:active,
+.vj-option-item.selected {
+  background: rgba(229, 9, 20, 0.25);
+  color: #fff;
+  font-weight: 700;
+}
+
+.vj-option-empty {
+  padding: 12px;
+  font-size: 0.8rem;
+  color: #888;
+  text-align: center;
 }
 
 /* Mobile Slide-Out Drawer Overlay */
