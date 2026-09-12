@@ -60,7 +60,11 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     });
 
     if (!response.ok) {
-      console.warn(`Reelplexi API returned status ${response.status} for ${endpoint}`);
+      if (response.status === 403) {
+        console.warn(`Reelplexi API key is suspended or invalid (HTTP 403) for ${endpoint}. Falling back to local VJ database catalog.`);
+      } else {
+        console.warn(`Reelplexi API returned status ${response.status} for ${endpoint}`);
+      }
       return null;
     }
 

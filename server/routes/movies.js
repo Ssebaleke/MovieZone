@@ -85,18 +85,23 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Fallback to SQLite DB if Reelplexi key is unconfigured or offline
-    if (movies.length === 0) {
-      const dbMovies = await prisma.movie.findMany({
-        orderBy: latest ? { releaseYear: 'desc' } : { id: 'asc' }
-      });
-      movies = dbMovies;
-    }
+    // Always combine with local database movies so no content is ever lost
+    const dbMovies = await prisma.movie.findMany({
+      orderBy: latest ? { releaseYear: 'desc' } : { id: 'asc' }
+    });
+    movies = [...movies, ...dbMovies];
 
-    // Deduplicate by ID
+    // Deduplicate by ID and Title
     const uniqueMap = new Map();
-    movies.forEach(m => uniqueMap.set(m.id, m));
-    movies = Array.from(uniqueMap.values());
+    movies.forEach(m => {
+      const key = `${m.title}_${m.vj}`;
+      if (!uniqueMap.has(m.id) && !uniqueMap.has(key)) {
+        uniqueMap.set(m.id, m);
+        uniqueMap.set(key, m);
+      }
+    });
+    // Extract unique values
+    movies = Array.from(new Set(uniqueMap.values()));
 
     // Apply client-side filters if specified
     if (vj) {
@@ -114,7 +119,7 @@ router.get('/', async (req, res) => {
       movies = movies.filter(item => item.type === type.toUpperCase());
     }
 
-    // Group movies into rich Genre Categories (Comedy, Romance, Action, Sci-Fi, Thriller, TV Series)
+    // Group movies into rich Genre Categories (Comedy, Romance, Action, Sci-Fi, Thrillers, Series)
     let sortedCategories = [];
 
     if (vj) {
@@ -131,15 +136,11 @@ router.get('/', async (req, res) => {
       vjCategories.forEach(c => vjCatMap.set(c.name, []));
 
       movies.forEach(m => {
-        let placed = false;
         for (const cat of vjCategories) {
           if (cat.match(m)) {
             vjCatMap.get(cat.name).push(m);
-            placed = true;
-            break;
           }
         }
-        if (!placed) vjCatMap.get(`🎬 All Movies by ${vj}`).push(m);
       });
 
       sortedCategories = Array.from(vjCatMap.entries())
@@ -148,7 +149,7 @@ router.get('/', async (req, res) => {
     } else {
       // Main Screen: Group by Genres (Action, Comedy, Romance, Sci-Fi, Thrillers, Series, Trending)
       const genreCategories = [
-        { name: '🔥 Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && m.genres.includes('Action')) },
+        { name: '🔥 Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && /action|trending|blockbuster/i.test(m.genres)) },
         { name: '💥 Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
         { name: '😂 Comedy & Entertainment', match: (m) => m.type === 'MOVIE' && /comedy|humor|family|animation/i.test(m.genres) },
         { name: '❤️ Romance & Emotional Dramas', match: (m) => m.type === 'MOVIE' && /romance|romantic|drama/i.test(m.genres) },
@@ -166,11 +167,10 @@ router.get('/', async (req, res) => {
         for (const cat of genreCategories) {
           const list = catMap.get(cat.name);
           const seen = seenMovieIdsPerCategory.get(cat.name) || new Set();
-          if (cat.match(movie) && !seen.has(movie.id) && list.length < 20) {
+          if (cat.match(movie) && !seen.has(movie.id)) {
             list.push(movie);
             seen.add(movie.id);
             seenMovieIdsPerCategory.set(cat.name, seen);
-            if (cat.name !== '🇺🇬 Ugandan VJ Exclusives') break; // Allow item in primary genre
           }
         }
       });
