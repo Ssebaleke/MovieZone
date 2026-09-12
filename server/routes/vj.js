@@ -9,7 +9,7 @@ router.use(authenticateToken);
 // List all VJ translators dynamically from Reelplexi API
 router.get('/', async (req, res) => {
   try {
-    const reelplexiData = await reelplexiFetch('/v1/vj');
+    const reelplexiData = await reelplexiFetch('/v1/vj', { per_page: 100 }) || await reelplexiFetch('/vj', { per_page: 100 });
     if (reelplexiData && Array.isArray(reelplexiData.data)) {
       const vjs = reelplexiData.data.map(vj => {
         const rawName = vj.name || 'VJ';
@@ -17,6 +17,7 @@ router.get('/', async (req, res) => {
         return {
           id: vj.id,
           name: formattedName,
+          rawName: rawName,
           title: 'Official Ugandan VJ Translator',
           avatar_url: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&q=80`,
           bio: `Professional Ugandan VJ bringing high-energy Luganda audio translation to international cinema.`
@@ -45,26 +46,61 @@ router.get('/', async (req, res) => {
 router.get('/:name/movies', async (req, res) => {
   const { name } = req.params;
   try {
-    const reelplexiData = await reelplexiFetch('/v1/movies', { vj: name, per_page: 100 });
-    if (reelplexiData && Array.isArray(reelplexiData.data)) {
-      const mapped = reelplexiData.data.map(item => ({
-        id: `rp_${item.id}`,
-        title: item.title,
-        description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
-        thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
-        backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
-        videoUrl: item.stream_url || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
-        duration: '2h 10m',
-        releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
-        rating: 'PG-13',
-        genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Action'),
-        type: 'MOVIE',
-        category: 'Ugandan VJ Exclusives',
-        vj: item.vj || name,
-        originCountry: 'UG',
-        region: 'east-african'
-      }));
-      return res.json({ data: mapped, total: mapped.length });
+    const [moviesRes, seriesRes] = await Promise.all([
+      reelplexiFetch('/movies', { vj: name, per_page: 100 }),
+      reelplexiFetch('/series', { vj: name, per_page: 100 })
+    ]);
+
+    const results = [];
+
+    if (moviesRes && Array.isArray(moviesRes.data)) {
+      moviesRes.data.forEach(item => {
+        results.push({
+          id: `rp_${item.id}`,
+          reelplexiId: item.id,
+          title: item.title,
+          description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
+          thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
+          backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
+          videoUrl: item.stream_url || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+          duration: '2h 10m',
+          releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
+          rating: 'PG-13',
+          genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Action'),
+          type: 'MOVIE',
+          category: 'Ugandan VJ Exclusives',
+          vj: item.vj || name,
+          originCountry: item.origin_country || 'UG',
+          region: 'east-african'
+        });
+      });
+    }
+
+    if (seriesRes && Array.isArray(seriesRes.data)) {
+      seriesRes.data.forEach(item => {
+        results.push({
+          id: `rp_series_${item.id}`,
+          reelplexiId: item.id,
+          title: item.title,
+          description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
+          thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
+          backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
+          videoUrl: item.stream_url || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+          duration: 'Series',
+          releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
+          rating: 'PG-13',
+          genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Drama'),
+          type: 'SHOW',
+          category: 'Reelplexi Series Feed',
+          vj: item.vj || name,
+          originCountry: item.origin_country || 'UG',
+          region: 'kdrama'
+        });
+      });
+    }
+
+    if (results.length > 0) {
+      return res.json({ data: results, total: results.length });
     }
 
     const dbMovies = await prisma.movie.findMany({

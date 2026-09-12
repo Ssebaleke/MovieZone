@@ -35,32 +35,58 @@ function mapReelplexiItem(item) {
 
 // Get full movies/series catalog grouped by categories (100% Reelplexi.com API)
 router.get('/', async (req, res) => {
-  const { vj, region, type, latest, trending } = req.query;
+  const { vj, region, type, latest, trending, page = 1 } = req.query;
 
   try {
     let movies = [];
 
-    // Fetch full catalog from Reelplexi API using per_page=100
-    const [liveMoviesRes, liveSeriesRes, trendingRes] = await Promise.all([
-      reelplexiFetch('/movies', { per_page: 100, page: 1 }),
-      reelplexiFetch('/series', { per_page: 100, page: 1 }),
-      reelplexiFetch('/trending', { per_page: 100 })
-    ]);
+    if (vj) {
+      // Direct VJ filter query on Reelplexi API
+      const [vjMoviesRes, vjSeriesRes] = await Promise.all([
+        reelplexiFetch('/movies', { vj, per_page: 100, page }),
+        reelplexiFetch('/series', { vj, per_page: 100, page })
+      ]);
 
-    if (liveMoviesRes && Array.isArray(liveMoviesRes.data)) {
-      liveMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
-    }
+      if (vjMoviesRes && Array.isArray(vjMoviesRes.data)) {
+        vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
+      }
+      if (vjSeriesRes && Array.isArray(vjSeriesRes.data)) {
+        vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
+      }
+    } else {
+      // Fetch multi-page catalog from Reelplexi API for maximum content
+      const [
+        liveMoviesP1, liveMoviesP2, liveMoviesP3,
+        liveSeriesP1, liveSeriesP2,
+        trendingRes
+      ] = await Promise.all([
+        reelplexiFetch('/movies', { per_page: 100, page: 1 }),
+        reelplexiFetch('/movies', { per_page: 100, page: 2 }),
+        reelplexiFetch('/movies', { per_page: 100, page: 3 }),
+        reelplexiFetch('/series', { per_page: 100, page: 1 }),
+        reelplexiFetch('/series', { per_page: 100, page: 2 }),
+        reelplexiFetch('/trending', { per_page: 100 })
+      ]);
 
-    if (liveSeriesRes && Array.isArray(liveSeriesRes.data)) {
-      liveSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
-    }
-
-    if (trendingRes && Array.isArray(trendingRes.data)) {
-      trendingRes.data.forEach(item => {
-        const mapped = mapReelplexiItem(item);
-        mapped.category = 'Trending VJ Movies';
-        movies.push(mapped);
+      [liveMoviesP1, liveMoviesP2, liveMoviesP3].forEach(res => {
+        if (res && Array.isArray(res.data)) {
+          res.data.forEach(item => movies.push(mapReelplexiItem(item)));
+        }
       });
+
+      [liveSeriesP1, liveSeriesP2].forEach(res => {
+        if (res && Array.isArray(res.data)) {
+          res.data.forEach(item => movies.push(mapReelplexiItem(item)));
+        }
+      });
+
+      if (trendingRes && Array.isArray(trendingRes.data)) {
+        trendingRes.data.forEach(item => {
+          const mapped = mapReelplexiItem(item);
+          mapped.category = 'Trending VJ Movies';
+          movies.push(mapped);
+        });
+      }
     }
 
     // Fallback to SQLite DB if Reelplexi key is unconfigured or offline
@@ -76,7 +102,7 @@ router.get('/', async (req, res) => {
     movies.forEach(m => uniqueMap.set(m.id, m));
     movies = Array.from(uniqueMap.values());
 
-    // Apply filtering on movies list
+    // Apply client-side filters if specified
     if (vj) {
       movies = movies.filter(item => 
         (item.vj && item.vj.toLowerCase().includes(vj.toLowerCase())) || 
@@ -95,7 +121,12 @@ router.get('/', async (req, res) => {
     // Group movies by category
     const categories = {};
     movies.forEach(movie => {
-      const cat = movie.category || 'Ugandan VJ Exclusives';
+      let cat = movie.category || 'Ugandan VJ Exclusives';
+      if (movie.vj) {
+        cat = `Translated by ${movie.vj}`;
+      } else if (movie.type === 'SHOW') {
+        cat = 'Reelplexi Series Feed';
+      }
       if (!categories[cat]) {
         categories[cat] = [];
       }
@@ -105,28 +136,14 @@ router.get('/', async (req, res) => {
     // Ensure we have a featured movie
     const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
 
-    const CATEGORY_ORDER = [
-      'Trending VJ Movies',
-      'Ugandan VJ Exclusives',
-      'Reelplexi Movies Feed',
-      'Reelplexi Series Feed',
-      'Action & Adventure',
-      'K-Drama Hits'
-    ];
-
     const sortedCategories = Object.entries(categories)
       .map(([name, items]) => ({ name, items }))
-      .sort((a, b) => {
-        let indexA = CATEGORY_ORDER.indexOf(a.name);
-        let indexB = CATEGORY_ORDER.indexOf(b.name);
-        if (indexA === -1) indexA = 99;
-        if (indexB === -1) indexB = 99;
-        return indexA - indexB;
-      });
+      .sort((a, b) => b.items.length - a.items.length);
 
     res.json({
       featured,
-      categories: sortedCategories
+      categories: sortedCategories,
+      total_items: movies.length
     });
   } catch (error) {
     console.error('Error fetching Reelplexi catalog:', error);

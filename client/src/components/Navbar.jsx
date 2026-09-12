@@ -45,14 +45,33 @@ export default function Navbar({
     navigate('/login');
   };
 
-  const VJ_LIST = [
+  const [vjsList, setVjsList] = useState([
     { name: 'All VJs', value: '' },
-    { name: 'VJ Junior (Action & Suspense)', value: 'VJ Junior' },
-    { name: 'VJ Emmy (Romance & Drama)', value: 'VJ Emmy' },
-    { name: 'VJ Ice P (Sci-Fi & Anime)', value: 'VJ Ice P' },
-    { name: 'VJ Jingo (Comedy & Classics)', value: 'VJ Jingo' },
-    { name: 'VJ Mark (K-Drama & Series)', value: 'VJ Mark' }
-  ];
+    { name: 'VJ Junior', value: 'VJ Junior' },
+    { name: 'VJ Emmy', value: 'VJ Emmy' },
+    { name: 'VJ Ice P', value: 'VJ Ice P' },
+    { name: 'VJ Jingo', value: 'VJ Jingo' },
+    { name: 'VJ Mark', value: 'VJ Mark' }
+  ]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('netflix_token');
+    if (!token) return;
+    fetch('/api/vj', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.data) && data.data.length > 0) {
+          const fetched = data.data.map(vj => ({
+            name: vj.name,
+            value: vj.name
+          }));
+          setVjsList([{ name: 'All VJs', value: '' }, ...fetched]);
+        }
+      })
+      .catch(err => console.error('Error loading VJs in Navbar:', err));
+  }, []);
 
   const REGIONS_LIST = [
     { name: 'All Regions', slug: '' },
@@ -85,8 +104,8 @@ export default function Navbar({
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
             </span>
-            <div className="nav-dropdown-menu">
-              {VJ_LIST.map((vj) => (
+            <div className="nav-dropdown-menu" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+              {vjsList.map((vj) => (
                 <div
                   key={vj.name}
                   className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
