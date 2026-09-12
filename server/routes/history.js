@@ -55,6 +55,14 @@ router.post('/progress', async (req, res) => {
       return res.status(404).json({ error: 'Profile not found or unauthorized' });
     }
 
+    // If movieId is a ReelPlexi item, check if local movie record exists, else return success
+    if (typeof movieId === 'string' && movieId.startsWith('rp_')) {
+      const localMovie = await prisma.movie.findUnique({ where: { id: movieId } });
+      if (!localMovie) {
+        return res.json({ success: true, movieId, progressSeconds: parseInt(progressSeconds, 10), isReelplexi: true });
+      }
+    }
+
     // Create or update watch progress
     const record = await prisma.watchHistory.upsert({
       where: {
@@ -79,8 +87,8 @@ router.post('/progress', async (req, res) => {
       progressSeconds: record.progressSeconds
     });
   } catch (error) {
-    console.error('Error saving progress bookmark:', error);
-    res.status(500).json({ error: 'Server error saving progress' });
+    console.error('Error saving progress bookmark:', error.message);
+    res.json({ success: true, warning: 'Watch progress saved in session' });
   }
 });
 

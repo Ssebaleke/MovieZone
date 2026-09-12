@@ -20,6 +20,9 @@ export async function getApiKey() {
   return process.env.REELPLEXI_API_KEY || '';
 }
 
+const apiCache = new Map();
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes cache for ultra-responsive navigation
+
 // Low-level fetch wrapper for Reelplexi API
 export async function reelplexiFetch(endpoint, queryParams = {}) {
   const apiKey = await getApiKey();
@@ -40,8 +43,14 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     }
   });
 
+  const cacheKey = url.toString();
+  const cached = apiCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+    return cached.data;
+  }
+
   try {
-    const response = await fetch(url.toString(), {
+    const response = await fetch(cacheKey, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -55,7 +64,11 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (data) {
+      apiCache.set(cacheKey, { timestamp: Date.now(), data });
+    }
+    return data;
   } catch (error) {
     console.error(`Reelplexi API fetch error on ${endpoint}:`, error.message);
     return null;
