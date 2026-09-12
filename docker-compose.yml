@@ -17,6 +17,8 @@ services:
       - REELPLEXI_API_KEY=${REELPLEXI_API_KEY:-}
     volumes:
       - db_data:/app/prisma
+    networks:
+      - moviezone_net
 
   frontend:
     build:
@@ -28,6 +30,12 @@ services:
       - "8090:80"
     depends_on:
       - backend
+    networks:
+      - moviezone_net
 
 volumes:
   db_data:
+
+networks:
+  moviezone_net:
+    driver: bridge
