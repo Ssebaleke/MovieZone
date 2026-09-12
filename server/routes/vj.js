@@ -9,7 +9,7 @@ router.use(authenticateToken);
 // List all VJ translators dynamically from Reelplexi API
 router.get('/', async (req, res) => {
   try {
-    const reelplexiData = await reelplexiFetch('/v1/vj', { per_page: 100 }) || await reelplexiFetch('/vj', { per_page: 100 });
+    const reelplexiData = await reelplexiFetch('/vj', { per_page: 100 });
     if (reelplexiData && Array.isArray(reelplexiData.data)) {
       const vjs = reelplexiData.data.map(vj => {
         const rawName = vj.name || 'VJ';
