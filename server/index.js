@@ -13,6 +13,8 @@ import regionRoutes from './routes/regions.js';
 import prisma from './db.js';
 import bcrypt from 'bcryptjs';
 
+import { catalogMovies } from './seedCatalog.js';
+
 dotenv.config();
 
 const app = express();
@@ -47,7 +49,7 @@ app.use('/api/regions', regionRoutes);
 // Health check route
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date() });
-import { catalogMovies } from './seedCatalog.js';
+});
 
 // Automatic DB Seeder
 async function seedDatabase() {
