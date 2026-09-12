@@ -107,8 +107,13 @@ export default function AdminDashboard() {
   const handleSaveApiKey = async (e) => {
     e.preventDefault();
     setSaveStatus('');
+    const val = apiKey ? apiKey.trim() : '';
+    if (val.startsWith('http://') || val.startsWith('https://')) {
+      setSaveStatus('Error: You entered a website URL ("http://..."). Please paste your Reelplexi API Secret Key (e.g. sk_live_...) instead of your site link!');
+      return;
+    }
     try {
-      await api.post('/admin/settings', { key: 'REELPLEXI_API_KEY', value: apiKey });
+      await api.post('/admin/settings', { key: 'REELPLEXI_API_KEY', value: val });
       setSaveStatus('API Key saved successfully! Reelplexi API connection active.');
       fetchSettingsAndStats();
     } catch (err) {
