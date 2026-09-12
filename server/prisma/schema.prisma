@@ -1,0 +1,84 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  passwordHash       String
+  role               String    @default("USER") // USER, ADMIN
+  createdAt          DateTime  @default(now())
+  plan               String    @default("NONE") // NONE, BASIC, STANDARD, PREMIUM
+  subscriptionStatus String    @default("INACTIVE") // INACTIVE, ACTIVE, CANCELED, PAST_DUE
+  subscriptionEnd    DateTime?
+  stripeCustomerId   String?
+  stripeSubId        String?
+  profiles           Profile[]
+}
+
+model Profile {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  avatarUrl     String
+  maturityLimit String         @default("13+")
+  myList        MyList[]
+  watchHistory  WatchHistory[]
+}
+
+model Movie {
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  thumbnailUrl  String
+  backdropUrl   String
+  videoUrl      String         // HLS (.m3u8), standard MP4, or Reelplexi stream
+  tmdbId        String?        // TMDB ID or Reelplexi content ID
+  duration      String         // e.g. "1h 45m" or "10 Episodes"
+  releaseYear   Int
+  rating        String         // PG-13, R, TV-MA, etc.
+  genres        String         // Comma-separated
+  type          String         // MOVIE or SHOW
+  category      String         // Trending, Action, etc.
+  vj            String?        // e.g. VJ Junior, VJ Emmy, VJ Ice P, VJ Jingo, VJ Mark
+  originCountry String?        // e.g. UG, KR, NG, US, IN
+  region        String?        // e.g. east-african, kdrama, nollywood, western, bollywood, anime
+  myLists       MyList[]
+  watchHistory  WatchHistory[]
+}
+
+model MyList {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  movieId   String
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, movieId])
+}
+
+model WatchHistory {
+  id              String   @id @default(uuid())
+  profileId       String
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  movieId         String
+  movie           Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  progressSeconds Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([profileId, movieId])
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

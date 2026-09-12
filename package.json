@@ -1,0 +1,16 @@
+{
+  "name": "netflix-clone-workspace",
+  "version": "1.0.0",
+  "description": "Commercial Netflix Clone Monorepo",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix client && npm install --prefix server",
+    "db:init": "npm run db:init --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
