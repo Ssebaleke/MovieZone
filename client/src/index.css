@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
+  --mz-red: #E50914;
+  --mz-red-hover: #b80710;
+  --mz-gradient: linear-gradient(135deg, #E50914 0%, #FF2D55 40%, #FF3B30 75%, #FF9500 100%);
   --netflix-red: #E50914;
   --netflix-red-hover: #b80710;
   --netflix-black: #141414;
@@ -14,6 +17,13 @@
   --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   --transition-fast: all 0.2s ease-in-out;
+}
+
+.brand-gradient-text {
+  background: var(--mz-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
 }
 
 * {

@@ -62,12 +62,12 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
       <div className="billboard-overlay"></div>
 
       <div className="billboard-info">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '15px' }}>
-          <svg viewBox="0 0 11 20" style={{ height: '22px', fill: '#E50914' }} xmlns="http://www.w3.org/2000/svg">
-            <path d="M10.51 0h-3.5L3.5 9.17V0H0v20h3.5v-9.17L7.01 20h3.5z"/>
-          </svg>
-          <span style={{ fontSize: '0.8rem', color: '#e5e5e5', fontWeight: '800', letterSpacing: '4px', textTransform: 'uppercase' }}>
-            {movie.type === 'SHOW' ? 'Series' : 'Film'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+          <span className="brand-gradient-text" style={{ fontSize: '1.1rem', fontWeight: '900', letterSpacing: '2px' }}>
+            MOVIEZONE EXCLUSIVE
+          </span>
+          <span style={{ fontSize: '0.8rem', color: '#e5e5e5', fontWeight: '800', letterSpacing: '3px', textTransform: 'uppercase' }}>
+            • {movie.type === 'SHOW' ? 'Series' : 'Film'}
           </span>
         </div>
         <h1 className="billboard-title">{movie.title}</h1>

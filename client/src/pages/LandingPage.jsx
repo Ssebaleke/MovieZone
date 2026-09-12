@@ -54,8 +54,8 @@ export default function LandingPage() {
       </div>
 
       <div className="landing-hero">
-        <h1>Ugandan VJs, Blockbuster Movies & K-Dramas</h1>
-        <h2>Watch VJ Junior, VJ Emmy, VJ Ice P, VJ Jingo, VJ Mark & More.</h2>
+        <h1>Ugandan VJs, Blockbuster Movies & <span className="brand-gradient-text">K-Dramas</span></h1>
+        <h2>Watch <span className="brand-gradient-text">VJ Junior, VJ Emmy, VJ Ice P, VJ Jingo, VJ Mark</span> & More.</h2>
         <p>Ready to watch? Enter your email to create or restart your membership.</p>
         
         <form onSubmit={handleGetStarted} className="email-signup-form">
