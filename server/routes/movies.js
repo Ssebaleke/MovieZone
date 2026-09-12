@@ -114,27 +114,74 @@ router.get('/', async (req, res) => {
       movies = movies.filter(item => item.type === type.toUpperCase());
     }
 
-    // Group movies by category
-    const categories = {};
-    movies.forEach(movie => {
-      let cat = movie.category || 'Ugandan VJ Exclusives';
-      if (movie.vj) {
-        cat = `Translated by ${movie.vj}`;
-      } else if (movie.type === 'SHOW') {
-        cat = 'Reelplexi Series Feed';
-      }
-      if (!categories[cat]) {
-        categories[cat] = [];
-      }
-      categories[cat].push(movie);
-    });
+    // Group movies into rich Genre Categories (Comedy, Romance, Action, Sci-Fi, Thriller, TV Series)
+    let sortedCategories = [];
 
-    // Ensure we have a featured movie
+    if (vj) {
+      // When a specific VJ is selected, group by Action, Comedy, Drama, Series for that VJ
+      const vjCategories = [
+        { name: `💥 Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
+        { name: `😂 Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
+        { name: `❤️ Romance & Thrillers (${vj})`, match: (m) => m.type === 'MOVIE' && /romance|thriller|crime/i.test(m.genres) },
+        { name: `📺 TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' },
+        { name: `🎬 All Movies by ${vj}`, match: () => true }
+      ];
+
+      const vjCatMap = new Map();
+      vjCategories.forEach(c => vjCatMap.set(c.name, []));
+
+      movies.forEach(m => {
+        let placed = false;
+        for (const cat of vjCategories) {
+          if (cat.match(m)) {
+            vjCatMap.get(cat.name).push(m);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) vjCatMap.get(`🎬 All Movies by ${vj}`).push(m);
+      });
+
+      sortedCategories = Array.from(vjCatMap.entries())
+        .map(([name, items]) => ({ name, movies: items }))
+        .filter(c => c.movies.length > 0);
+    } else {
+      // Main Screen: Group by Genres (Action, Comedy, Romance, Sci-Fi, Thrillers, Series, Trending)
+      const genreCategories = [
+        { name: '🔥 Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && m.genres.includes('Action')) },
+        { name: '💥 Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
+        { name: '😂 Comedy & Entertainment', match: (m) => m.type === 'MOVIE' && /comedy|humor|family|animation/i.test(m.genres) },
+        { name: '❤️ Romance & Emotional Dramas', match: (m) => m.type === 'MOVIE' && /romance|romantic|drama/i.test(m.genres) },
+        { name: '🦸‍♂️ Sci-Fi, Superhero & Fantasy', match: (m) => m.type === 'MOVIE' && /sci-fi|fantasy|superhero|science/i.test(m.genres) },
+        { name: '🎭 Thrillers, Crime & Mystery', match: (m) => m.type === 'MOVIE' && /thriller|crime|mystery|horror/i.test(m.genres) },
+        { name: '📺 Popular TV Series & Shows', match: (m) => m.type === 'SHOW' },
+        { name: '🇺🇬 Ugandan VJ Exclusives', match: () => true }
+      ];
+
+      const catMap = new Map();
+      genreCategories.forEach(c => catMap.set(c.name, []));
+      const seenMovieIdsPerCategory = new Map();
+
+      movies.forEach(movie => {
+        for (const cat of genreCategories) {
+          const list = catMap.get(cat.name);
+          const seen = seenMovieIdsPerCategory.get(cat.name) || new Set();
+          if (cat.match(movie) && !seen.has(movie.id) && list.length < 20) {
+            list.push(movie);
+            seen.add(movie.id);
+            seenMovieIdsPerCategory.set(cat.name, seen);
+            if (cat.name !== '🇺🇬 Ugandan VJ Exclusives') break; // Allow item in primary genre
+          }
+        }
+      });
+
+      sortedCategories = Array.from(catMap.entries())
+        .map(([name, items]) => ({ name, movies: items }))
+        .filter(c => c.movies.length > 0);
+    }
+
+    // Ensure we have a featured movie for Hero Banner
     const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
-
-    const sortedCategories = Object.entries(categories)
-      .map(([name, items]) => ({ name, items }))
-      .sort((a, b) => b.items.length - a.items.length);
 
     res.json({
       featured,

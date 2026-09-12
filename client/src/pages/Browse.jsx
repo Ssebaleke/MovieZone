@@ -228,7 +228,7 @@ export default function Browse() {
               <MovieRow
                 key={idx}
                 title={cat.name}
-                movies={cat.items}
+                movies={cat.movies || cat.items}
                 onPlay={setActivePlayMovie}
                 onOpenModal={setSelectedMovie}
                 watchlist={watchlist}
