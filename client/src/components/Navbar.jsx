@@ -140,60 +140,6 @@ export default function Navbar({
             <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
           </div>
 
-          {/* Mobile Header Dropdown Selector Pill */}
-          <div className="mobile-header-vj-select-wrapper" ref={vjDropdownRef}>
-            <button
-              className="mobile-vj-select-btn"
-              onClick={() => setIsMobileVjDropdownOpen(!isMobileVjDropdownOpen)}
-              type="button"
-            >
-              <Mic size={13} color="#e50914" />
-              <span className="vj-btn-label">{activeVJ || 'All VJs'}</span>
-              <ChevronDown size={14} color="#aaa" className={`vj-chevron ${isMobileVjDropdownOpen ? 'open' : ''}`} />
-            </button>
-
-            {/* Popup dropdown */}
-            {isMobileVjDropdownOpen && (
-              <div className="mobile-vj-dropdown-popup">
-                <div className="vj-dropdown-search-box">
-                  <Search size={14} color="#aaa" />
-                  <input
-                    type="text"
-                    placeholder="Search Ugandan VJs..."
-                    value={vjSearchTerm}
-                    onChange={(e) => setVjSearchTerm(e.target.value)}
-                    autoFocus
-                  />
-                  {vjSearchTerm && (
-                    <X size={14} color="#aaa" onClick={() => setVjSearchTerm('')} style={{ cursor: 'pointer' }} />
-                  )}
-                </div>
-
-                <div className="vj-dropdown-options-list multi-column">
-                  {filteredVjs.map((vj) => (
-                    <div
-                      key={vj.name}
-                      className={`vj-option-item ${activeVJ === vj.value ? 'selected' : ''}`}
-                      onClick={() => {
-                        setActiveVJ(vj.value);
-                        setActiveTab('vj');
-                        onSearchChange('');
-                        setIsMobileVjDropdownOpen(false);
-                        navigate('/browse');
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} />
-                        {vj.name}
-                      </span>
-                      {activeVJ === vj.value && <Check size={14} color="#fff" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Desktop Navigation Links */}
           <ul className="nav-links desktop-only-links">
             <li
