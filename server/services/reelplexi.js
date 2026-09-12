@@ -21,7 +21,7 @@ export async function getApiKey() {
 }
 
 const apiCache = new Map();
-const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes cache for ultra-responsive navigation
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache for ultra-fast response
 
 // Low-level fetch wrapper for Reelplexi API
 export async function reelplexiFetch(endpoint, queryParams = {}) {

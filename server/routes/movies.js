@@ -54,31 +54,27 @@ router.get('/', async (req, res) => {
         vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
       }
     } else {
-      // Fetch multi-page catalog from Reelplexi API for maximum content
+      // Fetch multi-page catalog from Reelplexi API (optimized to 4 parallel calls for speed & stability)
       const [
-        liveMoviesP1, liveMoviesP2, liveMoviesP3,
-        liveSeriesP1, liveSeriesP2,
+        liveMoviesP1, liveMoviesP2,
+        liveSeriesP1,
         trendingRes
       ] = await Promise.all([
         reelplexiFetch('/movies', { per_page: 100, page: 1 }),
         reelplexiFetch('/movies', { per_page: 100, page: 2 }),
-        reelplexiFetch('/movies', { per_page: 100, page: 3 }),
         reelplexiFetch('/series', { per_page: 100, page: 1 }),
-        reelplexiFetch('/series', { per_page: 100, page: 2 }),
         reelplexiFetch('/trending', { per_page: 100 })
       ]);
 
-      [liveMoviesP1, liveMoviesP2, liveMoviesP3].forEach(res => {
+      [liveMoviesP1, liveMoviesP2].forEach(res => {
         if (res && Array.isArray(res.data)) {
           res.data.forEach(item => movies.push(mapReelplexiItem(item)));
         }
       });
 
-      [liveSeriesP1, liveSeriesP2].forEach(res => {
-        if (res && Array.isArray(res.data)) {
-          res.data.forEach(item => movies.push(mapReelplexiItem(item)));
-        }
-      });
+      if (liveSeriesP1 && Array.isArray(liveSeriesP1.data)) {
+        liveSeriesP1.data.forEach(item => movies.push(mapReelplexiItem(item)));
+      }
 
       if (trendingRes && Array.isArray(trendingRes.data)) {
         trendingRes.data.forEach(item => {
