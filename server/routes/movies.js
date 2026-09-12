@@ -29,10 +29,80 @@ router.get('/', async (req, res) => {
       whereClause.type = type.toUpperCase();
     }
 
-    const movies = await prisma.movie.findMany({
+    let movies = await prisma.movie.findMany({
       where: whereClause,
       orderBy: latest ? { releaseYear: 'desc' } : { id: 'asc' }
     });
+    
+    // Attempt live fetch from Reelplexi API
+    try {
+      const liveMoviesRes = await reelplexiFetch('/movies');
+      const liveSeriesRes = await reelplexiFetch('/series');
+      
+      const liveItems = [];
+      if (liveMoviesRes && Array.isArray(liveMoviesRes.data)) {
+        liveMoviesRes.data.forEach(item => {
+          liveItems.push({
+            id: `rp_movie_${item.id}`,
+            title: item.title,
+            description: item.overview || `Exclusive Ugandan VJ translation by ${item.vj || 'VJ Junior'}`,
+            thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
+            backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
+            videoUrl: item.stream_url || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+            tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
+            duration: '2h 10m',
+            releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
+            rating: 'PG-13',
+            genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Action, Drama'),
+            type: 'MOVIE',
+            category: 'Reelplexi VJ Live Feed',
+            vj: item.vj || 'VJ Junior',
+            originCountry: 'UG',
+            region: 'east-african'
+          });
+        });
+      }
+
+      if (liveSeriesRes && Array.isArray(liveSeriesRes.data)) {
+        liveSeriesRes.data.forEach(item => {
+          liveItems.push({
+            id: `rp_series_${item.id}`,
+            title: item.title,
+            description: item.overview || `Hit VJ Translated Series by ${item.vj || 'VJ Emmy'}`,
+            thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=500&h=300&fit=crop&q=80',
+            backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1200&h=600&fit=crop&q=80',
+            videoUrl: item.stream_url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+            tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
+            duration: '12 Episodes',
+            releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
+            rating: 'TV-14',
+            genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Drama'),
+            type: 'SHOW',
+            category: 'Reelplexi Series Feed',
+            vj: item.vj || 'VJ Emmy',
+            originCountry: 'UG',
+            region: 'kdrama'
+          });
+        });
+      }
+
+      if (liveItems.length > 0) {
+        // Filter live items if VJ or Region query is provided
+        let filteredLive = liveItems;
+        if (vj) {
+          filteredLive = filteredLive.filter(item => item.vj.toLowerCase().includes(vj.toLowerCase()) || item.title.toLowerCase().includes(vj.toLowerCase()));
+        }
+        if (region) {
+          filteredLive = filteredLive.filter(item => item.region === region);
+        }
+        if (type) {
+          filteredLive = filteredLive.filter(item => item.type === type.toUpperCase());
+        }
+        movies = [...filteredLive, ...movies];
+      }
+    } catch (e) {
+      console.warn('Reelplexi live merge fallback to local DB:', e.message);
+    }
     
     // Group movies by category
     const categories = {};
@@ -48,6 +118,8 @@ router.get('/', async (req, res) => {
     const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
 
     const CATEGORY_ORDER = [
+      'Reelplexi VJ Live Feed',
+      'Reelplexi Series Feed',
       'UG VJ Exclusives',
       'Trending VJ Movies',
       'Netflix Originals',

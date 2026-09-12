@@ -25,12 +25,11 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     return null; // Signals fallback mode
   }
 
-  // Handle both /v1 prefix and /account prefix
-  let fetchUrl = endpoint.startsWith('/account') 
-    ? `https://api.reelplexi.com${endpoint}`
-    : `${REELPLEXI_BASE_URL}${endpoint}`;
-
-  const url = new URL(fetchUrl);
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (cleanEndpoint.startsWith('/account')) {
+    cleanEndpoint = `/v1${cleanEndpoint}`;
+  }
+  const url = new URL(`${REELPLEXI_BASE_URL}${cleanEndpoint}`);
   Object.keys(queryParams).forEach(key => {
     if (queryParams[key] !== undefined && queryParams[key] !== null) {
       url.searchParams.append(key, queryParams[key]);
