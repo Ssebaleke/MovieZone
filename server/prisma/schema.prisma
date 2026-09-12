@@ -82,3 +82,19 @@ model SystemSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model Package {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  price       Float
+  currency    String   @default("UGX")
+  interval    String   @default("MONTHLY")
+  description String?
+  features    String?
+  resolution  String   @default("1080p Full HD")
+  screens     Int      @default(2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

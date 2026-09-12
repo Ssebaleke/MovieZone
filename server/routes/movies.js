@@ -5,9 +5,8 @@ import { reelplexiFetch } from '../services/reelplexi.js';
 
 const router = express.Router();
 
-// Apply auth + subscription middleware to all client movie routes
+// Apply auth middleware to client movie routes (allow unsubscribed browsing)
 router.use(authenticateToken);
-router.use(requireSubscription);
 
 // Helper to map Reelplexi API items to frontend schema
 function mapReelplexiItem(item) {

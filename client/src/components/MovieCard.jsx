@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ThumbsUp, ChevronDown, Mic } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, ChevronDown, Mic, Star } from 'lucide-react';
 
-export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, onToggleWatchlist }) {
+export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, onToggleWatchlist, isSubscribed }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const hoverTimeoutRef = useRef(null);
   const videoRef = useRef(null);
+
+  const cachedUserStr = localStorage.getItem('netflix_user');
+  const user = cachedUserStr ? JSON.parse(cachedUserStr) : null;
+  const userIsSubscribed = isSubscribed !== undefined ? isSubscribed : (user?.subscriptionStatus === 'ACTIVE' || user?.role === 'ADMIN');
 
   const handleMouseEnter = () => {
     hoverTimeoutRef.current = setTimeout(() => {
@@ -45,6 +49,19 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
         }
       }}
     >
+      {/* Premium Star Badge when subscription is not active */}
+      {!userIsSubscribed && !isHovered && (
+        <div style={{
+          position: 'absolute', top: '8px', right: '8px',
+          background: 'rgba(10, 10, 15, 0.85)', border: '1px solid #ffc107', color: '#ffc107',
+          fontSize: '0.65rem', fontWeight: 'bold', padding: '3px 7px', borderRadius: '4px',
+          display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10, backdropFilter: 'blur(4px)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.6)'
+        }}>
+          <Star size={11} fill="#ffc107" color="#ffc107" /> Premium
+        </div>
+      )}
+
       {/* VJ Badge overlay on static thumbnail */}
       {movie.vj && !isHovered && (
         <div className="vj-pill-badge">

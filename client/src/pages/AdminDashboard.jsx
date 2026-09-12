@@ -3,17 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, X, Edit, Trash2, Users, Key, Film, Activity,
   ShieldCheck, Server, LogOut, BarChart3, Database,
-  Search, RefreshCw, CheckCircle2, AlertCircle, Clock
+  Search, RefreshCw, CheckCircle2, AlertCircle, Clock, Package as PackageIcon, Check
 } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function AdminDashboard() {
-  const [activeNav, setActiveNav] = useState('overview'); // 'overview' | 'signups' | 'apikeys' | 'catalog' | 'analytics'
+  const [activeNav, setActiveNav] = useState('overview'); // 'overview' | 'signups' | 'apikeys' | 'catalog' | 'analytics' | 'packages'
   
   // Catalog State
   const [movies, setMovies] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMovieId, setEditingMovieId] = useState(null);
+
+  // Packages State
+  const [packagesList, setPackagesList] = useState([]);
+  const [showPackageModal, setShowPackageModal] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState(null);
+  const [pkgName, setPkgName] = useState('');
+  const [pkgPrice, setPkgPrice] = useState('');
+  const [pkgCurrency, setPkgCurrency] = useState('UGX');
+  const [pkgInterval, setPkgInterval] = useState('MONTHLY');
+  const [pkgDescription, setPkgDescription] = useState('');
+  const [pkgFeatures, setPkgFeatures] = useState('');
+  const [pkgResolution, setPkgResolution] = useState('1080p Full HD');
+  const [pkgScreens, setPkgScreens] = useState(2);
+  const [pkgIsActive, setPkgIsActive] = useState(true);
 
   // User Signups State
   const [userSignups, setUserSignups] = useState([]);
@@ -48,6 +62,85 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const fetchPackages = async () => {
+    try {
+      const data = await api.get('/admin/packages');
+      setPackagesList(data || []);
+    } catch (err) {
+      console.error('Error fetching admin packages:', err);
+    }
+  };
+
+  const handleOpenPackageModal = (pkg = null) => {
+    setError('');
+    if (pkg) {
+      setEditingPackageId(pkg.id);
+      setPkgName(pkg.name);
+      setPkgPrice(pkg.price);
+      setPkgCurrency(pkg.currency || 'UGX');
+      setPkgInterval(pkg.interval || 'MONTHLY');
+      setPkgDescription(pkg.description || '');
+      setPkgFeatures(pkg.features || '');
+      setPkgResolution(pkg.resolution || '1080p Full HD');
+      setPkgScreens(pkg.screens || 2);
+      setPkgIsActive(pkg.isActive !== undefined ? pkg.isActive : true);
+    } else {
+      setEditingPackageId(null);
+      setPkgName('');
+      setPkgPrice('');
+      setPkgCurrency('UGX');
+      setPkgInterval('MONTHLY');
+      setPkgDescription('');
+      setPkgFeatures('');
+      setPkgResolution('1080p Full HD');
+      setPkgScreens(2);
+      setPkgIsActive(true);
+    }
+    setShowPackageModal(true);
+  };
+
+  const handleSavePackage = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const payload = {
+      name: pkgName,
+      price: parseFloat(pkgPrice),
+      currency: pkgCurrency,
+      interval: pkgInterval,
+      description: pkgDescription,
+      features: pkgFeatures,
+      resolution: pkgResolution,
+      screens: parseInt(pkgScreens, 10),
+      isActive: pkgIsActive
+    };
+
+    try {
+      if (editingPackageId) {
+        await api.put(`/admin/packages/${editingPackageId}`, payload);
+      } else {
+        await api.post('/admin/packages', payload);
+      }
+      await fetchPackages();
+      setShowPackageModal(false);
+    } catch (err) {
+      setError(err.message || 'Error saving subscription package');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePackage = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this subscription package?')) return;
+    try {
+      await api.delete(`/admin/packages/${id}`);
+      await fetchPackages();
+    } catch (err) {
+      setError(err.message || 'Error deleting package');
+    }
+  };
 
   const fetchMovies = async () => {
     try {
@@ -267,6 +360,17 @@ export default function AdminDashboard() {
             </button>
 
             <button
+              onClick={() => { setActiveNav('packages'); fetchPackages(); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
+                background: activeNav === 'packages' ? '#e50914' : 'transparent', color: activeNav === 'packages' ? '#fff' : '#aaa',
+                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
+              }}
+            >
+              <PackageIcon size={18} /> Packages & Pricing ({packagesList.length})
+            </button>
+
+            <button
               onClick={() => { setActiveNav('apikeys'); fetchSettingsAndStats(); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
@@ -336,6 +440,7 @@ export default function AdminDashboard() {
             <h1 style={{ fontSize: '1.8rem', fontWeight: '800' }}>
               {activeNav === 'overview' && 'System Overview & Platform Health'}
               {activeNav === 'signups' && 'User Signups & Account Directory'}
+              {activeNav === 'packages' && 'Subscription Packages & Pricing Configuration'}
               {activeNav === 'apikeys' && 'Reelplexi API Key & CDN Configuration'}
               {activeNav === 'catalog' && 'Ugandan VJ Media Catalog'}
               {activeNav === 'analytics' && 'VJ Content Performance Analytics'}
@@ -351,6 +456,15 @@ export default function AdminDashboard() {
               style={{ background: '#e50914', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <Plus size={18} /> Ingest VJ Media
+            </button>
+          )}
+
+          {activeNav === 'packages' && (
+            <button
+              onClick={() => handleOpenPackageModal()}
+              style={{ background: '#e50914', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={18} /> Create Package
             </button>
           )}
         </div>
@@ -673,6 +787,65 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* SECTION 6: PACKAGES & PRICING CONFIGURATION */}
+        {activeNav === 'packages' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+              {packagesList.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  style={{
+                    background: '#161820', border: pkg.isActive ? '1px solid rgba(229,9,20,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px', padding: '24px', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h3 style={{ fontSize: '1.3rem', fontWeight: '800', margin: 0, color: '#fff' }}>{pkg.name}</h3>
+                      <span style={{
+                        background: pkg.isActive ? 'rgba(70,211,105,0.15)' : 'rgba(255,255,255,0.1)',
+                        color: pkg.isActive ? '#46d369' : '#888',
+                        padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '700'
+                      }}>
+                        {pkg.isActive ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#ff4d4d', marginBottom: '8px' }}>
+                      {pkg.price.toLocaleString()} <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: '600' }}>{pkg.currency} / {pkg.interval.toLowerCase()}</span>
+                    </div>
+
+                    <p style={{ color: '#aaa', fontSize: '0.85rem', marginBottom: '16px', lineHeight: '1.4' }}>
+                      {pkg.description || 'Standard subscription access plan.'}
+                    </p>
+
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', marginBottom: '20px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '6px' }}><strong>Resolution:</strong> {pkg.resolution}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '6px' }}><strong>Screens:</strong> {pkg.screens} simultaneous</div>
+                      <div style={{ fontSize: '0.8rem', color: '#aaa' }}><strong>Features:</strong> {pkg.features || 'Full movie catalog access'}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                    <button
+                      onClick={() => handleOpenPackageModal(pkg)}
+                      style={{ flex: 1, background: '#222', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <Edit size={14} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeletePackage(pkg.id)}
+                      style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* Ingest Modal */}
@@ -788,6 +961,89 @@ export default function AdminDashboard() {
               <div className="payment-actions" style={{ gridColumn: 'span 2', marginTop: '20px' }}>
                 <button type="submit" className="payment-confirm" disabled={loading} style={{ background: '#e50914' }}>{loading ? 'Ingesting...' : 'Save VJ Title'}</button>
                 <button type="button" className="payment-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Package Create/Edit Modal */}
+      {showPackageModal && (
+        <div className="payment-modal-overlay">
+          <div className="profile-modal" style={{ maxWidth: '600px', background: '#161820' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>{editingPackageId ? 'Edit Package & Pricing' : 'Create Subscription Package'}</h2>
+              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => setShowPackageModal(false)}>
+                <X size={28} color="#fff" />
+              </button>
+            </div>
+
+            {error && <div className="error-message" style={{ marginBottom: '15px' }}>{error}</div>}
+
+            <form onSubmit={handleSavePackage} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="cc-input-container">
+                <label>Package Name (e.g. Monthly VIP, Daily Pass)</label>
+                <input type="text" value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="Monthly Pass" required />
+              </div>
+
+              <div className="cc-input-container">
+                <label>Price Amount</label>
+                <input type="number" value={pkgPrice} onChange={(e) => setPkgPrice(e.target.value)} placeholder="20000" required />
+              </div>
+
+              <div className="cc-input-container">
+                <label>Currency</label>
+                <select value={pkgCurrency} onChange={(e) => setPkgCurrency(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
+                  <option value="UGX">UGX (Ugandan Shilling)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="KES">KES (Kenyan Shilling)</option>
+                </select>
+              </div>
+
+              <div className="cc-input-container">
+                <label>Billing Cycle / Interval</label>
+                <select value={pkgInterval} onChange={(e) => setPkgInterval(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
+                  <option value="DAILY">DAILY (24 Hours)</option>
+                  <option value="WEEKLY">WEEKLY (7 Days)</option>
+                  <option value="MONTHLY">MONTHLY (30 Days)</option>
+                  <option value="YEARLY">YEARLY (365 Days)</option>
+                </select>
+              </div>
+
+              <div className="cc-input-container">
+                <label>Resolution Quality</label>
+                <select value={pkgResolution} onChange={(e) => setPkgResolution(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
+                  <option value="720p HD">720p HD</option>
+                  <option value="1080p Full HD">1080p Full HD</option>
+                  <option value="4K Ultra HD">4K Ultra HD</option>
+                </select>
+              </div>
+
+              <div className="cc-input-container">
+                <label>Simultaneous Screens</label>
+                <input type="number" value={pkgScreens} onChange={(e) => setPkgScreens(e.target.value)} min="1" max="10" required />
+              </div>
+
+              <div className="cc-input-container" style={{ gridColumn: 'span 2' }}>
+                <label>Short Description</label>
+                <input type="text" placeholder="Full 30 days access to all Luganda translated movies" value={pkgDescription} onChange={(e) => setPkgDescription(e.target.value)} />
+              </div>
+
+              <div className="cc-input-container" style={{ gridColumn: 'span 2' }}>
+                <label>Feature Bullet Points (Comma separated)</label>
+                <input type="text" placeholder="Unlimited Streaming, HD Quality, Luganda VJs" value={pkgFeatures} onChange={(e) => setPkgFeatures(e.target.value)} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input type="checkbox" id="isActiveCheck" checked={pkgIsActive} onChange={(e) => setPkgIsActive(e.target.checked)} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                <label htmlFor="isActiveCheck" style={{ cursor: 'pointer', fontWeight: 'bold' }}>Active & Visible for User Payments</label>
+              </div>
+
+              <div className="payment-actions" style={{ gridColumn: 'span 2', marginTop: '20px' }}>
+                <button type="submit" className="payment-confirm" disabled={loading} style={{ background: '#e50914' }}>
+                  {loading ? 'Saving...' : 'Save Package'}
+                </button>
+                <button type="button" className="payment-cancel" onClick={() => setShowPackageModal(false)}>Cancel</button>
               </div>
             </form>
           </div>

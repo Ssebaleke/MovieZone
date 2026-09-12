@@ -39,12 +39,8 @@ export default function LoginPage() {
       localStorage.setItem('netflix_token', data.token);
       localStorage.setItem('netflix_user', JSON.stringify(data.user));
 
-      // Redirect depending on subscription state
-      if (data.user.subscriptionStatus === 'ACTIVE' || data.user.role === 'ADMIN') {
-        navigate('/profiles');
-      } else {
-        navigate('/signup/plans');
-      }
+      // Always allow user login and redirect to profile selection
+      navigate('/profiles');
     } catch (err) {
       setError(err.message || 'Authentication failed. Please check your credentials.');
     } finally {

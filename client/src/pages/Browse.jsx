@@ -6,6 +6,7 @@ import MovieRow from '../components/MovieRow';
 import DetailModal from '../components/DetailModal';
 import VideoPlayer from '../components/VideoPlayer';
 import MovieCard from '../components/MovieCard';
+import UpgradeModal from '../components/UpgradeModal';
 import { api } from '../utils/api';
 
 export default function Browse() {
@@ -24,12 +25,43 @@ export default function Browse() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  // User & Subscription state
+  const [user, setUser] = useState(() => {
+    const str = localStorage.getItem('netflix_user');
+    return str ? JSON.parse(str) : null;
+  });
+  const isSubscribed = user?.subscriptionStatus === 'ACTIVE' || user?.role === 'ADMIN';
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMovieTarget, setUpgradeMovieTarget] = useState(null);
+
   // Interaction Modals
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [activePlayMovie, setActivePlayMovie] = useState(null);
 
   const navigate = useNavigate();
   const currentProfile = JSON.parse(localStorage.getItem('netflix_profile'));
+
+  // Play button handler with subscription paywall gate
+  const handlePlay = (movie) => {
+    if (!isSubscribed) {
+      setUpgradeMovieTarget(movie);
+      setShowUpgradeModal(true);
+    } else {
+      setActivePlayMovie(movie);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch latest user status to ensure fresh subscription state
+    api.get('/auth/me')
+      .then(res => {
+        if (res && res.user) {
+          setUser(res.user);
+          localStorage.setItem('netflix_user', JSON.stringify(res.user));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!localStorage.getItem('netflix_token')) {
@@ -160,10 +192,11 @@ export default function Browse() {
                 <MovieCard
                   key={movie.id}
                   movie={movie}
-                  onPlay={setActivePlayMovie}
+                  onPlay={handlePlay}
                   onOpenModal={setSelectedMovie}
                   isInWatchlist={isMovieInWatchlist(movie.id)}
                   onToggleWatchlist={handleToggleWatchlist}
+                  isSubscribed={isSubscribed}
                 />
               ))}
             </div>
@@ -177,8 +210,9 @@ export default function Browse() {
           {featured && (
             <HeroBanner
               movie={featured}
-              onPlay={setActivePlayMovie}
+              onPlay={handlePlay}
               onOpenModal={setSelectedMovie}
+              isSubscribed={isSubscribed}
             />
           )}
 
@@ -204,10 +238,11 @@ export default function Browse() {
               <MovieRow
                 title="Continue Watching"
                 movies={continueWatching.map(item => item.movie)}
-                onPlay={setActivePlayMovie}
+                onPlay={handlePlay}
                 onOpenModal={setSelectedMovie}
                 watchlist={watchlist}
                 onToggleWatchlist={handleToggleWatchlist}
+                isSubscribed={isSubscribed}
               />
             )}
 
@@ -216,10 +251,11 @@ export default function Browse() {
               <MovieRow
                 title="My List"
                 movies={watchlist}
-                onPlay={setActivePlayMovie}
+                onPlay={handlePlay}
                 onOpenModal={setSelectedMovie}
                 watchlist={watchlist}
                 onToggleWatchlist={handleToggleWatchlist}
+                isSubscribed={isSubscribed}
               />
             )}
 
@@ -229,10 +265,11 @@ export default function Browse() {
                 key={idx}
                 title={cat.name}
                 movies={cat.movies || cat.items}
-                onPlay={setActivePlayMovie}
+                onPlay={handlePlay}
                 onOpenModal={setSelectedMovie}
                 watchlist={watchlist}
                 onToggleWatchlist={handleToggleWatchlist}
+                isSubscribed={isSubscribed}
               />
             ))}
           </div>
@@ -244,9 +281,10 @@ export default function Browse() {
         <DetailModal
           movie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
-          onPlay={setActivePlayMovie}
+          onPlay={handlePlay}
           watchlist={watchlist}
           onToggleWatchlist={handleToggleWatchlist}
+          isSubscribed={isSubscribed}
         />
       )}
 
@@ -260,6 +298,20 @@ export default function Browse() {
           }}
         />
       )}
+
+      {/* Upgrade Subscription Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        movie={upgradeMovieTarget}
+        onSubscriptionSuccess={(updatedUser, movieToPlay) => {
+          setUser(updatedUser);
+          setShowUpgradeModal(false);
+          if (movieToPlay) {
+            setActivePlayMovie(movieToPlay);
+          }
+        }}
+      />
     </div>
   );
 }

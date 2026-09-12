@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from './MovieCard';
 
-export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist, onToggleWatchlist }) {
+export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist, onToggleWatchlist, isSubscribed }) {
   const trackRef = useRef(null);
 
   const handleScroll = (direction) => {
@@ -47,6 +47,7 @@ export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist
                     onOpenModal={onOpenModal}
                     isInWatchlist={isMovieInWatchlist(movie.id)}
                     onToggleWatchlist={onToggleWatchlist}
+                    isSubscribed={isSubscribed}
                   />
                 </div>
               </div>
@@ -58,6 +59,7 @@ export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist
                 onOpenModal={onOpenModal}
                 isInWatchlist={isMovieInWatchlist(movie.id)}
                 onToggleWatchlist={onToggleWatchlist}
+                isSubscribed={isSubscribed}
               />
             )
           ))}

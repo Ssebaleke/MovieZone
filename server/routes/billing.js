@@ -11,13 +11,144 @@ if (stripeSecret) {
   stripeInstance = new Stripe(stripeSecret);
 }
 
-// Get price list / details
+// Get price list / details (Legacy plans)
 router.get('/plans', (req, res) => {
   res.json({
     BASIC: { price: 9.99, resolution: '720p', screens: 1, quality: 'Good' },
     STANDARD: { price: 15.49, resolution: '1080p', screens: 2, quality: 'Better' },
     PREMIUM: { price: 22.99, resolution: '4K + HDR', screens: 4, quality: 'Best' }
   });
+});
+
+// Get all active Admin packages for frontend checkout
+router.get('/packages', async (req, res) => {
+  try {
+    let packages = await prisma.package.findMany({
+      where: { isActive: true },
+      orderBy: { price: 'asc' }
+    });
+
+    if (packages.length === 0) {
+      // Seed default admin packages if none exist
+      const defaults = [
+        {
+          name: 'Daily Pass',
+          slug: 'daily-pass',
+          price: 2000,
+          currency: 'UGX',
+          interval: 'DAILY',
+          description: 'Full 24-hour access to all VJ Luganda movies and series',
+          features: 'Unlimited Streaming, 1 Screen, HD Quality, Luganda Translations',
+          resolution: '1080p Full HD',
+          screens: 1,
+          isActive: true
+        },
+        {
+          name: 'Weekly Special',
+          slug: 'weekly-special',
+          price: 7000,
+          currency: 'UGX',
+          interval: 'WEEKLY',
+          description: '7 days unlimited streaming access across all devices',
+          features: 'Unlimited Streaming, 2 Screens, HD Quality, All VJ Downloads',
+          resolution: '1080p Full HD',
+          screens: 2,
+          isActive: true
+        },
+        {
+          name: 'Monthly VIP',
+          slug: 'monthly-vip',
+          price: 20000,
+          currency: 'UGX',
+          interval: 'MONTHLY',
+          description: '30 days VIP access with 4K Ultra HD & Multi-Screen',
+          features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD, Priority VJ Releases',
+          resolution: '4K Ultra HD',
+          screens: 4,
+          isActive: true
+        }
+      ];
+
+      for (const item of defaults) {
+        await prisma.package.create({ data: item });
+      }
+
+      packages = await prisma.package.findMany({
+        where: { isActive: true },
+        orderBy: { price: 'asc' }
+      });
+    }
+
+    res.json(packages);
+  } catch (error) {
+    console.error('Error fetching billing packages:', error);
+    res.status(500).json({ error: 'Failed to load packages' });
+  }
+});
+
+// Process dynamic package payment checkout
+router.post('/subscribe-package', authenticateToken, async (req, res) => {
+  const { packageId } = req.body;
+
+  if (!packageId) {
+    return res.status(400).json({ error: 'Package ID is required' });
+  }
+
+  try {
+    const pkg = await prisma.package.findUnique({
+      where: { id: packageId }
+    });
+
+    if (!pkg || !pkg.isActive) {
+      return res.status(404).json({ error: 'Selected subscription package is invalid or inactive' });
+    }
+
+    // Calculate dynamic expiration based on package interval
+    const now = new Date();
+    const expiration = new Date(now);
+
+    switch (pkg.interval.toUpperCase()) {
+      case 'DAILY':
+        expiration.setDate(expiration.getDate() + 1);
+        break;
+      case 'WEEKLY':
+        expiration.setDate(expiration.getDate() + 7);
+        break;
+      case 'YEARLY':
+        expiration.setFullYear(expiration.getFullYear() + 1);
+        break;
+      case 'MONTHLY':
+      default:
+        expiration.setMonth(expiration.getMonth() + 1);
+        break;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        plan: pkg.name,
+        subscriptionStatus: 'ACTIVE',
+        subscriptionEnd: expiration,
+        stripeCustomerId: 'pkg_cust_' + Math.random().toString(36).substring(7),
+        stripeSubId: 'pkg_sub_' + Math.random().toString(36).substring(7)
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully subscribed to ${pkg.name}!`,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        plan: updatedUser.plan,
+        subscriptionStatus: updatedUser.subscriptionStatus,
+        subscriptionEnd: updatedUser.subscriptionEnd
+      }
+    });
+  } catch (error) {
+    console.error('Subscribe package error:', error);
+    res.status(500).json({ error: 'Failed to process package subscription' });
+  }
 });
 
 // Create checkout session (Stripe or Mock fallback)

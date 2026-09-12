@@ -285,4 +285,149 @@ router.delete('/movies/:id', async (req, res) => {
   }
 });
 
+// ==========================================
+// 6. Subscription Package Management
+// ==========================================
+router.get('/packages', async (req, res) => {
+  try {
+    let packages = await prisma.package.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // If no packages exist yet, seed default options
+    if (packages.length === 0) {
+      const defaults = [
+        {
+          name: 'Daily Pass',
+          slug: 'daily-pass',
+          price: 2000,
+          currency: 'UGX',
+          interval: 'DAILY',
+          description: 'Full 24-hour access to all VJ Luganda movies and series',
+          features: 'Unlimited Streaming, 1 Screen, HD Quality, Luganda Translations',
+          resolution: '1080p Full HD',
+          screens: 1,
+          isActive: true
+        },
+        {
+          name: 'Weekly Special',
+          slug: 'weekly-special',
+          price: 7000,
+          currency: 'UGX',
+          interval: 'WEEKLY',
+          description: '7 days unlimited streaming access across all devices',
+          features: 'Unlimited Streaming, 2 Screens, HD Quality, All VJ Downloads',
+          resolution: '1080p Full HD',
+          screens: 2,
+          isActive: true
+        },
+        {
+          name: 'Monthly VIP',
+          slug: 'monthly-vip',
+          price: 20000,
+          currency: 'UGX',
+          interval: 'MONTHLY',
+          description: '30 days VIP access with 4K Ultra HD & Multi-Screen',
+          features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD, Priority VJ Releases',
+          resolution: '4K Ultra HD',
+          screens: 4,
+          isActive: true
+        }
+      ];
+
+      for (const item of defaults) {
+        await prisma.package.create({ data: item });
+      }
+
+      packages = await prisma.package.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    res.json(packages);
+  } catch (error) {
+    console.error('Error fetching admin packages:', error);
+    res.status(500).json({ error: 'Server error fetching packages' });
+  }
+});
+
+router.post('/packages', async (req, res) => {
+  const { name, price, currency, interval, description, features, resolution, screens, isActive } = req.body;
+
+  if (!name || price === undefined) {
+    return res.status(400).json({ error: 'Package name and price are required' });
+  }
+
+  try {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now();
+    const pkg = await prisma.package.create({
+      data: {
+        name,
+        slug,
+        price: parseFloat(price),
+        currency: currency || 'UGX',
+        interval: interval || 'MONTHLY',
+        description: description || '',
+        features: features || '',
+        resolution: resolution || '1080p Full HD',
+        screens: screens ? parseInt(screens, 10) : 2,
+        isActive: isActive !== undefined ? Boolean(isActive) : true
+      }
+    });
+
+    res.status(201).json(pkg);
+  } catch (error) {
+    console.error('Error creating package:', error);
+    res.status(500).json({ error: 'Failed to create subscription package' });
+  }
+});
+
+router.put('/packages/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, price, currency, interval, description, features, resolution, screens, isActive } = req.body;
+
+  try {
+    const existing = await prisma.package.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    const updated = await prisma.package.update({
+      where: { id },
+      data: {
+        name: name !== undefined ? name : existing.name,
+        price: price !== undefined ? parseFloat(price) : existing.price,
+        currency: currency !== undefined ? currency : existing.currency,
+        interval: interval !== undefined ? interval : existing.interval,
+        description: description !== undefined ? description : existing.description,
+        features: features !== undefined ? features : existing.features,
+        resolution: resolution !== undefined ? resolution : existing.resolution,
+        screens: screens !== undefined ? parseInt(screens, 10) : existing.screens,
+        isActive: isActive !== undefined ? Boolean(isActive) : existing.isActive
+      }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating package:', error);
+    res.status(500).json({ error: 'Failed to update package' });
+  }
+});
+
+router.delete('/packages/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const existing = await prisma.package.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    await prisma.package.delete({ where: { id } });
+    res.json({ success: true, message: 'Package deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting package:', error);
+    res.status(500).json({ error: 'Failed to delete package' });
+  }
+});
+
 export default router;

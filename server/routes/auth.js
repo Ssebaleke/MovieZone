@@ -32,14 +32,17 @@ router.post('/register', async (req, res) => {
     const userCount = await prisma.user.count();
     const role = userCount === 0 ? 'ADMIN' : 'USER';
 
-    // Create user with default active subscription access
+    // Admin users get ACTIVE by default, regular users start INACTIVE
+    const plan = role === 'ADMIN' ? 'PREMIUM' : 'NONE';
+    const subscriptionStatus = role === 'ADMIN' ? 'ACTIVE' : 'INACTIVE';
+
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
         role,
-        plan: 'PREMIUM',
-        subscriptionStatus: 'ACTIVE'
+        plan,
+        subscriptionStatus
       }
     });
 
