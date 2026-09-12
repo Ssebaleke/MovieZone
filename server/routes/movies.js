@@ -33,17 +33,18 @@ function mapReelplexiItem(item) {
   };
 }
 
-// Get movies grouped by categories/rows with VJ and region support (100% Reelplexi.com API)
+// Get full movies/series catalog grouped by categories (100% Reelplexi.com API)
 router.get('/', async (req, res) => {
   const { vj, region, type, latest, trending } = req.query;
 
   try {
     let movies = [];
 
-    // Pure Reelplexi API fetch
-    const [liveMoviesRes, liveSeriesRes] = await Promise.all([
-      reelplexiFetch('/movies'),
-      reelplexiFetch('/series')
+    // Fetch full catalog from Reelplexi API using per_page=100
+    const [liveMoviesRes, liveSeriesRes, trendingRes] = await Promise.all([
+      reelplexiFetch('/movies', { per_page: 100, page: 1 }),
+      reelplexiFetch('/series', { per_page: 100, page: 1 }),
+      reelplexiFetch('/trending', { per_page: 100 })
     ]);
 
     if (liveMoviesRes && Array.isArray(liveMoviesRes.data)) {
@@ -54,6 +55,14 @@ router.get('/', async (req, res) => {
       liveSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
     }
 
+    if (trendingRes && Array.isArray(trendingRes.data)) {
+      trendingRes.data.forEach(item => {
+        const mapped = mapReelplexiItem(item);
+        mapped.category = 'Trending VJ Movies';
+        movies.push(mapped);
+      });
+    }
+
     // Fallback to SQLite DB if Reelplexi key is unconfigured or offline
     if (movies.length === 0) {
       const dbMovies = await prisma.movie.findMany({
@@ -61,6 +70,11 @@ router.get('/', async (req, res) => {
       });
       movies = dbMovies;
     }
+
+    // Deduplicate by ID
+    const uniqueMap = new Map();
+    movies.forEach(m => uniqueMap.set(m.id, m));
+    movies = Array.from(uniqueMap.values());
 
     // Apply filtering on movies list
     if (vj) {
@@ -92,10 +106,10 @@ router.get('/', async (req, res) => {
     const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
 
     const CATEGORY_ORDER = [
+      'Trending VJ Movies',
       'Ugandan VJ Exclusives',
       'Reelplexi Movies Feed',
       'Reelplexi Series Feed',
-      'Trending VJ Movies',
       'Action & Adventure',
       'K-Drama Hits'
     ];
@@ -129,7 +143,7 @@ router.get('/search', async (req, res) => {
   }
 
   try {
-    const reelplexiSearch = await reelplexiFetch('/search', { q });
+    const reelplexiSearch = await reelplexiFetch('/search', { q, per_page: 50 });
     if (reelplexiSearch && Array.isArray(reelplexiSearch.data)) {
       return res.json(reelplexiSearch.data.map(mapReelplexiItem));
     }

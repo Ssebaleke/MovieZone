@@ -9,7 +9,10 @@ export async function getApiKey() {
       where: { key: 'REELPLEXI_API_KEY' }
     });
     if (setting && setting.value) {
-      return setting.value;
+      const val = setting.value.trim();
+      if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        return val;
+      }
     }
   } catch (e) {
     // SystemSetting query fallback
@@ -30,6 +33,7 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     path = `/v1${path}`;
   }
   const url = new URL(`https://api.reelplexi.com${path}`);
+
   Object.keys(queryParams).forEach(key => {
     if (queryParams[key] !== undefined && queryParams[key] !== null) {
       url.searchParams.append(key, queryParams[key]);
@@ -40,8 +44,8 @@ export async function reelplexiFetch(endpoint, queryParams = {}) {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'X-API-Key': apiKey,
         'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey,
         'Accept': 'application/json'
       }
     });
@@ -113,7 +117,7 @@ export async function getAccountActivity(limit = 10) {
 }
 
 // GET /account/analytics/top-movies or top-series
-export async function getTopAnalytics(type = 'movies', limit = 10) {
+export async function getTopAnalytics(type = 'series', limit = 10) {
   const endpoint = type === 'series' ? '/account/analytics/top-series' : '/account/analytics/top-movies';
   const data = await reelplexiFetch(endpoint, { limit });
   if (data && data.data) return data.data;
