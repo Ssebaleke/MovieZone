@@ -167,7 +167,7 @@ router.get('/', async (req, res) => {
         for (const cat of genreCategories) {
           const list = catMap.get(cat.name);
           const seen = seenMovieIdsPerCategory.get(cat.name) || new Set();
-          if (cat.match(movie) && !seen.has(movie.id)) {
+          if (cat.match(movie) && !seen.has(movie.id) && list.length < 30) {
             list.push(movie);
             seen.add(movie.id);
             seenMovieIdsPerCategory.set(cat.name, seen);
