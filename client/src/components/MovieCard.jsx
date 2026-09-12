@@ -39,6 +39,11 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
       style={{ backgroundImage: `url(${movie.thumbnailUrl})` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={() => {
+        if ('ontouchstart' in window || window.innerWidth <= 768) {
+          onOpenModal(movie);
+        }
+      }}
     >
       {/* VJ Badge overlay on static thumbnail */}
       {movie.vj && !isHovered && (

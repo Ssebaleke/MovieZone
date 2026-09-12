@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -15,6 +15,7 @@ export default function Navbar({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,190 +85,375 @@ export default function Navbar({
   ];
 
   return (
-    <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="nav-left">
-        <div className="logo" style={{ cursor: 'pointer' }} onClick={() => { setActiveTab('home'); onSearchChange(''); navigate('/browse'); }}>
-          <img src="/movie-zone-logo.svg" alt="Movie Zone" style={{ height: '38px', width: 'auto' }} />
+    <>
+      <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="nav-left">
+          {/* Mobile Hamburger Toggle Button */}
+          <button
+            className="mobile-menu-toggle-btn"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            type="button"
+          >
+            {isMobileMenuOpen ? <X size={26} color="#fff" /> : <Menu size={26} color="#fff" />}
+          </button>
+
+          {/* Logo */}
+          <div
+            className="logo"
+            style={{ cursor: 'pointer' }}
+            onClick={() => {
+              setActiveTab('home');
+              setActiveVJ('');
+              setActiveRegion('');
+              onSearchChange('');
+              setIsMobileMenuOpen(false);
+              navigate('/browse');
+            }}
+          >
+            <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
+          </div>
+
+          {/* Desktop Navigation Links */}
+          <ul className="nav-links desktop-only-links">
+            <li
+              className={activeTab === 'home' && !searchQuery ? 'active' : ''}
+              onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              Home
+            </li>
+
+            {/* Ugandan VJs Dropdown */}
+            <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
+              </span>
+              <div className="nav-dropdown-menu" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                {vjsList.map((vj) => (
+                  <div
+                    key={vj.name}
+                    className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
+                    onClick={() => {
+                      setActiveVJ(vj.value);
+                      setActiveTab('vj');
+                      onSearchChange('');
+                      navigate('/browse');
+                    }}
+                  >
+                    {vj.name}
+                  </div>
+                ))}
+              </div>
+            </li>
+
+            <li
+              className={activeTab === 'series' ? 'active' : ''}
+              onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              TV Series
+            </li>
+
+            <li
+              className={activeTab === 'movies' ? 'active' : ''}
+              onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              Movies
+            </li>
+
+            <li
+              className={activeTab === 'latest' ? 'active' : ''}
+              onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              Latest
+            </li>
+
+            <li
+              className={activeTab === 'trending' ? 'active' : ''}
+              onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              Trending
+            </li>
+
+            {/* Multi-Region Dropdown */}
+            <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
+              </span>
+              <div className="nav-dropdown-menu">
+                {REGIONS_LIST.map((reg) => (
+                  <div
+                    key={reg.name}
+                    className={`dropdown-item ${activeRegion === reg.slug ? 'selected' : ''}`}
+                    onClick={() => {
+                      setActiveRegion(reg.slug);
+                      setActiveTab('regions');
+                      onSearchChange('');
+                      navigate('/browse');
+                    }}
+                  >
+                    {reg.name}
+                  </div>
+                ))}
+              </div>
+            </li>
+
+            <li
+              className={location.pathname === '/mylist' ? 'active' : ''}
+              onClick={() => navigate('/mylist')}
+            >
+              My List
+            </li>
+          </ul>
         </div>
 
-        <ul className="nav-links">
-          {/* 1. Home */}
-          <li
-            className={activeTab === 'home' && !searchQuery ? 'active' : ''}
-            onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-          >
-            Home
-          </li>
+        {/* Right Section */}
+        <div className="nav-right">
+          {/* Expanding Search Bar */}
+          <div className={`search-box ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
+            <button
+              className="search-btn-icon"
+              onClick={() => {
+                setIsSearchExpanded(true);
+                setTimeout(() => {
+                  if (searchInputRef.current) searchInputRef.current.focus();
+                }, 100);
+              }}
+              type="button"
+            >
+              <Search size={18} />
+            </button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Titles, VJs, genres..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onBlur={() => { if (!searchQuery) setIsSearchExpanded(false); }}
+            />
+            {searchQuery && (
+              <button
+                className="search-clear-btn"
+                onClick={() => {
+                  onSearchChange('');
+                  if (searchInputRef.current) searchInputRef.current.focus();
+                }}
+                type="button"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
 
-          {/* 2. Ugandan VJs Dropdown Menu */}
-          <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
-            </span>
-            <div className="nav-dropdown-menu" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+          {/* User Notifications */}
+          <button className="player-control-icon-btn notifications-btn" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Bell size={20} />
+            <span className="notification-badge">11</span>
+          </button>
+
+          {/* Profile Dropdown */}
+          {currentProfile && (
+            <div className="nav-profile-menu">
+              <div className="nav-profile-avatar">
+                <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
+              </div>
+              <ChevronDown size={16} className="desktop-only-icon" />
+
+              <div className="profile-dropdown">
+                <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}>
+                  <strong>{currentProfile.name}</strong>
+                </div>
+                <div className="dropdown-item" onClick={() => navigate('/profiles')}>
+                  <User size={16} /> Manage Profiles
+                </div>
+                <div className="dropdown-item" onClick={() => navigate('/account')}>
+                  <Settings size={16} /> Account Settings
+                </div>
+                <div className="dropdown-divider" />
+                <div className="dropdown-item" onClick={handleSignOut}>
+                  <LogOut size={16} /> Sign out
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Slide-Out Mobile Navigation Drawer */}
+      {isMobileMenuOpen && (
+        <div className="mobile-drawer-overlay" onClick={() => setIsMobileMenuOpen(false)}>
+          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer-header">
+              {currentProfile ? (
+                <div className="mobile-profile-info">
+                  <img src={currentProfile.avatarUrl} alt={currentProfile.name} className="mobile-avatar" />
+                  <div>
+                    <div className="mobile-profile-name">{currentProfile.name}</div>
+                    <span className="mobile-vj-badge">Uganda VIP Access</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mobile-profile-name">MovieZone</div>
+              )}
+              <button className="mobile-drawer-close" onClick={() => setIsMobileMenuOpen(false)}>
+                <X size={24} color="#fff" />
+              </button>
+            </div>
+
+            {/* Mobile Search input inside drawer */}
+            <div className="mobile-drawer-search">
+              <Search size={18} color="#aaa" />
+              <input
+                type="text"
+                placeholder="Search movies, Ugandan VJs..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => onSearchChange('')} style={{ background: 'none', border: 'none' }}>
+                  <X size={16} color="#aaa" />
+                </button>
+              )}
+            </div>
+
+            {/* Ugandan VJs Mobile Section */}
+            <div className="mobile-section-title">
+              <Mic size={16} color="#e50914" /> Ugandan VJ Translators
+            </div>
+            <div className="mobile-vj-chips-grid">
               {vjsList.map((vj) => (
-                <div
+                <button
                   key={vj.name}
-                  className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
+                  className={`mobile-vj-chip ${activeVJ === vj.value ? 'selected' : ''}`}
                   onClick={() => {
                     setActiveVJ(vj.value);
                     setActiveTab('vj');
                     onSearchChange('');
+                    setIsMobileMenuOpen(false);
                     navigate('/browse');
                   }}
                 >
                   {vj.name}
-                </div>
+                </button>
               ))}
             </div>
-          </li>
 
-          {/* 3. TV Series */}
-          <li
-            className={activeTab === 'series' ? 'active' : ''}
-            onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-          >
-            TV Series
-          </li>
+            {/* Main Navigation Links */}
+            <div className="mobile-section-title" style={{ marginTop: '20px' }}>
+              <Film size={16} color="#fff" /> Categories & Features
+            </div>
+            <ul className="mobile-nav-list">
+              <li
+                className={activeTab === 'home' && !searchQuery ? 'active' : ''}
+                onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
+              >
+                <Home size={18} /> Home
+              </li>
+              <li
+                className={activeTab === 'series' ? 'active' : ''}
+                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
+              >
+                <Tv size={18} /> TV Series
+              </li>
+              <li
+                className={activeTab === 'movies' ? 'active' : ''}
+                onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
+              >
+                <Film size={18} /> Movies
+              </li>
+              <li
+                className={activeTab === 'latest' ? 'active' : ''}
+                onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
+              >
+                <Sparkles size={18} /> Latest Releases
+              </li>
+              <li
+                className={activeTab === 'trending' ? 'active' : ''}
+                onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
+              >
+                <Flame size={18} /> Trending Now
+              </li>
+              <li
+                className={location.pathname === '/mylist' ? 'active' : ''}
+                onClick={() => { setIsMobileMenuOpen(false); navigate('/mylist'); }}
+              >
+                <User size={18} /> My Watchlist
+              </li>
+            </ul>
 
-          {/* 4. Movies */}
-          <li
-            className={activeTab === 'movies' ? 'active' : ''}
-            onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-          >
-            Movies
-          </li>
-
-          {/* 5. Latest */}
-          <li
-            className={activeTab === 'latest' ? 'active' : ''}
-            onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-          >
-            Latest
-          </li>
-
-          {/* 6. Trending */}
-          <li
-            className={activeTab === 'trending' ? 'active' : ''}
-            onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-          >
-            Trending
-          </li>
-
-          {/* 7. Multi-Region Dropdown */}
-          <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
-            </span>
-            <div className="nav-dropdown-menu">
+            {/* Multi-Region Selector */}
+            <div className="mobile-section-title" style={{ marginTop: '20px' }}>
+              <Globe size={16} color="#46d369" /> Select Region
+            </div>
+            <div className="mobile-vj-chips-grid">
               {REGIONS_LIST.map((reg) => (
-                <div
+                <button
                   key={reg.name}
-                  className={`dropdown-item ${activeRegion === reg.slug ? 'selected' : ''}`}
+                  className={`mobile-vj-chip ${activeRegion === reg.slug ? 'selected' : ''}`}
                   onClick={() => {
                     setActiveRegion(reg.slug);
                     setActiveTab('regions');
                     onSearchChange('');
+                    setIsMobileMenuOpen(false);
                     navigate('/browse');
                   }}
                 >
                   {reg.name}
-                </div>
+                </button>
               ))}
             </div>
-          </li>
 
-          {/* 8. My List */}
-          <li
-            className={location.pathname === '/mylist' ? 'active' : ''}
-            onClick={() => navigate('/mylist')}
-          >
-            My List
-          </li>
-        </ul>
-      </div>
-
-      <div className="nav-right">
-        {/* Expanding Search Bar */}
-        <div className={`search-box ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
-          <button
-            className="search-btn-icon"
-            onClick={() => {
-              setIsSearchExpanded(true);
-              setTimeout(() => {
-                if (searchInputRef.current) searchInputRef.current.focus();
-              }, 100);
-            }}
-            type="button"
-          >
-            <Search size={18} />
-          </button>
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Titles, VJs, genres..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onBlur={() => { if (!searchQuery) setIsSearchExpanded(false); }}
-          />
-          {searchQuery && (
-            <button
-              className="search-clear-btn"
-              onClick={() => {
-                onSearchChange('');
-                if (searchInputRef.current) searchInputRef.current.focus();
-              }}
-              type="button"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* User Notifications */}
-        <button className="player-control-icon-btn" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Bell size={20} />
-          <span style={{
-            position: 'absolute',
-            top: '-4px',
-            right: '-4px',
-            background: '#e50914',
-            color: '#fff',
-            fontSize: '0.65rem',
-            fontWeight: 'bold',
-            borderRadius: '10px',
-            padding: '2px 4px',
-            lineHeight: '1',
-            minWidth: '15px',
-            textAlign: 'center'
-          }}>11</span>
-        </button>
-
-        {currentProfile && (
-          <div className="nav-profile-menu">
-            <div className="nav-profile-avatar">
-              <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
-            </div>
-            <ChevronDown size={16} />
-            
-            <div className="profile-dropdown">
-              <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}>
-                <strong>{currentProfile.name}</strong>
-              </div>
-              <div className="dropdown-item" onClick={() => navigate('/profiles')}>
-                <User size={16} /> Manage Profiles
-              </div>
-              <div className="dropdown-item" onClick={() => navigate('/account')}>
-                <Settings size={16} /> Account Settings
-              </div>
-              <div className="dropdown-divider" />
-              <div className="dropdown-item" onClick={handleSignOut}>
+            {/* Mobile Footer Actions */}
+            <div className="mobile-drawer-footer">
+              <button className="mobile-signout-btn" onClick={handleSignOut}>
                 <LogOut size={16} /> Sign out
-              </div>
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </header>
+        </div>
+      )}
+
+      {/* Sleek Mobile Bottom Tab Bar for Smartphones */}
+      <nav className="mobile-bottom-nav">
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'home' && !searchQuery ? 'active' : ''}`}
+          onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+        >
+          <Home size={20} />
+          <span>Home</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <Mic size={20} color="#e50914" />
+          <span>VJs</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'series' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+        >
+          <Tv size={20} />
+          <span>Series</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'movies' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+        >
+          <Film size={20} />
+          <span>Movies</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${searchQuery ? 'active' : ''}`}
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <Search size={20} />
+          <span>Search</span>
+        </div>
+      </nav>
+    </>
   );
 }
