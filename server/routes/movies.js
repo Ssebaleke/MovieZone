@@ -182,16 +182,29 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Get single movie details with VJ versions
+// Get single movie details with direct ReelPlexi video stream URL
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    if (id.startsWith('rp_')) {
+    if (id.startsWith('rp_') || !isNaN(id)) {
       const cleanId = id.replace('rp_movie_', '').replace('rp_series_', '').replace('rp_', '');
-      const detail = await reelplexiFetch(`/movies/${cleanId}`) || await reelplexiFetch(`/series/${cleanId}`);
-      if (detail && detail.data) {
-        const movie = mapReelplexiItem(detail.data);
+      
+      const [detailRes, streamRes] = await Promise.all([
+        reelplexiFetch(`/movies/${cleanId}`).catch(() => null) || reelplexiFetch(`/series/${cleanId}`).catch(() => null),
+        reelplexiFetch(`/movies/${cleanId}/stream`).catch(() => null)
+      ]);
+
+      const rawDetail = detailRes?.data || detailRes;
+      if (rawDetail) {
+        const movie = mapReelplexiItem(rawDetail);
+        if (streamRes) {
+          movie.videoUrl = streamRes.stream_url || streamRes.video_url || streamRes.remux_url || movie.videoUrl;
+          movie.embedUrl = streamRes.embed_url || movie.embedUrl;
+          movie.isMkv = streamRes.is_mkv;
+          movie.format = streamRes.format;
+        }
+
         const available_vj_versions = [
           { id: `${movie.id}_vj1`, vj: movie.vj || 'VJ Junior', title: `${movie.title} (Voiced by ${movie.vj || 'VJ Junior'})` },
           { id: `${movie.id}_vj2`, vj: 'VJ Emmy', title: `${movie.title} (Voiced by VJ Emmy)` },

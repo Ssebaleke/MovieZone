@@ -75,32 +75,64 @@ export default function VideoPlayer({ movie, onClose }) {
     };
   }, []);
 
+  // Direct ReelPlexi stream fetch
+  const [directStreamUrl, setDirectStreamUrl] = useState(movie.videoUrl || '');
+  const [directEmbedUrl, setDirectEmbedUrl] = useState(movie.embedUrl || '');
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStreamData = async () => {
+      try {
+        const res = await api.get(`/movies/${movie.id}`);
+        if (res && res.movie && isMounted) {
+          if (res.movie.videoUrl) setDirectStreamUrl(res.movie.videoUrl);
+          if (res.movie.embedUrl) setDirectEmbedUrl(res.movie.embedUrl);
+        }
+      } catch (e) {
+        console.error('Error fetching direct ReelPlexi stream:', e);
+      }
+    };
+
+    fetchStreamData();
+    return () => { isMounted = false; };
+  }, [movie.id]);
+
+  const activeVideoUrl = directStreamUrl || movie.videoUrl || '';
+  const isReelplexiStream = Boolean(activeVideoUrl && (
+    activeVideoUrl.includes('reelplexi.com') ||
+    activeVideoUrl.includes('mlegacytv.com') ||
+    activeVideoUrl.includes('stream/proxy') ||
+    activeVideoUrl.endsWith('.mp4') ||
+    activeVideoUrl.endsWith('.mkv') ||
+    activeVideoUrl.endsWith('.m3u8')
+  ));
+
   // ----------------------------------------------------
-  // Local Player Fallback Effects & Handlers
+  // Local Player Effects & Handlers
   // ----------------------------------------------------
   useEffect(() => {
-    if (movie.tmdbId) return; // Skip custom video setup if embedding iframe
+    if (!isReelplexiStream && movie.tmdbId) return; // Skip custom video setup if falling back to external iframe
 
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !activeVideoUrl) return;
 
     let hls = null;
-    const isHls = movie.videoUrl.endsWith('.m3u8');
+    const isHls = activeVideoUrl.endsWith('.m3u8');
 
     if (isHls) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = movie.videoUrl;
+        video.src = activeVideoUrl;
       } else {
         import('hls.js').then((Hls) => {
           if (Hls.isSupported()) {
             hls = new Hls.default();
-            hls.loadSource(movie.videoUrl);
+            hls.loadSource(activeVideoUrl);
             hls.attachMedia(video);
           }
         });
       }
     } else {
-      video.src = movie.videoUrl;
+      video.src = activeVideoUrl;
     }
 
     const restoreBookmark = async () => {
@@ -126,12 +158,10 @@ export default function VideoPlayer({ movie, onClose }) {
         hls.destroy();
       }
     };
-  }, [movie, movie.tmdbId]);
+  }, [activeVideoUrl, isReelplexiStream, movie.id, movie.tmdbId]);
 
-  // Periodic watch progress check-in for custom video (every 5 seconds)
+  // Periodic watch progress check-in (every 5.5 seconds)
   useEffect(() => {
-    if (movie.tmdbId) return;
-
     const interval = setInterval(() => {
       const video = videoRef.current;
       if (video && isPlaying && currentProfile.id) {
@@ -141,11 +171,11 @@ export default function VideoPlayer({ movie, onClose }) {
 
     return () => {
       clearInterval(interval);
-      if (videoRef.current && currentProfile.id && !movie.tmdbId) {
+      if (videoRef.current && currentProfile.id) {
         saveProgress(Math.floor(videoRef.current.currentTime));
       }
     };
-  }, [isPlaying, movie.tmdbId]);
+  }, [isPlaying, movie.id]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -234,8 +264,8 @@ export default function VideoPlayer({ movie, onClose }) {
     return `${minutes}:${paddedSeconds}`;
   };
 
-  // Server Selection States
-  const [activeServer, setActiveServer] = useState('pro-multi'); // 'pro-multi' | 'vidsrc-me' | 'embed-su' | '2embed'
+  // Server Selection States for fallback
+  const [activeServer, setActiveServer] = useState('pro-multi');
 
   const SERVERS = [
     { id: 'pro-multi', name: 'Server 1 (Pro Multi)' },
@@ -244,7 +274,6 @@ export default function VideoPlayer({ movie, onClose }) {
     { id: '2embed', name: 'Server 4 (Multi-Lang)' }
   ];
 
-  // Build the embed source URL based on active server & TMDB ID
   const getEmbedUrl = () => {
     const isShow = movie.type === 'SHOW';
     if (activeServer === 'vidsrc-me') {
@@ -262,7 +291,6 @@ export default function VideoPlayer({ movie, onClose }) {
         ? `https://www.2embed.cc/embedtv/${movie.tmdbId}&s=${season}&e=${episode}`
         : `https://www.2embed.cc/embed/${movie.tmdbId}`;
     }
-    // Default Pro Multi (vidsrc.sbs)
     return isShow
       ? `https://vidsrc.sbs/embed/tv/${movie.tmdbId}/${season}/${episode}`
       : `https://vidsrc.sbs/embed/movie/${movie.tmdbId}`;
@@ -271,8 +299,8 @@ export default function VideoPlayer({ movie, onClose }) {
   // ----------------------------------------------------
   // Render Method
   // ----------------------------------------------------
-  if (movie.tmdbId) {
-    // Return Iframe Player with custom float controls for multi-server playback
+  if (!isReelplexiStream && movie.tmdbId) {
+    // Return Fallback Iframe Player ONLY if ReelPlexi direct stream is unavailable
     return (
       <div
         ref={playerRef}
