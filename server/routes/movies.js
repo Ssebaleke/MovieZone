@@ -124,11 +124,11 @@ router.get('/', async (req, res) => {
     if (vj) {
       // When a specific VJ is selected, group by Action, Comedy, Drama, Series for that VJ
       const vjCategories = [
-        { name: `💥 Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
-        { name: `😂 Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
-        { name: `❤️ Romance & Thrillers (${vj})`, match: (m) => m.type === 'MOVIE' && /romance|thriller|crime/i.test(m.genres) },
-        { name: `📺 TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' },
-        { name: `🎬 All Movies by ${vj}`, match: () => true }
+        { name: `Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
+        { name: `Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
+        { name: `Romance & Thrillers (${vj})`, match: (m) => m.type === 'MOVIE' && /romance|thriller|crime/i.test(m.genres) },
+        { name: `TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' },
+        { name: `All Movies by ${vj}`, match: () => true }
       ];
 
       const vjCatMap = new Map();
@@ -148,14 +148,14 @@ router.get('/', async (req, res) => {
     } else {
       // Main Screen: Group by Genres (Action, Comedy, Romance, Sci-Fi, Thrillers, Series, Trending)
       const genreCategories = [
-        { name: '🔥 Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && /action|trending|blockbuster/i.test(m.genres)) },
-        { name: '💥 Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
-        { name: '😂 Comedy & Entertainment', match: (m) => m.type === 'MOVIE' && /comedy|humor|family|animation/i.test(m.genres) },
-        { name: '❤️ Romance & Emotional Dramas', match: (m) => m.type === 'MOVIE' && /romance|romantic|drama/i.test(m.genres) },
-        { name: '🦸‍♂️ Sci-Fi, Superhero & Fantasy', match: (m) => m.type === 'MOVIE' && /sci-fi|fantasy|superhero|science/i.test(m.genres) },
-        { name: '🎭 Thrillers, Crime & Mystery', match: (m) => m.type === 'MOVIE' && /thriller|crime|mystery|horror/i.test(m.genres) },
-        { name: '📺 Popular TV Series & Shows', match: (m) => m.type === 'SHOW' },
-        { name: '🇺🇬 Ugandan VJ Exclusives', match: () => true }
+        { name: 'Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && /action|trending|blockbuster/i.test(m.genres)) },
+        { name: 'Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
+        { name: 'Comedy & Entertainment', match: (m) => m.type === 'MOVIE' && /comedy|humor|family|animation/i.test(m.genres) },
+        { name: 'Romance & Emotional Dramas', match: (m) => m.type === 'MOVIE' && /romance|romantic|drama/i.test(m.genres) },
+        { name: 'Sci-Fi, Superhero & Fantasy', match: (m) => m.type === 'MOVIE' && /sci-fi|fantasy|superhero|science/i.test(m.genres) },
+        { name: 'Thrillers, Crime & Mystery', match: (m) => m.type === 'MOVIE' && /thriller|crime|mystery|horror/i.test(m.genres) },
+        { name: 'Popular TV Series & Shows', match: (m) => m.type === 'SHOW' },
+        { name: 'Ugandan VJ Exclusives', match: () => true }
       ];
 
       const catMap = new Map();
