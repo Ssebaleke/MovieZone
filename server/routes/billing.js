@@ -70,11 +70,10 @@ router.get('/packages', async (req, res) => {
       ];
 
       for (const item of defaults) {
-        await prisma.package.upsert({
-          where: { slug: item.slug },
-          update: {},
-          create: item
-        });
+        const existing = await prisma.package.findFirst({ where: { slug: item.slug } });
+        if (!existing) {
+          await prisma.package.create({ data: item });
+        }
       }
 
       packages = await prisma.package.findMany({
