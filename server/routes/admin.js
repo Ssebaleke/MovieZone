@@ -113,6 +113,46 @@ router.post('/settings', async (req, res) => {
   }
 });
 
+// LivePay Diagnostic & Balance Test Endpoint
+router.get('/livepay/test-balance', async (req, res) => {
+  try {
+    const keySetting = await prisma.systemSetting.findUnique({ where: { key: 'LIVEPAY_API_KEY' } });
+    const accSetting = await prisma.systemSetting.findUnique({ where: { key: 'LIVEPAY_ACCOUNT_NUMBER' } });
+
+    const apiKey = keySetting?.value?.trim();
+    const accountNumber = accSetting?.value?.trim();
+
+    if (!apiKey) {
+      return res.status(400).json({ error: 'LivePay API Key is not set in settings' });
+    }
+
+    const lpRes = await fetch('https://livepay.me/api/check-balance', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const lpData = await lpRes.json();
+
+    if (!lpRes.ok || lpData.success === false) {
+      const msg = lpData.message || lpData.error || `LivePay error (${lpRes.status})`;
+      return res.status(lpRes.status || 400).json({ error: msg, details: lpData });
+    }
+
+    res.json({
+      success: true,
+      message: 'LivePay API Key verified successfully!',
+      accountNumber: accountNumber || 'Not specified',
+      balanceData: lpData
+    });
+  } catch (error) {
+    console.error('Error testing LivePay balance:', error);
+    res.status(500).json({ error: 'Failed to connect to LivePay server: ' + error.message });
+  }
+});
+
 // Reelplexi API Live Stats & Analytics for Admin
 router.get('/reelplexi/stats', async (req, res) => {
   try {

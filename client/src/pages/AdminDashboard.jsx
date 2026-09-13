@@ -47,6 +47,8 @@ export default function AdminDashboard() {
   const [livepayAccountNumber, setLivepayAccountNumber] = useState('');
   const [livepayEnabled, setLivepayEnabled] = useState(true);
   const [livepaySaveStatus, setLivepaySaveStatus] = useState('');
+  const [livepayTestResult, setLivepayTestResult] = useState(null);
+  const [testingLivepay, setTestingLivepay] = useState(false);
 
   // Form Fields for Media Ingestion
   const [title, setTitle] = useState('');
@@ -211,6 +213,19 @@ export default function AdminDashboard() {
       setLivepaySaveStatus('LivePay Payment Gateway settings saved successfully!');
     } catch (err) {
       setLivepaySaveStatus('Error saving LivePay settings: ' + err.message);
+    }
+  };
+
+  const handleTestLivepayConnection = async () => {
+    setTestingLivepay(true);
+    setLivepayTestResult(null);
+    try {
+      const data = await api.get('/admin/livepay/test-balance');
+      setLivepayTestResult({ success: true, message: data.message, data: data.balanceData, accountNumber: data.accountNumber });
+    } catch (err) {
+      setLivepayTestResult({ success: false, error: err.message });
+    } finally {
+      setTestingLivepay(false);
     }
   };
 
@@ -949,12 +964,38 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleTestLivepayConnection}
+                    disabled={testingLivepay || !livepayApiKey}
+                    style={{ background: '#1f222e', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '14px 24px', borderRadius: '8px', fontWeight: '700', cursor: testingLivepay ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <RefreshCw size={16} className={testingLivepay ? 'spin' : ''} /> {testingLivepay ? 'Testing Authorization...' : '⚡ Test API Key & Check Balance'}
+                  </button>
+
                   <button type="submit" style={{ background: '#e50914', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(229,9,20,0.4)' }}>
                     <Check size={18} /> Save LivePay Settings
                   </button>
                 </div>
               </form>
+
+              {livepayTestResult && (
+                <div style={{
+                  marginTop: '24px', padding: '18px', borderRadius: '8px',
+                  background: livepayTestResult.success ? 'rgba(70,211,105,0.1)' : 'rgba(239,68,68,0.1)',
+                  border: livepayTestResult.success ? '1px solid #46d369' : '1px solid #ef4444'
+                }}>
+                  <div style={{ fontWeight: 'bold', color: livepayTestResult.success ? '#46d369' : '#f87171', marginBottom: '6px', fontSize: '0.95rem' }}>
+                    {livepayTestResult.success ? '✅ ' + livepayTestResult.message : '❌ Authorization Test Failed: ' + livepayTestResult.error}
+                  </div>
+                  {livepayTestResult.data && (
+                    <div style={{ fontSize: '0.85rem', color: '#ccc', marginTop: '8px', fontFamily: 'monospace' }}>
+                      <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(livepayTestResult.data, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Integration Specifications Card */}
