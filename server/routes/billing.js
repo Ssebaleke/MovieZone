@@ -107,9 +107,9 @@ router.get('/packages', async (req, res) => {
   }
 });
 
-// Process dynamic package payment checkout
+// Process dynamic package payment checkout (Mobile Money via LivePay / Card)
 router.post('/subscribe-package', authenticateToken, async (req, res) => {
-  const { packageId } = req.body;
+  const { packageId, paymentMethod, phoneNumber, network } = req.body;
 
   if (!packageId) {
     return res.status(400).json({ error: 'Package ID is required' });
@@ -122,6 +122,82 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
 
     if (!pkg || !pkg.isActive) {
       return res.status(404).json({ error: 'Selected subscription package is invalid or inactive' });
+    }
+
+    // Fetch LivePay credentials from SystemSetting
+    let livepayApiKey = '';
+    let livepayAccountNumber = '';
+    let livepayEnabled = true;
+
+    try {
+      const allSettings = await prisma.systemSetting.findMany({
+        where: {
+          key: { in: ['LIVEPAY_API_KEY', 'LIVEPAY_ACCOUNT_NUMBER', 'LIVEPAY_ENABLED'] }
+        }
+      });
+      allSettings.forEach(s => {
+        if (s.key === 'LIVEPAY_API_KEY') livepayApiKey = s.value ? s.value.trim() : '';
+        if (s.key === 'LIVEPAY_ACCOUNT_NUMBER') livepayAccountNumber = s.value ? s.value.trim() : '';
+        if (s.key === 'LIVEPAY_ENABLED') livepayEnabled = s.value !== 'false';
+      });
+    } catch (sErr) {
+      console.warn('SystemSetting lookup error:', sErr.message);
+    }
+
+    // If payment method is mobile money (or default) and LivePay API Key is configured
+    if (paymentMethod === 'mobile_money' || (!paymentMethod && livepayApiKey)) {
+      if (!phoneNumber) {
+        return res.status(400).json({ error: 'Mobile Money phone number is required' });
+      }
+
+      if (livepayApiKey && livepayAccountNumber && livepayEnabled) {
+        // Construct unique reference (max 30 chars, no spaces)
+        const timestamp = Date.now().toString().slice(-6);
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        const reference = `LP_${timestamp}_${randomNum}`;
+
+        const collectPayload = {
+          accountNumber: livepayAccountNumber,
+          phoneNumber: phoneNumber.trim(),
+          amount: pkg.price,
+          currency: pkg.currency || 'UGX',
+          reference: reference,
+          description: `MovieZone ${pkg.name}`
+        };
+
+        if (pkg.currency && pkg.currency.toUpperCase() !== 'UGX') {
+          collectPayload.network = network || 'GLOBAL';
+        }
+
+        console.log(`Initiating LivePay Collection request to https://livepay.me/api/collect-money for ${pkg.name} (${pkg.price} ${pkg.currency})...`);
+
+        try {
+          const lpResponse = await fetch('https://livepay.me/api/collect-money', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${livepayApiKey}`
+            },
+            body: JSON.stringify(collectPayload)
+          });
+
+          const lpData = await lpResponse.json();
+
+          if (!lpResponse.ok || lpData.success === false) {
+            const errorMsg = lpData.message || lpData.error || `LivePay transaction failed (${lpResponse.status})`;
+            console.error('LivePay API Error:', lpData);
+            return res.status(400).json({ error: errorMsg });
+          }
+
+          console.log('LivePay Collection successful:', lpData);
+        } catch (lpErr) {
+          console.error('Error connecting to LivePay API:', lpErr);
+          return res.status(502).json({ error: 'Failed to reach LivePay server: ' + lpErr.message });
+        }
+      } else if (!livepayApiKey || !livepayAccountNumber) {
+        // Demo fallback alert if Admin has not entered LivePay API key yet
+        console.warn('LivePay API Key or Account Number not configured in Admin Dashboard yet.');
+      }
     }
 
     // Calculate dynamic expiration based on package interval

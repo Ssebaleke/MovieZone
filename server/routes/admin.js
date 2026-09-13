@@ -80,16 +80,30 @@ router.get('/settings', async (req, res) => {
 });
 
 router.post('/settings', async (req, res) => {
-  const { key, value } = req.body;
-  if (!key) {
-    return res.status(400).json({ error: 'Setting key is required' });
-  }
+  const { key, value, settings } = req.body;
 
   try {
+    if (settings && typeof settings === 'object') {
+      const results = [];
+      for (const [k, v] of Object.entries(settings)) {
+        const updated = await prisma.systemSetting.upsert({
+          where: { key: k },
+          update: { value: String(v || '') },
+          create: { key: k, value: String(v || '') }
+        });
+        results.push(updated);
+      }
+      return res.json({ success: true, settings: results });
+    }
+
+    if (!key) {
+      return res.status(400).json({ error: 'Setting key is required' });
+    }
+
     const updated = await prisma.systemSetting.upsert({
       where: { key },
-      update: { value: value || '' },
-      create: { key, value: value || '' }
+      update: { value: value !== undefined ? String(value) : '' },
+      create: { key, value: value !== undefined ? String(value) : '' }
     });
 
     res.json({ success: true, setting: updated });

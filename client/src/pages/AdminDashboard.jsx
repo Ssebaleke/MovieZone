@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, X, Edit, Trash2, Users, Key, Film, Activity,
   ShieldCheck, Server, LogOut, BarChart3, Database,
-  Search, RefreshCw, CheckCircle2, AlertCircle, Clock, Package as PackageIcon, Check
+  Search, RefreshCw, CheckCircle2, AlertCircle, Clock, Package as PackageIcon, Check, CreditCard, Smartphone, DollarSign
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -41,6 +41,12 @@ export default function AdminDashboard() {
   const [reelplexiUsage, setReelplexiUsage] = useState(null);
   const [reelplexiActivity, setReelplexiActivity] = useState([]);
   const [topMovies, setTopMovies] = useState([]);
+
+  // LivePay Payment Gateway State
+  const [livepayApiKey, setLivepayApiKey] = useState('');
+  const [livepayAccountNumber, setLivepayAccountNumber] = useState('');
+  const [livepayEnabled, setLivepayEnabled] = useState(true);
+  const [livepaySaveStatus, setLivepaySaveStatus] = useState('');
 
   // Form Fields for Media Ingestion
   const [title, setTitle] = useState('');
@@ -170,6 +176,11 @@ export default function AdminDashboard() {
       if (settingsData && settingsData.REELPLEXI_API_KEY) {
         setApiKey(settingsData.REELPLEXI_API_KEY);
       }
+      if (settingsData && settingsData.settings) {
+        if (settingsData.settings.LIVEPAY_API_KEY) setLivepayApiKey(settingsData.settings.LIVEPAY_API_KEY);
+        if (settingsData.settings.LIVEPAY_ACCOUNT_NUMBER) setLivepayAccountNumber(settingsData.settings.LIVEPAY_ACCOUNT_NUMBER);
+        if (settingsData.settings.LIVEPAY_ENABLED !== undefined) setLivepayEnabled(settingsData.settings.LIVEPAY_ENABLED !== 'false');
+      }
       const statsData = await api.get('/admin/reelplexi/stats');
       setReelplexiStats(statsData);
 
@@ -183,6 +194,23 @@ export default function AdminDashboard() {
       setTopMovies(topData);
     } catch (err) {
       console.error('Error fetching settings/stats:', err);
+    }
+  };
+
+  const handleSaveLivepaySettings = async (e) => {
+    e.preventDefault();
+    setLivepaySaveStatus('');
+    try {
+      await api.post('/admin/settings', {
+        settings: {
+          LIVEPAY_API_KEY: livepayApiKey.trim(),
+          LIVEPAY_ACCOUNT_NUMBER: livepayAccountNumber.trim(),
+          LIVEPAY_ENABLED: livepayEnabled ? 'true' : 'false'
+        }
+      });
+      setLivepaySaveStatus('LivePay Payment Gateway settings saved successfully!');
+    } catch (err) {
+      setLivepaySaveStatus('Error saving LivePay settings: ' + err.message);
     }
   };
 
@@ -371,6 +399,17 @@ export default function AdminDashboard() {
             </button>
 
             <button
+              onClick={() => { setActiveNav('livepay'); fetchSettingsAndStats(); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
+                background: activeNav === 'livepay' ? '#e50914' : 'transparent', color: activeNav === 'livepay' ? '#fff' : '#aaa',
+                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
+              }}
+            >
+              <CreditCard size={18} /> LivePay Gateway Config
+            </button>
+
+            <button
               onClick={() => { setActiveNav('apikeys'); fetchSettingsAndStats(); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
@@ -441,6 +480,7 @@ export default function AdminDashboard() {
               {activeNav === 'overview' && 'System Overview & Platform Health'}
               {activeNav === 'signups' && 'User Signups & Account Directory'}
               {activeNav === 'packages' && 'Subscription Packages & Pricing Configuration'}
+              {activeNav === 'livepay' && 'LivePay Mobile Money Payment Gateway Configuration'}
               {activeNav === 'apikeys' && 'Reelplexi API Key & CDN Configuration'}
               {activeNav === 'catalog' && 'Ugandan VJ Media Catalog'}
               {activeNav === 'analytics' && 'VJ Content Performance Analytics'}
@@ -842,6 +882,98 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 7: LIVEPAY PAYMENT GATEWAY CONFIGURATION */}
+        {activeNav === 'livepay' && (
+          <div>
+            <div style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '28px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Smartphone size={22} color="#e50914" /> LivePay Mobile Money Gateway Settings
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: livepayEnabled ? '#46d369' : '#888', fontWeight: 'bold' }}>
+                    {livepayEnabled ? 'GATEWAY ACTIVE' : 'GATEWAY DISABLED'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={livepayEnabled}
+                    onChange={(e) => setLivepayEnabled(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#e50914' }}
+                  />
+                </div>
+              </div>
+
+              <p style={{ color: '#aaa', marginBottom: '24px', fontSize: '0.92rem', lineHeight: '1.5' }}>
+                Type your <strong>LivePay API Key</strong> and <strong>Account Number</strong> below. When users click pay via Mobile Money during package subscription, funds will be directly requested via <code>https://livepay.me/api/collect-money</code>.
+              </p>
+
+              {livepaySaveStatus && (
+                <div style={{
+                  background: livepaySaveStatus.startsWith('Error') ? '#3d1c1c' : '#1b3d22',
+                  border: livepaySaveStatus.startsWith('Error') ? '1px solid #e50914' : '1px solid #46d369',
+                  color: '#fff', padding: '14px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  {livepaySaveStatus.startsWith('Error') ? <AlertCircle size={18} color="#e50914" /> : <CheckCircle2 size={18} color="#46d369" />}
+                  {livepaySaveStatus}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveLivepaySettings} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#ccc', marginBottom: '6px' }}>
+                    LIVEPAY API KEY (Authorization Token)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Paste LivePay Bearer API key..."
+                    value={livepayApiKey}
+                    onChange={(e) => setLivepayApiKey(e.target.value)}
+                    style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.2)', padding: '14px 18px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#ccc', marginBottom: '6px' }}>
+                    LIVEPAY ACCOUNT NUMBER
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. LP2305443309"
+                    value={livepayAccountNumber}
+                    onChange={(e) => setLivepayAccountNumber(e.target.value)}
+                    style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.2)', padding: '14px 18px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button type="submit" style={{ background: '#e50914', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(229,9,20,0.4)' }}>
+                    <Check size={18} /> Save LivePay Settings
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Integration Specifications Card */}
+            <div style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '24px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '14px', color: '#fff' }}>
+                LivePay Collect Money Specification Summary
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '0.85rem', color: '#aaa' }}>
+                <div style={{ background: '#0a0a0c', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <strong style={{ color: '#fff' }}>Endpoint:</strong> <code>https://livepay.me/api/collect-money</code><br />
+                  <strong style={{ color: '#fff' }}>Method:</strong> POST<br />
+                  <strong style={{ color: '#fff' }}>Auth Header:</strong> Bearer &lt;Your API Key&gt;
+                </div>
+                <div style={{ background: '#0a0a0c', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <strong style={{ color: '#fff' }}>Configured Account:</strong> {livepayAccountNumber || 'Not Set'}<br />
+                  <strong style={{ color: '#fff' }}>Configured API Key:</strong> {livepayApiKey ? '••••••••' + livepayApiKey.slice(-6) : 'Not Set'}<br />
+                  <strong style={{ color: '#fff' }}>Status:</strong> {livepayApiKey && livepayAccountNumber ? 'Ready for collections' : 'Awaiting configuration'}
+                </div>
+              </div>
             </div>
           </div>
         )}

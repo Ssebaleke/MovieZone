@@ -44,6 +44,11 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
       return;
     }
 
+    if (paymentMethod === 'mobile_money' && !phoneNumber.trim()) {
+      setError('Please enter your Mobile Money phone number (e.g. 077XXXXXXX or 075XXXXXXX)');
+      return;
+    }
+
     setError('');
     setLoading(true);
     setSuccessMsg('');
@@ -52,7 +57,7 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
       const response = await api.post('/billing/subscribe-package', {
         packageId: selectedPkgId,
         paymentMethod,
-        phoneNumber
+        phoneNumber: phoneNumber.trim()
       });
 
       if (response.success && response.user) {
