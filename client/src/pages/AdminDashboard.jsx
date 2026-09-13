@@ -230,11 +230,24 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const cachedUser = localStorage.getItem('netflix_user');
-    if (!cachedUser || JSON.parse(cachedUser).role !== 'ADMIN') {
+    const token = localStorage.getItem('netflix_token');
+    if (!token) {
       navigate('/login');
       return;
     }
+
+    // Verify live user role from server
+    api.get('/auth/me')
+      .then(res => {
+        if (res && res.user) {
+          localStorage.setItem('netflix_user', JSON.stringify(res.user));
+          if (res.user.role !== 'ADMIN') {
+            navigate('/browse');
+          }
+        }
+      })
+      .catch(() => {});
+
     fetchMovies();
     fetchUserSignups();
     fetchSettingsAndStats();

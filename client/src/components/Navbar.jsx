@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -16,6 +16,10 @@ export default function Navbar({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const userStr = localStorage.getItem('netflix_user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
 
   // Drawer expandable dropdown toggles
   const [isDrawerVjOpen, setIsDrawerVjOpen] = useState(false);
@@ -294,6 +298,11 @@ export default function Navbar({
                 <div className="dropdown-item" onClick={() => navigate('/account')}>
                   <Settings size={16} /> Account Settings
                 </div>
+                {currentUser && currentUser.role === 'ADMIN' && (
+                  <div className="dropdown-item" onClick={() => navigate('/admin')} style={{ color: '#e50914', fontWeight: 'bold' }}>
+                    <ShieldCheck size={16} color="#e50914" /> Admin Console
+                  </div>
+                )}
                 <div className="dropdown-divider" />
                 <div className="dropdown-item" onClick={handleSignOut}>
                   <LogOut size={16} /> Sign out
