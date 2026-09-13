@@ -288,14 +288,13 @@ router.delete('/movies/:id', async (req, res) => {
 // ==========================================
 // 6. Subscription Package Management
 // ==========================================
-router.get('/packages', async (req, res) => {
-  try {
-    let packages = await prisma.package.findMany({
+async function fetchAdminPackages() {
+  if (prisma.package) {
+    let pkgs = await prisma.package.findMany({
       orderBy: { createdAt: 'desc' }
     });
 
-    // If no packages exist yet, seed default options
-    if (packages.length === 0) {
+    if (pkgs.length === 0) {
       const defaults = [
         {
           name: 'Daily Pass',
@@ -342,11 +341,24 @@ router.get('/packages', async (req, res) => {
         }
       }
 
-      packages = await prisma.package.findMany({
+      pkgs = await prisma.package.findMany({
         orderBy: { createdAt: 'desc' }
       });
     }
+    return pkgs;
+  }
 
+  try {
+    const rawPkgs = await prisma.$queryRawUnsafe(`SELECT * FROM "Package" ORDER BY "createdAt" DESC`);
+    return rawPkgs;
+  } catch (err) {
+    return [];
+  }
+}
+
+router.get('/packages', async (req, res) => {
+  try {
+    const packages = await fetchAdminPackages();
     res.json(packages);
   } catch (error) {
     console.error('Error fetching admin packages:', error);

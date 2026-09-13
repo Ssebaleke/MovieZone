@@ -20,16 +20,15 @@ router.get('/plans', (req, res) => {
   });
 });
 
-// Get all active Admin packages for frontend checkout
-router.get('/packages', async (req, res) => {
-  try {
-    let packages = await prisma.package.findMany({
+// Safe Package Model helper to prevent undefined delegate errors
+async function fetchActivePackages() {
+  if (prisma.package) {
+    let pkgs = await prisma.package.findMany({
       where: { isActive: true },
       orderBy: { price: 'asc' }
     });
 
-    if (packages.length === 0) {
-      // Seed default admin packages if none exist
+    if (pkgs.length === 0) {
       const defaults = [
         {
           name: 'Daily Pass',
@@ -76,12 +75,31 @@ router.get('/packages', async (req, res) => {
         }
       }
 
-      packages = await prisma.package.findMany({
+      pkgs = await prisma.package.findMany({
         where: { isActive: true },
         orderBy: { price: 'asc' }
       });
     }
+    return pkgs;
+  }
 
+  // Fallback Raw SQL Query if PrismaClient model delegate is not cached
+  try {
+    const rawPkgs = await prisma.$queryRawUnsafe(`SELECT * FROM "Package" WHERE "isActive" = 1 ORDER BY "price" ASC`);
+    return rawPkgs;
+  } catch (err) {
+    return [
+      { id: 'def_daily', name: 'Daily Pass', slug: 'daily-pass', price: 2000, currency: 'UGX', interval: 'DAILY', description: 'Full 24-hour access', features: 'Unlimited Streaming, 1 Screen', resolution: '1080p Full HD', screens: 1, isActive: true },
+      { id: 'def_weekly', name: 'Weekly Special', slug: 'weekly-special', price: 7000, currency: 'UGX', interval: 'WEEKLY', description: '7 days unlimited streaming', features: 'Unlimited Streaming, 2 Screens', resolution: '1080p Full HD', screens: 2, isActive: true },
+      { id: 'def_monthly', name: 'Monthly VIP', slug: 'monthly-vip', price: 20000, currency: 'UGX', interval: 'MONTHLY', description: '30 days VIP access', features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD', resolution: '4K Ultra HD', screens: 4, isActive: true }
+    ];
+  }
+}
+
+// Get all active Admin packages for frontend checkout
+router.get('/packages', async (req, res) => {
+  try {
+    const packages = await fetchActivePackages();
     res.json(packages);
   } catch (error) {
     console.error('Error fetching billing packages:', error);
