@@ -336,7 +336,11 @@ router.get('/packages', async (req, res) => {
       ];
 
       for (const item of defaults) {
-        await prisma.package.create({ data: item });
+        await prisma.package.upsert({
+          where: { slug: item.slug },
+          update: {},
+          create: item
+        });
       }
 
       packages = await prisma.package.findMany({
@@ -347,7 +351,7 @@ router.get('/packages', async (req, res) => {
     res.json(packages);
   } catch (error) {
     console.error('Error fetching admin packages:', error);
-    res.status(500).json({ error: 'Server error fetching packages' });
+    res.status(500).json({ error: 'Server error fetching packages: ' + error.message });
   }
 });
 
