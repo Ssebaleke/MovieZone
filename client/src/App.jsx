@@ -8,6 +8,7 @@ import Browse from './pages/Browse';
 import WatchlistPage from './pages/WatchlistPage';
 import AccountSettings from './pages/AccountSettings';
 import AdminDashboard from './pages/AdminDashboard';
+import { api } from './utils/api';
 
 // Route protector for Authenticated users
 function ProtectedRoute({ children }) {
