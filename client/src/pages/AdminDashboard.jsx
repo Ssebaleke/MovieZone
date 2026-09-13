@@ -74,9 +74,10 @@ export default function AdminDashboard() {
   const fetchPackages = async () => {
     try {
       const data = await api.get('/admin/packages');
-      setPackagesList(data || []);
+      setPackagesList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching admin packages:', err);
+      setPackagesList([]);
     }
   };
 
@@ -153,10 +154,11 @@ export default function AdminDashboard() {
   const fetchMovies = async () => {
     try {
       const data = await api.get('/admin/movies');
-      setMovies(data);
+      setMovies(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching admin movies list:', err);
       setError(err.message || 'Error fetching movies list');
+      setMovies([]);
     }
   };
 
@@ -164,9 +166,10 @@ export default function AdminDashboard() {
     setUsersLoading(true);
     try {
       const data = await api.get('/admin/users');
-      setUserSignups(data);
+      setUserSignups(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching user signups list:', err);
+      setUserSignups([]);
     } finally {
       setUsersLoading(false);
     }
@@ -183,19 +186,32 @@ export default function AdminDashboard() {
         if (settingsData.settings.LIVEPAY_ACCOUNT_NUMBER) setLivepayAccountNumber(settingsData.settings.LIVEPAY_ACCOUNT_NUMBER);
         if (settingsData.settings.LIVEPAY_ENABLED !== undefined) setLivepayEnabled(settingsData.settings.LIVEPAY_ENABLED !== 'false');
       }
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+    }
+
+    try {
       const statsData = await api.get('/admin/reelplexi/stats');
       setReelplexiStats(statsData);
+    } catch (err) {}
 
+    try {
       const usageData = await api.get('/admin/reelplexi/usage?range=30d');
       setReelplexiUsage(usageData);
+    } catch (err) {}
 
+    try {
       const activityData = await api.get('/admin/reelplexi/activity?limit=10');
-      setReelplexiActivity(activityData);
-
-      const topData = await api.get('/admin/reelplexi/top-movies');
-      setTopMovies(topData);
+      setReelplexiActivity(Array.isArray(activityData) ? activityData : []);
     } catch (err) {
-      console.error('Error fetching settings/stats:', err);
+      setReelplexiActivity([]);
+    }
+
+    try {
+      const topData = await api.get('/admin/reelplexi/top-movies');
+      setTopMovies(Array.isArray(topData) ? topData : []);
+    } catch (err) {
+      setTopMovies([]);
     }
   };
 
@@ -374,9 +390,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredUsers = userSignups.filter(u =>
-    u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    u.plan.toLowerCase().includes(userSearchQuery.toLowerCase())
+  const filteredUsers = (Array.isArray(userSignups) ? userSignups : []).filter(u =>
+    u && u.email && (
+      u.email.toLowerCase().includes((userSearchQuery || '').toLowerCase()) ||
+      (u.plan || '').toLowerCase().includes((userSearchQuery || '').toLowerCase())
+    )
   );
 
   return (
