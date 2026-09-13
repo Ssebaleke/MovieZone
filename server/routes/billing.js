@@ -198,6 +198,63 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
         // Demo fallback alert if Admin has not entered LivePay API key yet
         console.warn('LivePay API Key or Account Number not configured in Admin Dashboard yet.');
       }
+    } else if (paymentMethod === 'card' && livepayApiKey && livepayAccountNumber && livepayEnabled) {
+      // Calculate USD amount (min $1.00, max $5000.00)
+      let usdAmount = 1.00;
+      if (pkg.currency && pkg.currency.toUpperCase() === 'USD') {
+        usdAmount = Math.max(1, Math.min(5000, Number(pkg.price)));
+      } else {
+        const converted = Number(pkg.price) / 3700;
+        usdAmount = Math.max(1, Math.min(5000, Math.round(converted * 100) / 100));
+      }
+
+      const timestamp = Date.now().toString().slice(-6);
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const reference = `LPC_${timestamp}_${randomNum}`;
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+      const cardPayload = {
+        accountNumber: livepayAccountNumber,
+        amount: usdAmount,
+        currency: 'USD',
+        reference: reference,
+        email: req.user.email,
+        name: req.user.email ? req.user.email.split('@')[0] : 'Customer',
+        description: `MovieZone ${pkg.name} Subscription`,
+        return_url: `${clientUrl}/account?checkout=success`
+      };
+
+      console.log(`Initiating LivePay Card Collection request to https://livepay.me/api/card-collection for $${usdAmount} USD...`);
+
+      try {
+        const lpCardRes = await fetch('https://livepay.me/api/card-collection', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${livepayApiKey}`
+          },
+          body: JSON.stringify(cardPayload)
+        });
+
+        const lpCardData = await lpCardRes.json();
+
+        if (!lpCardRes.ok || lpCardData.success === false) {
+          const errorMsg = lpCardData.message || lpCardData.error || `LivePay Card Collection failed (${lpCardRes.status})`;
+          console.error('LivePay Card API Error:', lpCardData);
+          return res.status(400).json({ error: errorMsg });
+        }
+
+        if (lpCardData.checkout_url) {
+          return res.json({
+            success: true,
+            checkoutUrl: lpCardData.checkout_url,
+            message: 'Redirecting to LivePay Card Checkout...'
+          });
+        }
+      } catch (lpCardErr) {
+        console.error('Error connecting to LivePay Card API:', lpCardErr);
+        return res.status(502).json({ error: 'Failed to reach LivePay Card service: ' + lpCardErr.message });
+      }
     }
 
     // Calculate dynamic expiration based on package interval

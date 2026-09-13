@@ -60,6 +60,14 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
         phoneNumber: phoneNumber.trim()
       });
 
+      if (response.checkoutUrl) {
+        setSuccessMsg('Redirecting to LivePay Card Payment Gateway...');
+        setTimeout(() => {
+          window.location.href = response.checkoutUrl;
+        }, 800);
+        return;
+      }
+
       if (response.success && response.user) {
         // Update cached user in localStorage
         const storedUser = JSON.parse(localStorage.getItem('netflix_user') || '{}');
