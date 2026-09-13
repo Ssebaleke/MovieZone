@@ -29,11 +29,49 @@ function ProfileGate({ children }) {
 
 // Route protector for Admin Role
 function AdminGate({ children }) {
-  const userStr = localStorage.getItem('netflix_user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  if (!user || user.role !== 'ADMIN') {
+  const [checking, setChecking] = React.useState(true);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  React.useEffect(() => {
+    const cachedStr = localStorage.getItem('netflix_user');
+    const cachedUser = cachedStr ? JSON.parse(cachedStr) : null;
+    if (cachedUser && cachedUser.role === 'ADMIN') {
+      setIsAdmin(true);
+      setChecking(false);
+    }
+
+    // Verify live role from server
+    api.get('/auth/me')
+      .then(res => {
+        if (res && res.user) {
+          localStorage.setItem('netflix_user', JSON.stringify(res.user));
+          if (res.user.role === 'ADMIN') {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        }
+      })
+      .catch(err => {
+        console.error('AdminGate check failed:', err);
+      })
+      .finally(() => {
+        setChecking(false);
+      });
+  }, []);
+
+  if (checking) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0c', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>
+        <div>Loading Admin Console...</div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
     return <Navigate to="/browse" replace />;
   }
+
   return children;
 }
 

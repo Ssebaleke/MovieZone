@@ -28,9 +28,10 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Make the very first user an ADMIN, others USER
+    // Make the very first user or designated admin emails an ADMIN, others USER
     const userCount = await prisma.user.count();
-    const role = userCount === 0 ? 'ADMIN' : 'USER';
+    const isFirstOrAdmin = userCount === 0 || email.toLowerCase().includes('admin') || email.toLowerCase().includes('jsvico100') || email.toLowerCase().includes('ahmedmutumba');
+    const role = isFirstOrAdmin ? 'ADMIN' : 'USER';
 
     // Admin users get ACTIVE by default, regular users start INACTIVE
     const plan = role === 'ADMIN' ? 'PREMIUM' : 'NONE';
