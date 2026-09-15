@@ -2605,11 +2605,53 @@ a {
   padding: 0 4px;
 }
 
+/* Mobile Header Search Bar styling replacing text links on small screens */
+.mobile-header-search-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 6px 14px;
+  flex: 1;
+  max-width: 260px;
+  margin: 0 10px;
+}
+
+.mobile-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+.mobile-search-clear-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+@media (max-width: 1024px) {
+  .desktop-only-links {
+    display: none !important;
+  }
+  .mobile-only-search {
+    display: flex !important;
+  }
+}
+
 @media (max-width: 768px) {
   .mobile-bottom-nav {
     display: flex;
   }
-  .desktop-only-search, .desktop-only-icon, .desktop-only-links {
+  .desktop-only-search, .desktop-only-icon {
     display: none !important;
   }
   .desktop-hidden {

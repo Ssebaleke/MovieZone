@@ -237,6 +237,23 @@ export default function Navbar({
           </ul>
         </div>
 
+        {/* Mobile Header Search Bar (Replaces text links on small devices) */}
+        <div className="mobile-header-search-bar mobile-only-search">
+          <Search size={16} color="#aaaaaa" style={{ flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search titles, VJs..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="mobile-search-input"
+          />
+          {searchQuery && (
+            <button className="mobile-search-clear-btn" onClick={() => onSearchChange('')} type="button">
+              <X size={14} color="#aaaaaa" />
+            </button>
+          )}
+        </div>
+
         {/* Right Section */}
         <div className="nav-right">
           {/* Mobile Only Header Actions (Cast, Bell Badge 8, Search) */}
