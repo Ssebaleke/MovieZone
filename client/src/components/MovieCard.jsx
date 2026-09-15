@@ -38,8 +38,13 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
   const isHls = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
   const matchPercentage = Math.floor(Math.random() * 15) + 85;
 
+  const [imageError, setImageError] = useState(false);
   const firstGenre = movie.genres ? movie.genres.split(',')[0].trim().toUpperCase() : 'ACTION';
   const releaseYear = movie.releaseYear || movie.year || 2026;
+
+  const isFallbackUrl = !movie.thumbnailUrl || movie.thumbnailUrl.includes('unsplash.com');
+  const showTitleOverlay = isFallbackUrl || imageError;
+  const cleanTitle = (movie.title || '').replace(/\s*\(.*?\)/g, '').trim();
 
   return (
     <div
@@ -60,9 +65,22 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
           className="card-poster-img"
           loading="lazy"
           onError={(e) => {
+            setImageError(true);
             e.target.src = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80';
           }}
         />
+
+        {/* Dynamic Netflix-Style Title Overlay for fallback/missing posters */}
+        {showTitleOverlay && (
+          <div className="dynamic-title-card-overlay">
+            <div className="title-card-brand-tag">MOVIEZONE EXCLUSIVE</div>
+            <div className="title-card-main-title">{cleanTitle}</div>
+            <div className="title-card-sub-info">
+              <span>{firstGenre}</span>
+              {releaseYear && <span> • {releaseYear}</span>}
+            </div>
+          </div>
+        )}
 
         {/* Premium Star Badge when subscription is not active */}
         {!userIsSubscribed && !isHovered && (
