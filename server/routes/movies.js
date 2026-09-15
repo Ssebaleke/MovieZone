@@ -8,32 +8,6 @@ const router = express.Router();
 // Apply auth middleware to client movie routes (allow unsubscribed browsing)
 router.use(authenticateToken);
 
-// Official TMDB poster mapping for popular titles
-const TMDB_POSTER_MAP = [
-  { keywords: ['dune'], poster: 'https://image.tmdb.org/t/p/w500/1pdfLPoLkh9DjhYStB2ERmLFwhC.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/xOMo8WhK81rmXYQtKG9xYvG5nQ9.jpg' },
-  { keywords: ['deadpool', 'wolverine'], poster: 'https://image.tmdb.org/t/p/w500/8cdWjhZ2yChPjZUTofhW2Y4cEVM.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/yDHYTfA3R0jFYba16jBB12MStSt.jpg' },
-  { keywords: ['godzilla', 'kong'], poster: 'https://image.tmdb.org/t/p/w500/bAV2gIQyU66e63Wv9z2b314e36.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/z121WiqwE72vK4v2p958641.jpg' },
-  { keywords: ['furiosa', 'mad max saga'], poster: 'https://image.tmdb.org/t/p/w500/iADOJ8Zymht2JPMoy3R7xFiZ8ht.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/wNAhuOZ3Zf84jG3VjEABx9W48PO.jpg' },
-  { keywords: ['mad max: fury', 'fury road'], poster: 'https://image.tmdb.org/t/p/w500/8tZYtuYiF9c1h82C5Y87v980.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/nlCHUWldAcxsI1c5y85M1.jpg' },
-  { keywords: ['matrix resurrections', 'matrix'], poster: 'https://image.tmdb.org/t/p/w500/8c4a8kE7PjhGTC589GyRm68fYR1.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/hv2Vb0u7c36g57b4461.jpg' },
-  { keywords: ['oppenheimer'], poster: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg' },
-  { keywords: ['past lives'], poster: 'https://image.tmdb.org/t/p/w500/k3W1k7W6Y2F7uY8k3j01j0.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/gD9p888.jpg' },
-  { keywords: ['kgf'], poster: 'https://image.tmdb.org/t/p/w500/628Dep6AxEtSJj2LVJ7jGvL2Z.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/3w889b.jpg' },
-  { keywords: ['rrr'], poster: 'https://image.tmdb.org/t/p/w500/nEuF2avNFMte6uiFTDniqqzC5Wn.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vI4fD35123.jpg' },
-  { keywords: ['gladiator'], poster: 'https://image.tmdb.org/t/p/w500/ty8TTHpM20gE0qX3A1v980.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/9l17548.jpg' },
-  { keywords: ['crouching tiger', 'hidden dragon'], poster: 'https://image.tmdb.org/t/p/w500/5mG48M9.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/5mG48M9.jpg' },
-  { keywords: ['avatar'], poster: 'https://image.tmdb.org/t/p/w500/t68Gf12g3eX7bB9c14.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vL5LR6W7Z.jpg' },
-  { keywords: ['beekeeper'], poster: 'https://image.tmdb.org/t/p/w500/AfeUz0wzF98.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/AfeUz0wzF98.jpg' },
-  { keywords: ['spider-man', 'spider verse'], poster: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj7sfd8.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/8Vt6mWEReuy4Of61Lnj5Xj7sfd8.jpg' },
-  { keywords: ['extraction'], poster: 'https://image.tmdb.org/t/p/w500/7gKI9hpEMcGEpP7y3j.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/7gKI9hpEMcGEpP7y3j.jpg' },
-  { keywords: ['john wick'], poster: 'https://image.tmdb.org/t/p/w500/vZloFAK7N9MWwPKT2s.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vZloFAK7N9MWwPKT2s.jpg' },
-  { keywords: ['squid game'], poster: 'https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNen3GDW.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/dDlEmu3EZ0Pgg93K2SVNen3GDW.jpg' },
-  { keywords: ['lovely runner'], poster: 'https://image.tmdb.org/t/p/w500/55n5u4LgG9G03p.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/55n5u4LgG9G03p.jpg' },
-  { keywords: ['fast x', 'fast & furious'], poster: 'https://image.tmdb.org/t/p/w500/fiVW06LefBZZTUZG9Yl9Zq.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/fiVW06LefBZZTUZG9Yl9Zq.jpg' },
-  { keywords: ['the flash', 'flash'], poster: 'https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctZOSN1YySIySpwo.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/yF1eOkaW1ToDceP1JFUZ45hZQV9.jpg' },
-  { keywords: ['batman', 'dark knight'], poster: 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50x9T25uYw.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/74xTEgt7R36Fpooo50x9T25uYw.jpg' }
-];
-
 const DIVERSE_FALLBACK_POSTERS = [
   'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&h=750&fit=crop&q=80',
@@ -57,25 +31,25 @@ function resolveMovieMedia(item) {
   let rawPoster = item.poster_url || item.poster_path || item.poster || item.thumbnailUrl || item.thumbnail_url || item.image || item.cover;
   let rawBackdrop = item.backdrop_url || item.backdrop_path || item.backdrop || item.backdropUrl || item.background;
 
-  if (rawPoster && typeof rawPoster === 'string' && rawPoster.startsWith('/')) {
-    rawPoster = `https://image.tmdb.org/t/p/w500${rawPoster}`;
-  }
-  if (rawBackdrop && typeof rawBackdrop === 'string' && rawBackdrop.startsWith('/')) {
-    rawBackdrop = `https://image.tmdb.org/t/p/w1280${rawBackdrop}`;
-  }
-
-  // 2. Title matching against TMDB poster dictionary
-  const title = (item.title || '').toLowerCase().replace(/\s*\(.*?\)/g, '').trim();
-  for (const entry of TMDB_POSTER_MAP) {
-    if (entry.keywords.some(kw => title.includes(kw))) {
-      return {
-        poster: rawPoster || entry.poster,
-        backdrop: rawBackdrop || entry.backdrop || entry.poster
-      };
+  // Resolve relative Reelplexi storage paths against https://app.reelplexi.com
+  if (rawPoster && typeof rawPoster === 'string') {
+    if (rawPoster.startsWith('/')) {
+      rawPoster = `https://app.reelplexi.com${rawPoster}`;
+    } else if (!rawPoster.startsWith('http://') && !rawPoster.startsWith('https://')) {
+      rawPoster = `https://app.reelplexi.com/${rawPoster}`;
     }
   }
 
-  // 3. Fallback to hash-based diverse posters
+  if (rawBackdrop && typeof rawBackdrop === 'string') {
+    if (rawBackdrop.startsWith('/')) {
+      rawBackdrop = `https://app.reelplexi.com${rawBackdrop}`;
+    } else if (!rawBackdrop.startsWith('http://') && !rawBackdrop.startsWith('https://')) {
+      rawBackdrop = `https://app.reelplexi.com/${rawBackdrop}`;
+    }
+  }
+
+  // 2. Fallback to hash-based diverse movie posters for items missing poster metadata
+  const title = (item.title || '').toLowerCase().replace(/\s*\(.*?\)/g, '').trim();
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
     hash = (hash << 5) - hash + title.charCodeAt(i);
@@ -178,7 +152,17 @@ router.get('/', async (req, res) => {
     const dbMovies = await prisma.movie.findMany({
       orderBy: latest ? { releaseYear: 'desc' } : { id: 'asc' }
     });
-    movies = [...movies, ...dbMovies];
+
+    const mappedDbMovies = dbMovies.map(m => {
+      const media = resolveMovieMedia(m);
+      return {
+        ...m,
+        thumbnailUrl: media.poster,
+        backdropUrl: media.backdrop
+      };
+    });
+
+    movies = [...movies, ...mappedDbMovies];
 
     // Deduplicate by reelplexiId (or id for DB items), then filter out items with no poster
     const seenIds = new Set();
