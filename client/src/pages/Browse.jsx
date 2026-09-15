@@ -9,12 +9,14 @@ import VideoPlayer from '../components/VideoPlayer';
 import MovieCard from '../components/MovieCard';
 import UpgradeModal from '../components/UpgradeModal';
 import { api } from '../utils/api';
+import { SkeletonHero, SkeletonRow } from '../components/SkeletonRow';
 
 export default function Browse() {
   const [categories, setCategories] = useState([]);
   const [featured, setFeatured] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
   const [continueWatching, setContinueWatching] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Active navigation filter states
   const [activeTab, setActiveTab] = useState('home');
@@ -90,24 +92,25 @@ export default function Browse() {
       if (activeTab === 'trending') queryParams.push('trending=true');
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      
-      // Fetch catalog grouped by rows
-      const catalog = await api.get(`/movies${queryString}`);
+
+      // Fetch all 3 in parallel
+      const [catalog, list, history] = await Promise.all([
+        api.get(`/movies${queryString}`),
+        api.get(`/mylist/${currentProfile.id}`),
+        api.get(`/history/${currentProfile.id}`),
+      ]);
+
       setCategories(catalog.categories || []);
       setFeatured(catalog.featured);
-
-      // Fetch watchlist
-      const list = await api.get(`/mylist/${currentProfile.id}`);
       setWatchlist(list);
-
-      // Fetch watch progress history
-      const history = await api.get(`/history/${currentProfile.id}`);
       setContinueWatching(history);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       if (err.status === 403 && err.data?.subscriptionRequired) {
         navigate('/signup/plans');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -179,7 +182,17 @@ export default function Browse() {
         setActiveRegion={setActiveRegion}
       />
 
-      {searchQuery ? (
+      {/* Skeleton loading state */}
+      {loading && !searchQuery && (
+        <div className="browse-skeleton">
+          <SkeletonHero />
+          <SkeletonRow count={6} />
+          <SkeletonRow count={6} />
+          <SkeletonRow count={6} />
+        </div>
+      )}
+
+      {!loading && searchQuery ? (
         // Search Results layout grid
         <div style={{ padding: 'clamp(80px, 15vw, 120px) 4% 60px 4%' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '700', marginBottom: '24px' }}>
@@ -207,6 +220,7 @@ export default function Browse() {
         </div>
       ) : (
         // Main Dashboard Browse Layout
+        !loading && (
         <>
           {featured && (
             <HeroBanner
@@ -307,6 +321,7 @@ export default function Browse() {
             ))}
           </div>
         </>
+        )
       )}
 
       {/* Pop-up modal details */}

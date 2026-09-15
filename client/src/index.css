@@ -4907,3 +4907,63 @@ a {
   }
 }
 
+
+/* ==========================================================================
+   Skeleton / Shimmer Loading State
+   ========================================================================== */
+
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
+}
+
+.skeleton-block {
+  background: linear-gradient(
+    90deg,
+    #1a1a1a 0%,
+    #2a2a2a 40%,
+    #1a1a1a 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Hero skeleton */
+.skeleton-hero {
+  position: relative;
+  width: 100%;
+  height: clamp(320px, 60vh, 600px);
+  background: #111;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 6% 60px;
+  overflow: hidden;
+}
+
+.skeleton-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #141414 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.skeleton-hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Mobile skeleton adjustments */
+@media (max-width: 768px) {
+  .skeleton-hero {
+    height: 70vw;
+    min-height: 280px;
+    padding: 0 4% 32px;
+  }
+
+  .skeleton-block[style*="16.666%"] {
+    flex: 0 0 calc(33.333% - 8px) !important;
+  }
+}
