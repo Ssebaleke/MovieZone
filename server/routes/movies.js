@@ -20,8 +20,8 @@ function mapReelplexiItem(item) {
     reelplexiId: item.id,
     title: item.title,
     description: item.overview || item.description || '',
-    thumbnailUrl: item.poster_url || item.thumbnailUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
-    backdropUrl: item.backdrop_url || item.poster_url || item.backdropUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
+    thumbnailUrl: item.poster_url || item.thumbnailUrl || null,
+    backdropUrl: item.backdrop_url || item.poster_url || item.backdropUrl || null,
     videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
     embedUrl: item.embed_url || item.embedUrl || '',
     tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
@@ -95,17 +95,20 @@ router.get('/', async (req, res) => {
     });
     movies = [...movies, ...dbMovies];
 
-    // Deduplicate by ID and Title
-    const uniqueMap = new Map();
-    movies.forEach(m => {
-      const key = `${m.title}_${m.vj}`;
-      if (!uniqueMap.has(m.id) && !uniqueMap.has(key)) {
-        uniqueMap.set(m.id, m);
-        uniqueMap.set(key, m);
-      }
+    // Deduplicate by reelplexiId (or id for DB items), then filter out items with no poster
+    const seenIds = new Set();
+    const seenTitles = new Set();
+    movies = movies.filter(m => {
+      if (!m.thumbnailUrl) return false; // drop items with no poster image
+      const uid = m.reelplexiId || m.id;
+      if (seenIds.has(uid)) return false;
+      seenIds.add(uid);
+      // Also deduplicate by title+type to avoid same movie from movies+trending endpoints
+      const titleKey = `${m.title}__${m.type}`;
+      if (seenTitles.has(titleKey)) return false;
+      seenTitles.add(titleKey);
+      return true;
     });
-    // Extract unique values
-    movies = Array.from(new Set(uniqueMap.values()));
 
     // Apply client-side filters if specified
     if (vj) {

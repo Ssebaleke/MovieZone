@@ -54,7 +54,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
     >
       {/* Poster Image Container */}
       <div className="card-poster-wrapper">
-        <img src={movie.thumbnailUrl} alt={movie.title} className="card-poster-img" loading="lazy" />
+        <img src={movie.thumbnailUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23141414%22 width=%22200%22 height=%22300%22/%3E%3C/svg%3E'} alt={movie.title} className="card-poster-img" loading="lazy" onError={e => { e.target.style.display='none'; e.target.parentElement.style.background='#141414'; }} />
 
         {/* Premium Star Badge when subscription is not active */}
         {!userIsSubscribed && !isHovered && (
