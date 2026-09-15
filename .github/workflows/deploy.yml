@@ -15,22 +15,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST || '69.164.245.17' }}
-          username: ${{ secrets.VPS_USERNAME || 'root' }}
-          password: ${{ secrets.VPS_PASSWORD || 'Vico@2026' }}
-          port: 22
-          script_stop: true
-          script: |
+      - name: Execute Deployment Commands on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USERNAME }}
+          VPS_PASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          TARGET_HOST="${VPS_HOST:-69.164.245.17}"
+          TARGET_USER="${VPS_USER:-root}"
+          TARGET_PASS="${VPS_PASS:-Vico@2026}"
+
+          sudo apt-get update -qq && sudo apt-get install -y sshpass -qq
+          
+          echo "Connecting to $TARGET_HOST via SSH..."
+          sshpass -p "$TARGET_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET_USER@$TARGET_HOST" << 'EOF'
+            set -e
             echo "===> Pulling latest code from GitHub main branch..."
             cd /root/MovieZone
             git fetch origin main
             git reset --hard origin/main
-            
+
             echo "===> Building and recreating Docker containers..."
             docker-compose build
             docker-compose up -d --force-recreate
-            
-            echo "===> Auto-deployment finished successfully!"
+
+            echo "===> Auto-deployment completed successfully on VPS!"
+          EOF
