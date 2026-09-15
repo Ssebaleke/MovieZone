@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ThumbsUp, X, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, X, Volume2, VolumeX, Mic, ChevronDown } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggleWatchlist }) {
@@ -8,7 +8,14 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
   const [activeVJVersion, setActiveVJVersion] = useState(movie.vj || 'VJ Junior');
   const [isMuted, setIsMuted] = useState(true);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const videoRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setCurrentMovie(movie);
@@ -17,28 +24,18 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
 
   useEffect(() => {
     if (!currentMovie) return;
-    
-    // Fetch detailed data + recommendations
     const fetchMovieData = async () => {
       try {
         const data = await api.get(`/movies/${currentMovie.id}`);
         setRecommendations(data.recommendations || []);
-        if (data.movie) {
-          setCurrentMovie(prev => ({ ...prev, ...data.movie }));
-        }
+        if (data.movie) setCurrentMovie(prev => ({ ...prev, ...data.movie }));
       } catch (err) {
         console.error('Error fetching details/recommendations:', err);
       }
     };
-
     fetchMovieData();
     setIsPlayingVideo(false);
-
-    // Auto-play trailer inside modal after 1.5 seconds
-    const timer = setTimeout(() => {
-      setIsPlayingVideo(true);
-    }, 1500);
-
+    const timer = setTimeout(() => setIsPlayingVideo(true), 1500);
     return () => clearTimeout(timer);
   }, [currentMovie.id]);
 
@@ -47,21 +44,116 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
   const isHls = currentMovie.videoUrl && currentMovie.videoUrl.endsWith('.m3u8');
   const isMovieInWatchlist = watchlist && watchlist.some(m => m.id === currentMovie.id);
   const matchPercentage = Math.floor(Math.random() * 15) + 85;
-
   const availableVJs = [
-    { name: currentMovie.vj || 'VJ Junior', desc: 'Action & High Energy Luganda' },
-    { name: 'VJ Emmy', desc: 'Romance & Deep Voiceover' },
-    { name: 'VJ Ice P', desc: 'Fast Commentary & FX' }
+    { name: currentMovie.vj || 'VJ Junior' },
+    { name: 'VJ Emmy' },
+    { name: 'VJ Ice P' }
   ];
 
   const handleRecommendationClick = (recMovie) => {
     setCurrentMovie(recMovie);
     const scrollContainer = document.querySelector('.modal-overlay');
-    if (scrollContainer) {
-      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /* ── MOBILE BOTTOM SHEET ── */
+  if (isMobile) {
+    return (
+      <div className="mobile-sheet-overlay" onClick={onClose}>
+        <div className="mobile-sheet" onClick={e => e.stopPropagation()}>
+          {/* Drag handle */}
+          <div className="mobile-sheet-handle" />
+
+          {/* Video / Backdrop preview */}
+          <div className="mobile-sheet-preview">
+            {isPlayingVideo ? (
+              isHls ? (
+                <HlsModalPlayer src={currentMovie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={currentMovie.backdropUrl} />
+              ) : (
+                <video ref={videoRef} src={currentMovie.videoUrl} autoPlay muted={isMuted} loop playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )
+            ) : (
+              <img src={currentMovie.backdropUrl || currentMovie.thumbnailUrl} alt={currentMovie.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
+            <div className="mobile-sheet-preview-overlay" />
+
+            {/* Close + Mute controls */}
+            <button className="mobile-sheet-close" onClick={onClose}><X size={18} color="#fff" /></button>
+            <button className="mobile-sheet-mute" onClick={() => setIsMuted(!isMuted)}>
+              {isMuted ? <VolumeX size={16} color="#fff" /> : <Volume2 size={16} color="#fff" />}
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="mobile-sheet-body">
+            {/* Title + meta */}
+            <h2 className="mobile-sheet-title">{currentMovie.title}</h2>
+            <div className="mobile-sheet-meta">
+              <span className="meta-year-green">{currentMovie.releaseYear || currentMovie.year || 2026}</span>
+              <span className="meta-type-badge">{currentMovie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+              {currentMovie.rating && <span className="card-rating-badge">{currentMovie.rating}</span>}
+              {currentMovie.duration && <span style={{ color: '#aaa' }}>{currentMovie.duration}</span>}
+            </div>
+
+            {/* BIG Play button */}
+            <button className="mobile-sheet-play-btn" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
+              <Play size={20} fill="#000" color="#000" /> Play
+            </button>
+
+            {/* Watchlist + Like row */}
+            <div className="mobile-sheet-actions">
+              <button className="mobile-sheet-action-btn" onClick={() => onToggleWatchlist(currentMovie)}>
+                {isMovieInWatchlist ? <Check size={20} color="#46d369" /> : <Plus size={20} color="#fff" />}
+                <span>{isMovieInWatchlist ? 'Saved' : 'My List'}</span>
+              </button>
+              <button className="mobile-sheet-action-btn" onClick={() => alert('Liked!')}>
+                <ThumbsUp size={20} color="#fff" />
+                <span>Like</span>
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className="mobile-sheet-desc">{currentMovie.description}</p>
+
+            {/* VJ selector */}
+            <div className="mobile-sheet-vj-section">
+              <div className="mobile-sheet-section-label"><Mic size={13} color="#e50914" /> Audio Version</div>
+              <div className="mobile-sheet-vj-pills">
+                {availableVJs.map(vj => (
+                  <button
+                    key={vj.name}
+                    className={`mobile-sheet-vj-pill ${activeVJVersion === vj.name ? 'active' : ''}`}
+                    onClick={() => setActiveVJVersion(vj.name)}
+                  >
+                    {vj.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* More Like This */}
+            {recommendations.length > 0 && (
+              <div className="mobile-sheet-more">
+                <div className="mobile-sheet-section-label" style={{ marginBottom: '10px' }}>More Like This</div>
+                <div className="mobile-sheet-recs">
+                  {recommendations.slice(0, 6).map(rec => (
+                    <div key={rec.id} className="mobile-sheet-rec-card" onClick={() => handleRecommendationClick(rec)}>
+                      <img src={rec.thumbnailUrl} alt={rec.title} />
+                      <span>{rec.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── DESKTOP LAYOUT ── */
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content-container" onClick={(e) => e.stopPropagation()}>
