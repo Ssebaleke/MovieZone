@@ -117,17 +117,41 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user details
-router.get('/me', authenticateToken, (req, res) => {
-  res.json({
-    user: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role,
-      plan: req.user.plan,
-      subscriptionStatus: req.user.subscriptionStatus
+// Get current user details — auto-expire subscription if past subscriptionEnd
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Auto-expire if subscriptionEnd has passed
+    if (
+      user.subscriptionStatus === 'ACTIVE' &&
+      user.role !== 'ADMIN' &&
+      user.subscriptionEnd &&
+      new Date(user.subscriptionEnd) < new Date()
+    ) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { subscriptionStatus: 'INACTIVE', plan: 'NONE' }
+      });
+      user.subscriptionStatus = 'INACTIVE';
+      user.plan = 'NONE';
     }
-  });
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionEnd: user.subscriptionEnd
+      }
+    });
+  } catch (err) {
+    console.error('Error in /me:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;

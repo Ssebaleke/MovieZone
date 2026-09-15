@@ -117,7 +117,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
             <div className="card-control-row">
               <div className="card-controls-left">
                 <button className="card-control-btn play" onClick={() => onPlay(movie)}>
-                  <Play size={16} fill="#000" />
+                  {userIsSubscribed ? <Play size={16} fill="#000" /> : <span style={{fontSize:'0.7rem',fontWeight:800}}>🔒</span>}
                 </button>
                 <button className="card-control-btn" onClick={() => onToggleWatchlist(movie)}>
                   {isInWatchlist ? <Check size={16} color="#fff" /> : <Plus size={16} color="#fff" />}

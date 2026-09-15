@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Plus, Check, ThumbsUp, X, Volume2, VolumeX, Mic, ChevronDown } from 'lucide-react';
 import { api } from '../utils/api';
 
-export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggleWatchlist }) {
+export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggleWatchlist, isSubscribed }) {
   const [recommendations, setRecommendations] = useState([]);
   const [currentMovie, setCurrentMovie] = useState(movie);
   const [activeVJVersion, setActiveVJVersion] = useState(movie.vj || 'VJ Junior');
@@ -98,9 +98,15 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
             </div>
 
             {/* BIG Play button */}
-            <button className="mobile-sheet-play-btn" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
-              <Play size={20} fill="#000" color="#000" /> Play
-            </button>
+            {isSubscribed ? (
+              <button className="mobile-sheet-play-btn" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
+                <Play size={20} fill="#000" color="#000" /> Play
+              </button>
+            ) : (
+              <button className="mobile-sheet-play-btn dm-locked-btn" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
+                🔒 Subscribe to Watch
+              </button>
+            )}
 
             {/* Watchlist + Like row */}
             <div className="mobile-sheet-actions">
@@ -213,9 +219,15 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
             </div>
 
             <div className="billboard-actions" style={{ flexWrap: 'wrap', gap: '10px' }}>
-              <button className="billboard-btn billboard-play" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
-                <Play size={20} fill="#000" /> Play ({activeVJVersion})
-              </button>
+              {isSubscribed ? (
+                <button className="billboard-btn billboard-play" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
+                  <Play size={20} fill="#000" /> Play ({activeVJVersion})
+                </button>
+              ) : (
+                <button className="billboard-btn billboard-play dm-locked-btn" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
+                  🔒 Subscribe to Watch
+                </button>
+              )}
               <button className="card-control-btn" style={{ width: '44px', height: '44px' }} onClick={() => onToggleWatchlist(currentMovie)}>
                 {isMovieInWatchlist ? <Check size={20} color="#fff" /> : <Plus size={20} color="#fff" />}
               </button>

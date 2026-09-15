@@ -6221,3 +6221,31 @@ a {
   color: #e50914;
   font-weight: 700;
 }
+
+/* Premium lock badge on movie cards */
+.card-premium-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, #b8860b, #ffd700);
+  color: #000;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Locked subscribe button in detail modal */
+.dm-locked-btn {
+  background: linear-gradient(135deg, #b8860b, #e6a817) !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+  cursor: pointer;
+}
+
+.dm-locked-btn:hover {
+  background: linear-gradient(135deg, #e6a817, #ffd700) !important;
+}

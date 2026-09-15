@@ -33,7 +33,9 @@ export default function Browse() {
     const str = localStorage.getItem('netflix_user');
     return str ? JSON.parse(str) : null;
   });
-  const isSubscribed = user?.subscriptionStatus === 'ACTIVE' || user?.role === 'ADMIN';
+  const isSubscribed = user?.subscriptionStatus === 'ACTIVE' && (
+    user?.role === 'ADMIN' || !user?.subscriptionEnd || new Date(user.subscriptionEnd) > new Date()
+  );
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMovieTarget, setUpgradeMovieTarget] = useState(null);
 
