@@ -228,6 +228,263 @@ a {
   margin: 4px 0;
 }
 
+/* ==========================================================================
+   Hero Billboard Banner (Desktop & Mobile)
+   ========================================================================== */
+.billboard-hero {
+  position: relative;
+  width: 100%;
+  height: clamp(520px, 80vh, 850px);
+  background-size: cover;
+  background-position: center top;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 4% 80px 4%;
+  box-sizing: border-box;
+}
+
+.billboard-hero-desktop {
+  display: flex;
+}
+
+.billboard-hero-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .billboard-hero-desktop {
+    display: none !important;
+  }
+  .billboard-hero-mobile {
+    display: block !important;
+    position: relative;
+    width: 100%;
+    height: 70vh;
+    min-height: 480px;
+    background-size: cover;
+    background-position: center;
+  }
+}
+
+/* Background video container */
+.billboard-video-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.billboard-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Gradient Overlay Mask */
+.billboard-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 20, 20, 0.4) 0%,
+    rgba(20, 20, 20, 0.1) 40%,
+    rgba(20, 20, 20, 0.8) 75%,
+    #141414 100%
+  );
+  pointer-events: none;
+}
+
+/* Info Text Box */
+.billboard-info {
+  position: relative;
+  z-index: 3;
+  max-width: 650px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.billboard-title-desktop {
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.05;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+  margin: 0;
+  letter-spacing: -1px;
+}
+
+/* Meta Badges Row */
+.billboard-meta-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meta-year-green {
+  color: #46d369;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.meta-type-badge {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.meta-season-text {
+  color: #d2d2d2;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.meta-vj-badge {
+  background: #e50914;
+  color: #ffffff;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(229, 9, 20, 0.4);
+}
+
+/* Genre Pills Row */
+.billboard-genre-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.genre-pill-item {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.genre-pill-item:not(:last-child)::after {
+  content: "•";
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Description Text */
+.billboard-desc {
+  color: #e5e5e5;
+  font-size: 1rem;
+  line-height: 1.45;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  max-width: 580px;
+}
+
+/* Action Buttons Row */
+.billboard-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.billboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+}
+
+.billboard-play-solid {
+  background: #ffffff;
+  color: #000000;
+}
+
+.billboard-play-solid:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.03);
+}
+
+.billboard-translucent-btn {
+  background: rgba(109, 109, 110, 0.7);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.billboard-translucent-btn:hover {
+  background: rgba(109, 109, 110, 0.4);
+  transform: scale(1.03);
+}
+
+/* Right Side Controls */
+.billboard-right-controls {
+  position: absolute;
+  right: 4%;
+  bottom: 80px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.billboard-control-btn {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.billboard-control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.carousel-indicators {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.indicator-line.active {
+  width: 24px;
+  height: 3px;
+  background: #e50914;
+  border-radius: 2px;
+}
+
+.indicator-dot {
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
