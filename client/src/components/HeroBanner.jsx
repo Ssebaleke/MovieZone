@@ -84,30 +84,52 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
         </div>
       </div>
 
-      {/* Mobile Vertical Banner */}
+      {/* Mobile Hero Banner — full bleed backdrop/video with overlay */}
       <div className="billboard-hero-mobile">
-        <div className="mobile-banner-poster">
-          <img src={movie.thumbnailUrl} alt={movie.title} />
-          {movie.vj && <span className="mobile-banner-vj-badge">{movie.vj}</span>}
-          <div className="mobile-banner-poster-overlay" />
-        </div>
-        <div className="mobile-banner-info">
-          <h1 className="mobile-banner-title">{movie.title}</h1>
-          <div className="billboard-meta-badges-row" style={{ marginBottom: '10px' }}>
-            <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
-            <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
-            {movie.vj && <span className="meta-vj-badge">{movie.vj}</span>}
+        {/* Background: video if playing, else backdrop image */}
+        {isPlayingVideo ? (
+          <div className="mobile-banner-video-bg">
+            {isHls ? (
+              <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
+            ) : (
+              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
           </div>
-          <p className="mobile-banner-desc">{movie.description}</p>
+        ) : (
+          <div className="mobile-banner-video-bg" style={{ backgroundImage: `url(${movie.backdropUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        )}
+
+        {/* Dark gradient overlay */}
+        <div className="mobile-banner-overlay" />
+
+        {/* Mute toggle top-right */}
+        <button className="mobile-banner-mute-btn" onClick={() => setIsMuted(!isMuted)} aria-label="Toggle mute">
+          {isMuted ? <VolumeX size={16} color="#fff" /> : <Volume2 size={16} color="#fff" />}
+        </button>
+
+        {/* Content at bottom */}
+        <div className="mobile-banner-content">
+          {/* Small portrait thumbnail + title side by side */}
+          <div className="mobile-banner-title-row">
+            <img src={movie.thumbnailUrl} alt={movie.title} className="mobile-banner-thumb" />
+            <div className="mobile-banner-text">
+              <h1 className="mobile-banner-title">{movie.title}</h1>
+              <div className="billboard-meta-badges-row" style={{ marginBottom: '0' }}>
+                <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
+                <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+                {movie.vj && <span className="meta-vj-badge">{movie.vj}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
           <div className="mobile-banner-actions">
-            <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
-              <Play size={16} fill="#000" color="#000" /> Play
+            <button className="mobile-banner-btn mobile-banner-btn-play" onClick={() => onPlay(movie)}>
+              <Play size={15} fill="#000" color="#000" /> Play
             </button>
-            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
-              <Info size={16} color="#fff" /> Info
-            </button>
-            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
-              <Plus size={16} color="#fff" /> My List
+            <button className="mobile-banner-btn mobile-banner-btn-info" onClick={() => onOpenModal(movie)}>
+              <Info size={15} color="#fff" /> More Info
             </button>
           </div>
         </div>
