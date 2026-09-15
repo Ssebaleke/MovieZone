@@ -132,16 +132,16 @@ a {
 
 .landing-hero h1 {
   font-family: var(--font-family);
-  font-size: 4rem;
+  font-size: clamp(1.8rem, 5vw, 4rem);
   font-weight: 900;
   line-height: 1.15;
   margin-bottom: 20px;
-  letter-spacing: -1.5px;
+  letter-spacing: -1px;
 }
 
 .landing-hero h2 {
   font-family: var(--font-family);
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 3vw, 1.5rem);
   font-weight: 700;
   margin-bottom: 24px;
   color: #fff;
@@ -183,14 +183,15 @@ a {
   background-color: var(--netflix-red);
   color: #fff;
   border: none;
-  padding: 20px 36px;
-  font-size: 1.4rem;
+  padding: 16px 24px;
+  font-size: 1.1rem;
   font-weight: 700;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
   transition: var(--transition-fast);
 }
 
@@ -270,7 +271,7 @@ a {
 
 .login-card {
   background: rgba(0, 0, 0, 0.75);
-  padding: 60px;
+  padding: clamp(24px, 6vw, 60px);
   border-radius: 8px;
   width: 100%;
   max-width: 450px;
@@ -764,7 +765,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 22px 6%;
+  padding: 16px 4%;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
   transition: background-color 0.4s ease;
 }
@@ -922,13 +923,13 @@ a {
 /* Hero Billboard section */
 .billboard-hero {
   position: relative;
-  height: 88vh;
+  height: clamp(320px, 88vh, 88vh);
   width: 100%;
   background-size: cover;
   background-position: center center;
   display: flex;
-  align-items: center;
-  padding: 0 6%;
+  align-items: flex-end;
+  padding: 0 6% 60px;
   overflow: hidden;
 }
 
@@ -963,7 +964,7 @@ a {
   position: relative;
   z-index: 2;
   max-width: 640px;
-  margin-top: 60px;
+  width: 100%;
 }
 
 .billboard-title {
@@ -1025,8 +1026,8 @@ a {
 
 .billboard-right-controls {
   position: absolute;
-  right: 0;
-  bottom: 28%;
+  right: 4%;
+  bottom: 80px;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -1304,7 +1305,7 @@ a {
 .modal-video-billboard {
   position: relative;
   width: 100%;
-  height: 480px;
+  height: clamp(220px, 40vw, 480px);
 }
 
 .modal-video-billboard video, 
@@ -1325,25 +1326,26 @@ a {
 
 .modal-billboard-details {
   position: absolute;
-  left: 40px;
-  bottom: 40px;
+  left: clamp(16px, 4%, 40px);
+  bottom: clamp(16px, 4%, 40px);
+  right: clamp(16px, 4%, 40px);
   z-index: 2;
 }
 
 .modal-billboard-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 4rem;
+  font-size: clamp(1.6rem, 5vw, 4rem);
   letter-spacing: 1px;
   font-weight: 400;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   line-height: 0.95;
 }
 
 .modal-body-grid {
-  padding: 40px;
+  padding: clamp(16px, 4%, 40px);
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 40px;
+  gap: 24px;
 }
 
 .modal-synopsis {
@@ -1366,7 +1368,7 @@ a {
 
 /* More Like This grid */
 .more-like-this-section {
-  padding: 0 40px 40px 40px;
+  padding: 0 clamp(16px, 4%, 40px) clamp(16px, 4%, 40px);
 }
 
 .more-like-this-section h3 {
@@ -1728,12 +1730,6 @@ a {
 
 /* Responsiveness adjustments */
 @media(max-width: 900px) {
-  .landing-hero h1 {
-    font-size: 2.2rem;
-  }
-  .landing-hero h2 {
-    font-size: 1.2rem;
-  }
   .email-signup-form {
     flex-direction: column;
   }
@@ -1750,7 +1746,7 @@ a {
     grid-template-columns: 1fr 1fr;
   }
   .movie-card-item {
-    flex: 0 0 calc(33.333% - 6px); /* 3 items on small screens */
+    flex: 0 0 calc(33.333% - 6px);
   }
 }
 
@@ -2764,16 +2760,12 @@ a {
   }
 
   .billboard-hero {
-    height: 50vh;
-    padding-bottom: 30px;
+    height: clamp(280px, 55vw, 55vh);
+    padding: 0 4% 24px;
+    align-items: flex-end;
   }
   .billboard-info {
-    left: 4%;
-    bottom: 8%;
-    max-width: 92%;
-  }
-  .billboard-title {
-    font-size: 1.7rem;
+    max-width: 100%;
   }
   .billboard-desc {
     display: -webkit-box;
@@ -2781,29 +2773,60 @@ a {
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-size: 0.85rem;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+  }
+  .billboard-actions-row {
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
   }
   .billboard-btn {
-    padding: 8px 14px;
+    padding: 8px 16px;
     font-size: 0.88rem;
+  }
+  .billboard-play-solid,
+  .billboard-translucent-btn {
+    padding: 8px 16px !important;
+    font-size: 0.88rem !important;
   }
   .billboard-right-controls {
     right: 4%;
-    bottom: 10%;
+    bottom: 24px;
+  }
+  .billboard-meta-badges-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .billboard-genre-pills-row {
+    display: none;
+  }
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-start;
   }
   .modal-content-container {
-    width: 95vw;
-    margin: 15px auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    margin: 0;
+    min-height: 100vh;
   }
-  .modal-billboard-title {
-    font-size: 1.4rem;
+  .modal-body-grid {
+    grid-template-columns: 1fr;
+  }
+  .recommendations-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .billboard-actions {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 
 @media (max-width: 480px) {
   .movie-card-item {
     flex: 0 0 calc(31% - 5px);
-    min-width: 94px;
+    min-width: 90px;
     max-width: 115px;
   }
 
@@ -2811,11 +2834,71 @@ a {
     grid-template-columns: repeat(3, 1fr);
     gap: 10px 6px;
   }
+
+  .navbar-header {
+    padding: 12px 4%;
+  }
+
+  .landing-hero {
+    padding: 24px 16px;
+  }
+
+  .email-signup-form input {
+    padding: 14px 12px;
+    font-size: 0.95rem;
+  }
+
+  .faq-question {
+    font-size: 1rem;
+    padding: 16px;
+  }
+
+  .faq-answer p {
+    font-size: 0.95rem;
+    padding: 16px;
+  }
+
+  .plan-card {
+    padding: 20px;
+  }
+
+  .modal-billboard-details > div {
+    display: none;
+  }
+
+  .billboard-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .billboard-actions .billboard-btn {
+    flex: 1;
+    justify-content: center;
+    min-width: 120px;
+  }
 }
 
-/* ==========================================
-   Desktop labafilms.online Design Replication
-   ========================================== */
+.desktop-hidden {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .desktop-hidden {
+    display: flex !important;
+  }
+}
+
+.desktop-only-btn {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .desktop-only-btn {
+    display: flex;
+  }
+}
+
+/* Desktop labafilms.online Design Replication */
 .navbar-wrapper {
   position: relative;
   width: 100%;
@@ -2938,7 +3021,7 @@ a {
 
 /* Hero Banner Elements */
 .billboard-title-desktop {
-  font-size: 4rem;
+  font-size: clamp(1.6rem, 4vw, 4rem);
   font-weight: 800;
   color: #ffffff;
   margin-bottom: 12px;
@@ -3068,3 +3151,113 @@ a {
 
 
 
+
+/* ==========================================
+   Mobile Vertical Banner
+   ========================================== */
+
+/* Desktop banner — shown by default */
+.billboard-hero-desktop {
+  display: flex;
+}
+
+/* Mobile vertical banner — hidden on desktop */
+.billboard-hero-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .billboard-hero-desktop {
+    display: none !important;
+  }
+
+  .billboard-hero-mobile {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 72px 14px 16px;
+    background: #141414;
+  }
+
+  .mobile-banner-poster {
+    position: relative;
+    flex: 0 0 130px;
+    width: 130px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    aspect-ratio: 2 / 3;
+  }
+
+  .mobile-banner-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mobile-banner-poster-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%);
+    border-radius: 10px;
+  }
+
+  .mobile-banner-vj-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: linear-gradient(135deg, #e50914 0%, #b80710 100%);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    z-index: 5;
+  }
+
+  .mobile-banner-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 4px;
+    min-width: 0;
+  }
+
+  .mobile-banner-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    white-space: normal;
+  }
+
+  .mobile-banner-desc {
+    font-size: 0.78rem;
+    color: #cccccc;
+    line-height: 1.45;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .mobile-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mobile-banner-actions .billboard-btn {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    border-radius: 5px;
+    gap: 5px;
+  }
+}

@@ -24,97 +24,95 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
   const isHls = movie.videoUrl.endsWith('.m3u8');
 
   return (
-    <div
-      className="billboard-hero"
-      style={{ backgroundImage: !isPlayingVideo ? `url(${movie.backdropUrl})` : 'none' }}
-    >
-      {/* Video Preview */}
-      {isPlayingVideo && (
-        <div className="billboard-video-container">
-          {isHls ? (
-            <HlsPlayer
-              src={movie.videoUrl}
-              videoRef={videoRef}
-              isMuted={isMuted}
-              poster={movie.backdropUrl}
-            />
-          ) : (
-            <video
-              ref={videoRef}
-              src={movie.videoUrl}
-              autoPlay
-              muted={isMuted}
-              loop
-              playsInline
-            />
-          )}
-        </div>
-      )}
+    <>
+      {/* Desktop / Landscape Hero Banner */}
+      <div
+        className="billboard-hero billboard-hero-desktop"
+        style={{ backgroundImage: !isPlayingVideo ? `url(${movie.backdropUrl})` : 'none' }}
+      >
+        {isPlayingVideo && (
+          <div className="billboard-video-container">
+            {isHls ? (
+              <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
+            ) : (
+              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline />
+            )}
+          </div>
+        )}
 
-      <div className="billboard-overlay"></div>
+        <div className="billboard-overlay"></div>
 
-      <div className="billboard-info">
-        <h1 className="billboard-title-desktop">{movie.title}</h1>
-
-        {/* Metadata Row: 2026 | SERIES | 1 Season | VJ Ice p */}
-        <div className="billboard-meta-badges-row">
-          <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
-          <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
-          <span className="meta-season-text">{movie.type === 'SHOW' ? '1 Season' : (movie.duration || '2h 15m')}</span>
-          {movie.vj && (
-            <span className="meta-vj-badge">{movie.vj}</span>
-          )}
-        </div>
-
-        {/* Genre Pills Row */}
-        <div className="billboard-genre-pills-row">
-          {movie.genres ? (
-            movie.genres.split(',').map((g, idx) => (
+        <div className="billboard-info">
+          <h1 className="billboard-title-desktop">{movie.title}</h1>
+          <div className="billboard-meta-badges-row">
+            <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
+            <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+            <span className="meta-season-text">{movie.type === 'SHOW' ? '1 Season' : (movie.duration || '2h 15m')}</span>
+            {movie.vj && <span className="meta-vj-badge">{movie.vj}</span>}
+          </div>
+          <div className="billboard-genre-pills-row">
+            {movie.genres ? movie.genres.split(',').map((g, idx) => (
               <span key={idx} className="genre-pill-item">{g.trim()}</span>
-            ))
-          ) : (
-            <>
-              <span className="genre-pill-item">Action & Adventure</span>
-              <span className="genre-pill-item">Crime</span>
-              <span className="genre-pill-item">Drama</span>
-            </>
-          )}
+            )) : (
+              <><span className="genre-pill-item">Action & Adventure</span><span className="genre-pill-item">Drama</span></>
+            )}
+          </div>
+          <p className="billboard-desc">{movie.description}</p>
+          <div className="billboard-actions-row">
+            <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
+              <Play size={18} fill="#000" color="#000" /> Play
+            </button>
+            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+              <Info size={18} color="#fff" /> More Info
+            </button>
+            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+              <Plus size={18} color="#fff" /> My List
+            </button>
+          </div>
         </div>
 
-        <p className="billboard-desc">{movie.description}</p>
-
-        {/* 3 Action Buttons Row: Play, More Info, My List */}
-        <div className="billboard-actions-row">
-          <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
-            <Play size={18} fill="#000" color="#000" /> Play
+        <div className="billboard-right-controls">
+          <button className="billboard-control-btn" onClick={() => setIsMuted(!isMuted)} aria-label="Toggle mute">
+            {isMuted ? <VolumeX size={18} color="#fff" /> : <Volume2 size={18} color="#fff" />}
           </button>
-          <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
-            <Info size={18} color="#fff" /> More Info
-          </button>
-          <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
-            <Plus size={18} color="#fff" /> My List
-          </button>
-        </div>
-      </div>
-
-      <div className="billboard-right-controls">
-        <button
-          className="billboard-control-btn"
-          onClick={() => setIsMuted(!isMuted)}
-          aria-label="Toggle mute"
-        >
-          {isMuted ? <VolumeX size={18} color="#fff" /> : <Volume2 size={18} color="#fff" />}
-        </button>
-
-        {/* Carousel indicators matching desktop screenshot */}
-        <div className="carousel-indicators">
-          <span className="indicator-line active"></span>
-          <span className="indicator-dot"></span>
-          <span className="indicator-dot"></span>
-          <span className="indicator-dot"></span>
+          <div className="carousel-indicators" style={{ display: 'flex' }}>
+            <span className="indicator-line active"></span>
+            <span className="indicator-dot"></span>
+            <span className="indicator-dot"></span>
+            <span className="indicator-dot"></span>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Vertical Banner */}
+      <div className="billboard-hero-mobile">
+        <div className="mobile-banner-poster">
+          <img src={movie.thumbnailUrl} alt={movie.title} />
+          {movie.vj && <span className="mobile-banner-vj-badge">{movie.vj}</span>}
+          <div className="mobile-banner-poster-overlay" />
+        </div>
+        <div className="mobile-banner-info">
+          <h1 className="mobile-banner-title">{movie.title}</h1>
+          <div className="billboard-meta-badges-row" style={{ marginBottom: '10px' }}>
+            <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
+            <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+            {movie.vj && <span className="meta-vj-badge">{movie.vj}</span>}
+          </div>
+          <p className="mobile-banner-desc">{movie.description}</p>
+          <div className="mobile-banner-actions">
+            <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
+              <Play size={16} fill="#000" color="#000" /> Play
+            </button>
+            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+              <Info size={16} color="#fff" /> Info
+            </button>
+            <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+              <Plus size={16} color="#fff" /> My List
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -180,7 +180,7 @@ export default function Browse() {
 
       {searchQuery ? (
         // Search Results layout grid
-        <div style={{ padding: '120px 4% 60px 4%' }}>
+        <div style={{ padding: 'clamp(80px, 15vw, 120px) 4% 60px 4%' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '700', marginBottom: '24px' }}>
             Search Results for "{searchQuery}"
           </h2>

@@ -95,7 +95,7 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
             <h1 className="modal-billboard-title">{currentMovie.title}</h1>
 
             {/* VJ Version Selection pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Mic size={14} color="#e50914" /> AUDIO VERSION:
               </span>
@@ -120,7 +120,7 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
               ))}
             </div>
 
-            <div className="billboard-actions">
+            <div className="billboard-actions" style={{ flexWrap: 'wrap', gap: '10px' }}>
               <button className="billboard-btn billboard-play" onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion })}>
                 <Play size={20} fill="#000" /> Play ({activeVJVersion})
               </button>
