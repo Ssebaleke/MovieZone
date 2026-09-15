@@ -26,18 +26,6 @@ jobs:
           TARGET_PASS="${VPS_PASS:-Vico@2026}"
 
           sudo apt-get update -qq && sudo apt-get install -y sshpass -qq
-          
-          echo "Connecting to $TARGET_HOST via SSH..."
-          sshpass -p "$TARGET_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET_USER@$TARGET_HOST" << 'EOF'
-            set -e
-            echo "===> Pulling latest code from GitHub main branch..."
-            cd /root/MovieZone
-            git fetch origin main
-            git reset --hard origin/main
 
-            echo "===> Building and recreating Docker containers..."
-            docker-compose build
-            docker-compose up -d --force-recreate
-
-            echo "===> Auto-deployment completed successfully on VPS!"
-          EOF
+          echo "Connecting to $TARGET_HOST..."
+          sshpass -p "$TARGET_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TARGET_USER@$TARGET_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin;/usr/bin/env bash -c 'cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && docker-compose build && docker-compose up -d --force-recreate'"
