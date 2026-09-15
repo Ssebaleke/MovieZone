@@ -2635,18 +2635,15 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 26px;
-  border-radius: 14px;
-  transition: all 0.2s ease;
+  background: transparent !important;
 }
 
-.mobile-bottom-tab.active .tab-icon-pill {
-  background: #8bc34a;
+.mobile-bottom-tab.active svg {
+  color: #e50914 !important;
 }
 
 .mobile-bottom-tab.active span {
-  color: #8bc34a;
+  color: #e50914 !important;
   font-weight: 700;
 }
 

@@ -123,8 +123,9 @@ export default function Navbar({
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle navigation menu"
             type="button"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
           >
-            {isMobileMenuOpen ? <X size={24} color="#fff" /> : <Menu size={24} color="#fff" />}
+            {isMobileMenuOpen ? <X size={24} color="#e50914" /> : <Menu size={24} color="#e50914" />}
           </button>
 
           {/* Logo */}
@@ -375,59 +376,13 @@ export default function Navbar({
                 <Home size={18} /> Home
               </li>
 
-              {/* Expandable Ugandan VJs Dropdown Menu inside Navbar Icon Drawer */}
-              <li className="mobile-nav-dropdown-item">
-                <div
-                  className={`mobile-nav-dropdown-header ${isDrawerVjOpen || activeVJ ? 'active' : ''}`}
-                  onClick={() => setIsDrawerVjOpen(!isDrawerVjOpen)}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Mic size={18} color="#e50914" /> Ugandan VJs
-                  </span>
-                  <ChevronDown size={16} className={`vj-chevron ${isDrawerVjOpen ? 'open' : ''}`} />
-                </div>
-
-                {isDrawerVjOpen && (
-                  <ul className="mobile-nested-dropdown-list vj-columns-grid">
-                    {vjsList.map((vj) => (
-                      <li
-                        key={vj.name}
-                        className={activeVJ === vj.value ? 'selected' : ''}
-                        onClick={() => {
-                          setActiveVJ(vj.value);
-                          setActiveTab('vj');
-                          onSearchChange('');
-                          setIsMobileMenuOpen(false);
-                          navigate('/browse');
-                        }}
-                      >
-                        <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} />
-                        {vj.name}
-                        {activeVJ === vj.value && <Check size={14} color="#fff" style={{ marginLeft: 'auto' }} />}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-
-              <li
-                className={activeTab === 'series' ? 'active' : ''}
-                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
-              >
-                <Tv size={18} /> TV Series
-              </li>
-              <li
-                className={activeTab === 'movies' ? 'active' : ''}
-                onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
-              >
-                <Film size={18} /> Movies
-              </li>
               <li
                 className={activeTab === 'latest' ? 'active' : ''}
                 onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
               >
                 <Sparkles size={18} /> Latest Releases
               </li>
+
               <li
                 className={activeTab === 'trending' ? 'active' : ''}
                 onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); setIsMobileMenuOpen(false); navigate('/browse'); }}
@@ -494,9 +449,7 @@ export default function Navbar({
           className={`mobile-bottom-tab ${activeTab === 'home' && !searchQuery ? 'active' : ''}`}
           onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
         >
-          <div className="tab-icon-pill">
-            <Home size={18} color={activeTab === 'home' && !searchQuery ? '#121212' : '#aaaaaa'} />
-          </div>
+          <Home size={20} color={activeTab === 'home' && !searchQuery ? '#e50914' : '#aaaaaa'} />
           <span>Home</span>
         </div>
 
@@ -504,10 +457,9 @@ export default function Navbar({
           className={`mobile-bottom-tab ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => {
             setIsMobileMenuOpen(true);
-            setIsDrawerVjOpen(false);
           }}
         >
-          <LayoutGrid size={20} color="#aaaaaa" />
+          <LayoutGrid size={20} color={activeTab === 'categories' ? '#e50914' : '#aaaaaa'} />
           <span>Categories</span>
         </div>
 
@@ -515,7 +467,7 @@ export default function Navbar({
           className={`mobile-bottom-tab ${activeTab === 'radio' ? 'active' : ''}`}
           onClick={() => alert('Radio Live Streaming Coming Soon!')}
         >
-          <Radio size={20} color="#aaaaaa" />
+          <Radio size={20} color={activeTab === 'radio' ? '#e50914' : '#aaaaaa'} />
           <span>Radio</span>
         </div>
 
@@ -523,7 +475,7 @@ export default function Navbar({
           className={`mobile-bottom-tab ${activeTab === 'series' || activeTab === 'tv' ? 'active' : ''}`}
           onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
         >
-          <Tv size={20} color="#aaaaaa" />
+          <Tv size={20} color={activeTab === 'series' || activeTab === 'tv' ? '#e50914' : '#aaaaaa'} />
           <span>Live TV</span>
         </div>
 
@@ -531,7 +483,7 @@ export default function Navbar({
           className={`mobile-bottom-tab ${location.pathname === '/account' || location.pathname === '/profiles' ? 'active' : ''}`}
           onClick={() => navigate('/account')}
         >
-          <User size={20} color="#aaaaaa" />
+          <User size={20} color={location.pathname === '/account' || location.pathname === '/profiles' ? '#e50914' : '#aaaaaa'} />
           <span>You</span>
         </div>
       </nav>
