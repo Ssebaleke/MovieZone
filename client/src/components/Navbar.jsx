@@ -298,11 +298,6 @@ export default function Navbar({
                 <div className="dropdown-item" onClick={() => navigate('/account')}>
                   <Settings size={16} /> Account Settings
                 </div>
-                {currentUser && currentUser.role === 'ADMIN' && (
-                  <div className="dropdown-item" onClick={() => navigate('/admin')} style={{ color: '#e50914', fontWeight: 'bold' }}>
-                    <ShieldCheck size={16} color="#e50914" /> Admin Console
-                  </div>
-                )}
                 <div className="dropdown-divider" />
                 <div className="dropdown-item" onClick={handleSignOut}>
                   <LogOut size={16} /> Sign out
