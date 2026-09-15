@@ -1,0 +1,36 @@
+name: Auto Deploy to VPS Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST || '69.164.245.17' }}
+          username: ${{ secrets.VPS_USERNAME || 'root' }}
+          password: ${{ secrets.VPS_PASSWORD || 'Vico@2026' }}
+          port: 22
+          script_stop: true
+          script: |
+            echo "===> Pulling latest code from GitHub main branch..."
+            cd /root/MovieZone
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "===> Building and recreating Docker containers..."
+            docker-compose build
+            docker-compose up -d --force-recreate
+            
+            echo "===> Auto-deployment finished successfully!"
