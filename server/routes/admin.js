@@ -21,12 +21,10 @@ router.get('/users', async (req, res) => {
         role: true,
         plan: true,
         subscriptionStatus: true,
+        subscriptionEnd: true,
         createdAt: true,
         profiles: {
-          select: {
-            id: true,
-            name: true
-          }
+          select: { id: true, name: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -36,6 +34,56 @@ router.get('/users', async (req, res) => {
   } catch (error) {
     console.error('Error fetching user signups list:', error);
     res.status(500).json({ error: 'Server error fetching user signups' });
+  }
+});
+
+// Assign / upgrade / remove package for a user
+router.put('/users/:id/subscription', async (req, res) => {
+  const { id } = req.params;
+  const { packageId, action } = req.body; // action: 'assign' | 'remove'
+
+  try {
+    if (action === 'remove') {
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { plan: 'NONE', subscriptionStatus: 'INACTIVE', subscriptionEnd: null }
+      });
+      return res.json({ success: true, user: updated });
+    }
+
+    if (!packageId) return res.status(400).json({ error: 'packageId is required' });
+
+    const pkg = await prisma.package.findUnique({ where: { id: packageId } });
+    if (!pkg) return res.status(404).json({ error: 'Package not found' });
+
+    // Calculate expiry using same logic as billing
+    const now = new Date();
+    const expiration = new Date(now);
+    const str = String(pkg.interval).toUpperCase().trim();
+    const match = str.match(/^(\d+)[_\s:]*([A-Z]+)$/);
+    if (match) {
+      const val = parseInt(match[1], 10);
+      const unit = match[2];
+      if (val === 0) expiration.setFullYear(expiration.getFullYear() + 100);
+      else if (unit.startsWith('MIN')) expiration.setMinutes(expiration.getMinutes() + val);
+      else if (unit.startsWith('HOUR')) expiration.setHours(expiration.getHours() + val);
+      else if (unit.startsWith('DAY')) expiration.setDate(expiration.getDate() + val);
+      else if (unit.startsWith('WEEK')) expiration.setDate(expiration.getDate() + val * 7);
+      else if (unit.startsWith('MONTH')) expiration.setMonth(expiration.getMonth() + val);
+      else if (unit.startsWith('YEAR')) expiration.setFullYear(expiration.getFullYear() + val);
+    } else {
+      expiration.setMonth(expiration.getMonth() + 1);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { plan: pkg.name, subscriptionStatus: 'ACTIVE', subscriptionEnd: expiration }
+    });
+
+    res.json({ success: true, user: updated, package: pkg, subscriptionEnd: expiration });
+  } catch (error) {
+    console.error('Error updating user subscription:', error);
+    res.status(500).json({ error: 'Failed to update subscription: ' + error.message });
   }
 });
 

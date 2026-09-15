@@ -295,6 +295,7 @@ export default function AdminDashboard() {
 
     fetchMovies();
     fetchUserSignups();
+    fetchPackages();
     fetchSettingsAndStats();
   }, [navigate]);
 
@@ -570,7 +571,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* SECTION 2: USER SIGNUPS MANAGEMENT */}
         {activeNav === 'signups' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -584,71 +584,105 @@ export default function AdminDashboard() {
                   style={{ width: '100%', background: '#161820', border: '1px solid rgba(255,255,255,0.1)', padding: '10px 12px 10px 38px', borderRadius: '6px', color: '#fff', outline: 'none' }}
                 />
               </div>
-
-              <button
-                onClick={fetchUserSignups}
-                style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <RefreshCw size={16} /> Refresh Directory
+              <button onClick={fetchUserSignups} style={{ background: '#161820', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={16} /> Refresh
               </button>
             </div>
 
             {usersLoading ? (
-              <div style={{ color: '#aaa', padding: '40px 0' }}>Loading signed up accounts...</div>
+              <div style={{ color: '#aaa', padding: '40px 0' }}>Loading users...</div>
             ) : (
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>User Email</th>
-                    <th>Role</th>
-                    <th>Plan Level</th>
-                    <th>Subscription Status</th>
-                    <th>Profiles Count</th>
-                    <th>Signup Timestamp</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td style={{ fontWeight: '600', color: '#fff' }}>{user.email}</td>
-                      <td>
-                        <span className={`user-role-badge ${user.role}`}>{user.role}</span>
-                      </td>
-                      <td style={{ fontWeight: 'bold', color: '#e50914' }}>{user.plan}</td>
-                      <td>
-                        <span style={{
-                          background: user.subscriptionStatus === 'ACTIVE' ? 'rgba(70,211,105,0.15)' : 'rgba(255,255,255,0.08)',
-                          color: user.subscriptionStatus === 'ACTIVE' ? '#46d369' : '#888',
-                          padding: '4px 10px',
-                          borderRadius: '4px',
-                          fontSize: '0.78rem',
-                          fontWeight: 'bold'
-                        }}>
-                          {user.subscriptionStatus}
-                        </span>
-                      </td>
-                      <td>{user.profiles ? user.profiles.length : 0} Profiles</td>
-                      <td style={{ color: '#888', fontSize: '0.85rem' }}>
-                        {new Date(user.createdAt).toLocaleDateString()} {new Date(user.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td>
-                        <button
-                          style={{ background: 'rgba(229,9,20,0.15)', border: '1px solid #e50914', color: '#e50914', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          Delete Account
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredUsers.length === 0 && (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No signed-up users found matching query.</td>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Package</th>
+                      <th>Status</th>
+                      <th>Expires</th>
+                      <th>Joined</th>
+                      <th>Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td style={{ fontWeight: '600', color: '#fff' }}>{user.email}</td>
+                        <td><span className={`user-role-badge ${user.role}`}>{user.role}</span></td>
+                        <td style={{ fontWeight: 'bold', color: user.plan && user.plan !== 'NONE' ? '#e50914' : '#555' }}>
+                          {user.plan && user.plan !== 'NONE' ? user.plan : '— No Package'}
+                        </td>
+                        <td>
+                          <span style={{
+                            background: user.subscriptionStatus === 'ACTIVE' ? 'rgba(70,211,105,0.15)' : 'rgba(255,255,255,0.06)',
+                            color: user.subscriptionStatus === 'ACTIVE' ? '#46d369' : '#888',
+                            padding: '3px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'
+                          }}>
+                            {user.subscriptionStatus}
+                          </span>
+                        </td>
+                        <td style={{ color: '#aaa', fontSize: '0.82rem' }}>
+                          {user.subscriptionEnd
+                            ? new Date(user.subscriptionEnd) < new Date()
+                              ? <span style={{ color: '#e50914' }}>Expired</span>
+                              : new Date(user.subscriptionEnd).toLocaleString()
+                            : '—'}
+                        </td>
+                        <td style={{ color: '#888', fontSize: '0.82rem' }}>{new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {/* Assign / Upgrade package */}
+                            <select
+                              defaultValue=""
+                              onChange={async (e) => {
+                                const pkgId = e.target.value;
+                                if (!pkgId) return;
+                                try {
+                                  await api.put(`/admin/users/${user.id}/subscription`, { packageId: pkgId, action: 'assign' });
+                                  fetchUserSignups();
+                                } catch (err) { alert(err.message || 'Failed to assign package'); }
+                                e.target.value = '';
+                              }}
+                              style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '5px 8px', borderRadius: '4px', fontSize: '0.78rem', cursor: 'pointer' }}
+                            >
+                              <option value="">Assign Package</option>
+                              {packagesList.map(pkg => (
+                                <option key={pkg.id} value={pkg.id}>{pkg.name} ({pkg.interval})</option>
+                              ))}
+                            </select>
+                            {/* Remove subscription */}
+                            {user.subscriptionStatus === 'ACTIVE' && (
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(`Remove subscription from ${user.email}?`)) return;
+                                  try {
+                                    await api.put(`/admin/users/${user.id}/subscription`, { action: 'remove' });
+                                    fetchUserSignups();
+                                  } catch (err) { alert(err.message || 'Failed'); }
+                                }}
+                                style={{ background: 'rgba(229,9,20,0.15)', border: '1px solid #e50914', color: '#e50914', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700' }}
+                              >
+                                Remove
+                              </button>
+                            )}
+                            {/* Delete account */}
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#888', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.78rem' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No users found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
