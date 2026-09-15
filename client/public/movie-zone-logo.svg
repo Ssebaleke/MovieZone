@@ -1,17 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 75" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 465 75" fill="none">
   <defs>
-    <!-- Vibrant Brand Gradient -->
+    <!-- Reddish Brand Gradient -->
     <linearGradient id="mzFullGradient" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#E50914" />
-      <stop offset="40%" stop-color="#FF2D55" />
-      <stop offset="75%" stop-color="#FF3B30" />
-      <stop offset="100%" stop-color="#FF9500" />
-    </linearGradient>
-    <linearGradient id="mzTextGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="45%" stop-color="#F2F2F7" />
+      <stop offset="35%" stop-color="#FF2D55" />
       <stop offset="70%" stop-color="#FF3B30" />
-      <stop offset="100%" stop-color="#FF9500" />
+      <stop offset="100%" stop-color="#E50914" />
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="4" result="blur" />
@@ -19,7 +13,7 @@
     </filter>
   </defs>
 
-  <!-- Animated Play Emblem Icon -->
+  <!-- Glowing Play Emblem Icon -->
   <g transform="translate(8, 8)">
     <circle cx="29" cy="29" r="28" fill="url(#mzFullGradient)" filter="url(#glow)" opacity="0.95" />
     <circle cx="29" cy="29" r="22" fill="#0A0A0E" />
@@ -32,16 +26,18 @@
     <circle cx="47" cy="29" r="2.2" fill="#FFF" opacity="0.9" />
   </g>
 
-  <!-- Vibrant Gradient Typography -->
-  <text x="76" y="49" font-family="'Inter', 'Outfit', 'Arial Black', sans-serif" font-weight="900" font-size="36" letter-spacing="1.5">
-    <tspan fill="url(#mzFullGradient)">MOVIE</tspan><tspan fill="#FFFFFF"> </tspan><tspan fill="url(#mzFullGradient)">ZONE</tspan>
+  <!-- Reddish Gradient Typography for MOVIE ZONE -->
+  <text x="76" y="49" font-family="'Outfit', 'Inter', 'Arial Black', sans-serif" font-weight="900" font-size="35" letter-spacing="1.5">
+    <tspan fill="url(#mzFullGradient)">MOVIE</tspan>
+    <tspan fill="#FFFFFF"> </tspan>
+    <tspan fill="url(#mzFullGradient)">ZONE</tspan>
   </text>
 
-  <!-- Ugandan VJ Plus Pill -->
-  <g transform="translate(330, 24)">
-    <rect x="0" y="0" width="86" height="26" rx="6" fill="url(#mzFullGradient)" />
-    <text x="43" y="17" font-family="'Inter', sans-serif" font-weight="900" font-size="11" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-      VJ PLUS
+  <!-- Ugandan VJ PULSE Pill Badge with Generous Spacing -->
+  <g transform="translate(355, 24)">
+    <rect x="0" y="0" width="96" height="26" rx="6" fill="url(#mzFullGradient)" />
+    <text x="48" y="17" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="11" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+      VJ PULSE
     </text>
   </g>
 </svg>
