@@ -427,27 +427,62 @@ router.post('/packages', async (req, res) => {
     return res.status(400).json({ error: 'Package name and price are required' });
   }
 
-  try {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now();
-    const pkg = await prisma.package.create({
-      data: {
-        name,
-        slug,
-        price: parseFloat(price),
-        currency: currency || 'UGX',
-        interval: interval || 'MONTHLY',
-        description: description || '',
-        features: features || '',
-        resolution: resolution || '1080p Full HD',
-        screens: screens ? parseInt(screens, 10) : 2,
-        isActive: isActive !== undefined ? Boolean(isActive) : true
-      }
-    });
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now();
+  const pkgPrice = parseFloat(price);
+  const pkgCurrency = currency || 'UGX';
+  const pkgInterval = interval || 'MONTHLY';
+  const pkgDesc = description || '';
+  const pkgFeat = features || '';
+  const pkgRes = resolution || '1080p Full HD';
+  const pkgScr = screens ? parseInt(screens, 10) : 2;
+  const pkgActive = isActive !== undefined ? Boolean(isActive) : true;
+  const pkgId = 'pkg_' + Date.now() + '_' + Math.random().toString(36).substring(7);
 
-    res.status(201).json(pkg);
+  try {
+    if (prisma.package) {
+      const pkg = await prisma.package.create({
+        data: {
+          name,
+          slug,
+          price: pkgPrice,
+          currency: pkgCurrency,
+          interval: pkgInterval,
+          description: pkgDesc,
+          features: pkgFeat,
+          resolution: pkgRes,
+          screens: pkgScr,
+          isActive: pkgActive
+        }
+      });
+      return res.status(201).json(pkg);
+    }
+  } catch (err) {
+    console.warn('Prisma package create failed, attempting raw SQL:', err.message);
+  }
+
+  try {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Package" ("id", "name", "slug", "price", "currency", "interval", "description", "features", "resolution", "screens", "isActive", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      pkgId, name, slug, pkgPrice, pkgCurrency, pkgInterval, pkgDesc, pkgFeat, pkgRes, pkgScr, pkgActive ? 1 : 0
+    );
+
+    res.status(201).json({
+      id: pkgId,
+      name,
+      slug,
+      price: pkgPrice,
+      currency: pkgCurrency,
+      interval: pkgInterval,
+      description: pkgDesc,
+      features: pkgFeat,
+      resolution: pkgRes,
+      screens: pkgScr,
+      isActive: pkgActive
+    });
   } catch (error) {
     console.error('Error creating package:', error);
-    res.status(500).json({ error: 'Failed to create subscription package' });
+    res.status(500).json({ error: 'Failed to create subscription package: ' + error.message });
   }
 });
 
@@ -456,46 +491,70 @@ router.put('/packages/:id', async (req, res) => {
   const { name, price, currency, interval, description, features, resolution, screens, isActive } = req.body;
 
   try {
-    const existing = await prisma.package.findUnique({ where: { id } });
-    if (!existing) {
-      return res.status(404).json({ error: 'Package not found' });
+    if (prisma.package) {
+      const updated = await prisma.package.update({
+        where: { id },
+        data: {
+          name,
+          price: price !== undefined ? parseFloat(price) : undefined,
+          currency,
+          interval,
+          description,
+          features,
+          resolution,
+          screens: screens !== undefined ? parseInt(screens, 10) : undefined,
+          isActive: isActive !== undefined ? Boolean(isActive) : undefined
+        }
+      });
+      return res.json(updated);
     }
+  } catch (err) {
+    console.warn('Prisma package update failed, trying raw SQL:', err.message);
+  }
 
-    const updated = await prisma.package.update({
-      where: { id },
-      data: {
-        name: name !== undefined ? name : existing.name,
-        price: price !== undefined ? parseFloat(price) : existing.price,
-        currency: currency !== undefined ? currency : existing.currency,
-        interval: interval !== undefined ? interval : existing.interval,
-        description: description !== undefined ? description : existing.description,
-        features: features !== undefined ? features : existing.features,
-        resolution: resolution !== undefined ? resolution : existing.resolution,
-        screens: screens !== undefined ? parseInt(screens, 10) : existing.screens,
-        isActive: isActive !== undefined ? Boolean(isActive) : existing.isActive
-      }
-    });
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Package" SET 
+        "name" = COALESCE(?, "name"),
+        "price" = COALESCE(?, "price"),
+        "currency" = COALESCE(?, "currency"),
+        "interval" = COALESCE(?, "interval"),
+        "description" = COALESCE(?, "description"),
+        "features" = COALESCE(?, "features"),
+        "resolution" = COALESCE(?, "resolution"),
+        "screens" = COALESCE(?, "screens"),
+        "isActive" = COALESCE(?, "isActive"),
+        "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = ?`,
+      name || null, price !== undefined ? parseFloat(price) : null, currency || null, interval || null,
+      description || null, features || null, resolution || null, screens !== undefined ? parseInt(screens, 10) : null,
+      isActive !== undefined ? (isActive ? 1 : 0) : null, id
+    );
 
-    res.json(updated);
+    res.json({ success: true, message: 'Package updated successfully' });
   } catch (error) {
     console.error('Error updating package:', error);
-    res.status(500).json({ error: 'Failed to update package' });
+    res.status(500).json({ error: 'Failed to update package: ' + error.message });
   }
 });
 
 router.delete('/packages/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const existing = await prisma.package.findUnique({ where: { id } });
-    if (!existing) {
-      return res.status(404).json({ error: 'Package not found' });
+    if (prisma.package) {
+      await prisma.package.delete({ where: { id } });
+      return res.json({ success: true, message: 'Package deleted successfully' });
     }
+  } catch (err) {
+    console.warn('Prisma package delete failed, trying raw SQL:', err.message);
+  }
 
-    await prisma.package.delete({ where: { id } });
+  try {
+    await prisma.$executeRawUnsafe(`DELETE FROM "Package" WHERE "id" = ?`, id);
     res.json({ success: true, message: 'Package deleted successfully' });
   } catch (error) {
     console.error('Error deleting package:', error);
-    res.status(500).json({ error: 'Failed to delete package' });
+    res.status(500).json({ error: 'Failed to delete package: ' + error.message });
   }
 });
 
