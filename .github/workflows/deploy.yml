@@ -15,19 +15,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH to VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          TARGET_HOST="${VPS_HOST:-69.164.245.17}"
-          TARGET_USER="${VPS_USER:-root}"
-          TARGET_PASS="${VPS_PASS:-Vico@2026}"
+      - name: Deploy via SSH Key to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST || '69.164.245.17' }}
+          username: ${{ secrets.VPS_USERNAME || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY || secrets.VPS_KEY || '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAszjQgNrx8gB4k1vmjlnRkpGoINdHvV50fhXykpdmaNsfGnNs\ncCqRvV5mzbKJQM3ldZwSfEhQnEj6xmE20TsbpUSzEgbURk7dd2t3IBxIO7QhHxih\nA0cfF1e1lj2pxH8PQfLsBZ3IoRmcmu3BRa1IzRjPKF+9OLeQCL8vKjAVXSsrqSp+\nMYSK+kz318kw50b1o+KSXqa87nJZsaqnycXj1xrBjnNd5wXfhR1hwDe+Igty/TPB\nuE2hBLym70x00hXNaGn+O6BQm+OQP3ZJzYoUp5WiKrob/2NEHhfcWFJ0LXPJdg+1\nCV+Zs2VteGPAkEo4AC3Cz1W29WZpW7KE/fzn1QIDAQABAoIBAAcRWAOk3sK86wRg\nrOxzNVUS4m79Hmqk5XItemX2i4baEVVxNNcNjrbJmMNG5avFEuX69C2rimZHaIBX\nSBqjOplfZrJwy4FETe6OMeH1y5FzLpUz2vGupda9Uj9tChtiKV9f7ZfhG47i3C6t\n7p/JUCQqdMzyTZuFfawiogEHaWhFoRekdmXbYZbwkQq12mxN1dDi3M6wSXrRGRCr\n5SLgD4WTek+fz3CDB9ZrJO4OeZ7WO0AQjambXHBz+SY/xfqS6/7kW2AoLe2YJ5ME\nehUTDWVt9y9EnWGuzN7jfDY+a29Yjrt5IJVB0EnQQ0eLkA4kpoKqnvPguxcMVuBg\nhVcbtycCgYEA69e3aHApO3b90l3BZftebqn8TheeoayMxhWp40jpY2d8tc9VB5mW\nMfu+yW9QN8ysfKFzsyz7CnrXajB1QtTcJE4AEbY4sZVxDxm/UpkXbE7RPV80VbnH\nGdT7vuRw9GMMO1u6Uo/st0MI2f8ZZE8mvQFemJvaNkTEFeHtsk/JD6cCgYEAwoo5\nx4WmcmWgqwVbhyeDFgjwDb6HUnf4tJEpJn0T7ngiyWvNwID+7AshJfDIpwoOeVNM\n/EDVSFsAw3vW7NECIo818dGrXUbsBk5FfdxtQx4LAauZH9XDIwk8TAixilA5fPa8\n/M8W6QNmOXRafvOo1rxVEke4bEHzTv8zvV8anCMCgYA3wN5N5T4KHb4xbhKbTkpr\ntOm9eF368HSzG0n3PjRWWI+l12bNjiRwmofmzNbU6iDYsb5NXFPYjWPBacU+0F1e\ng8YGaeKLML3yiO6u0xwzcYqLjKctoOaNl8kPvqdpTsUEf1HT1MxsIn/EMUdKbF/H\nDLzVLPrwG1+ToL51ieEJPwKBgQCzDQPXBsTGn5D8NychwxUcj8dZ7xWfqromf0Bv\no0lYAAyMdINf/ZojaK7uu6oCS/g8ZJYDyixDtzaBtZaASnJ7mnHdCsx9Qoxz1VCS\nYfHSh3E77VM3AMjkk1iC5rF5ixMOWA5jZLtCZZWNpfCwzdSFJ7vo4kf0o9Krz6kw\nT7svHwKBgQDguf4ha6u2CWawLVbNC9HQ6XC9nEr0vSG7Epjob7YGintlQKq/NjpJ\n6YXdfXrHeC2NIvqngcArMGuK2K20Wl7F+cMTFlSMLeEmRX3dX0RE6Z2SipTrnP+M\nCw+7NBvGA4iKHf/Pno9cx8xu9XA5cofQpM89unFhUuabiLKL6hg6PQ==\n-----END RSA PRIVATE KEY-----' }}
+          port: 22
+          script_stop: true
+          script: |
+            echo "===> Pulling latest code from GitHub main branch..."
+            cd /root/MovieZone
+            git fetch origin main
+            git reset --hard origin/main
 
-          sudo apt-get update -qq && sudo apt-get install -y sshpass -qq
+            echo "===> Building and recreating Docker containers..."
+            docker-compose build
+            docker-compose up -d --force-recreate
 
-          echo "Connecting to $TARGET_HOST via SSH..."
-          sshpass -p "$TARGET_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no "$TARGET_USER@$TARGET_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin; cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && (docker-compose build || docker compose build) && (docker-compose up -d --force-recreate || docker compose up -d --force-recreate)"
-
-          echo "===> Auto-deployment completed successfully on VPS!"
+            echo "===> Auto-deployment finished successfully!"
