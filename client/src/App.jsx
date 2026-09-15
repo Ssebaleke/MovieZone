@@ -123,8 +123,8 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {/* Standalone Admin Console */}
-        <Route path="/admin" element={
+        {/* Standalone Admin Console (Secret Route) */}
+        <Route path="/vico" element={
           <ProtectedRoute>
             <AdminGate>
               <AdminDashboard />
@@ -132,7 +132,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/admin/dashboard" element={
+        <Route path="/vico/dashboard" element={
           <ProtectedRoute>
             <AdminGate>
               <AdminDashboard />
