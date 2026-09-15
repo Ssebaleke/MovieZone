@@ -4967,3 +4967,138 @@ a {
     flex: 0 0 calc(33.333% - 8px) !important;
   }
 }
+
+/* ==========================================================================
+   Video Player — Clean Mobile-Responsive Controls
+   ========================================================================== */
+
+.vp-controls-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.vp-controls-bar--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vp-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vp-back-btn {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+.vp-back-btn:hover { background: rgba(255,255,255,0.15); }
+
+.vp-title {
+  font-size: clamp(0.9rem, 3vw, 1.3rem);
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vp-vj-badge {
+  background: #e50914;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Selectors row — wraps on mobile */
+.vp-selectors-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vp-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vp-selector-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #e50914;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.vp-select {
+  background: rgba(20,20,20,0.95);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  max-width: 140px;
+}
+
+.vp-select:focus { border-color: #e50914; }
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .vp-controls-bar {
+    padding: 12px 14px 20px;
+    gap: 10px;
+  }
+
+  .vp-back-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .vp-selectors-row {
+    gap: 8px;
+  }
+
+  .vp-select {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    max-width: 110px;
+  }
+
+  .vp-selector-label {
+    font-size: 0.65rem;
+  }
+}

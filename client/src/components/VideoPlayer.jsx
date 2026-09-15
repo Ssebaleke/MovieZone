@@ -89,29 +89,9 @@ export default function VideoPlayer({ movie, onClose }) {
     };
   }, []);
 
-  // Direct ReelPlexi stream fetch
-  const [directStreamUrl, setDirectStreamUrl] = useState(movie.videoUrl || '');
-  const [directEmbedUrl, setDirectEmbedUrl] = useState(movie.embedUrl || '');
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchStreamData = async () => {
-      try {
-        const res = await api.get(`/movies/${movie.id}`);
-        if (res && res.movie && isMounted) {
-          if (res.movie.videoUrl) setDirectStreamUrl(res.movie.videoUrl);
-          if (res.movie.embedUrl) setDirectEmbedUrl(res.movie.embedUrl);
-        }
-      } catch (e) {
-        console.error('Error fetching direct ReelPlexi stream:', e);
-      }
-    };
-
-    fetchStreamData();
-    return () => { isMounted = false; };
-  }, [movie.id]);
-
-  const activeVideoUrl = directStreamUrl || movie.videoUrl || '';
+  // Use movie URLs directly — no re-fetch that could overwrite with wrong data
+  const activeVideoUrl = movie.videoUrl || '';
+  const directEmbedUrl = movie.embedUrl || '';
   const isReelplexiStream = Boolean(activeVideoUrl && (
     activeVideoUrl.includes('reelplexi.com') ||
     activeVideoUrl.includes('mlegacytv.com') ||
@@ -314,6 +294,7 @@ export default function VideoPlayer({ movie, onClose }) {
   // Render Method
   // ----------------------------------------------------
   if (!isReelplexiStream && movie.tmdbId) {
+    const isMobileView = window.innerWidth <= 768;
     // Return Fallback Iframe Player ONLY if ReelPlexi direct stream is unavailable
     return (
       <div
@@ -325,115 +306,56 @@ export default function VideoPlayer({ movie, onClose }) {
         <iframe
           key={`${activeServer}-${season}-${episode}`}
           src={getEmbedUrl()}
-          className="custom-player-video"
           allowFullScreen
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-          style={{ width: '100vw', height: '100vh', border: 'none', zIndex: '1' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', zIndex: 1 }}
           title={movie.title}
         />
 
-        {/* Float Controls Overlay */}
-        <div
-          className={`player-controls-overlay ${showControls ? 'active' : ''}`}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '100px',
-            background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '20px 40px',
-            zIndex: '10',
-            opacity: showControls ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-            pointerEvents: showControls ? 'auto' : 'none'
-          }}
-        >
-          <button className="player-back-btn" onClick={onClose} style={{ zIndex: '20' }}>
-            <ArrowLeft size={30} color="#fff" />
-          </button>
-          <div className="player-title" style={{ color: '#fff', fontSize: '1.4rem', fontWeight: '700', marginLeft: '15px' }}>
-            {movie.title} {movie.vj && <span style={{ background: '#e50914', color: '#fff', fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', marginLeft: '10px', verticalAlign: 'middle' }}>{movie.vj}</span>}
-          </div>
-
-          {/* Streaming Server Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '30px', zIndex: '20' }}>
-            <span style={{ fontSize: '0.85rem', color: '#e50914', fontWeight: 'bold' }}>SERVER:</span>
-            <select
-              value={activeServer}
-              onChange={(e) => setActiveServer(e.target.value)}
-              style={{
-                background: '#181818',
-                border: '1px solid #e50914',
-                color: '#fff',
-                padding: '8px 14px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: '700',
-                outline: 'none'
-              }}
-            >
-              {SERVERS.map((srv) => (
-                <option key={srv.id} value={srv.id}>{srv.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {movie.type === 'SHOW' && (
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginLeft: '25px', zIndex: '20' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.85rem', color: '#bbb', fontWeight: 'bold' }}>SEASON</span>
-                <select
-                  value={season}
-                  onChange={(e) => {
-                    setSeason(parseInt(e.target.value, 10));
-                    setEpisode(1);
-                  }}
-                  style={{
-                    background: '#141414',
-                    border: '1px solid #444',
-                    color: '#fff',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    outline: 'none'
-                  }}
-                >
-                  {Array.from({ length: getSeasonsCount() }, (_, i) => i + 1).map((s) => (
-                    <option key={s} value={s}>Season {s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.85rem', color: '#bbb', fontWeight: 'bold' }}>EPISODE</span>
-                <select
-                  value={episode}
-                  onChange={(e) => setEpisode(parseInt(e.target.value, 10))}
-                  style={{
-                    background: '#141414',
-                    border: '1px solid #444',
-                    color: '#fff',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    outline: 'none'
-                  }}
-                >
-                  {Array.from({ length: getEpisodesCount() }, (_, i) => i + 1).map((ep) => (
-                    <option key={ep} value={ep}>Episode {ep}</option>
-                  ))}
-                </select>
-              </div>
+        {/* Controls overlay */}
+        <div className={`vp-controls-bar ${showControls ? 'vp-controls-bar--visible' : ''}`}>
+          <div className="vp-top-bar">
+            <button className="vp-back-btn" onClick={onClose}>
+              <ArrowLeft size={22} color="#fff" />
+            </button>
+            <div className="vp-title">
+              {movie.title}
+              {movie.vj && <span className="vp-vj-badge">{movie.vj}</span>}
             </div>
-          )}
+          </div>
+
+          {/* Server + Season/Episode selectors */}
+          <div className="vp-selectors-row">
+            <div className="vp-selector-group">
+              <label className="vp-selector-label">Server</label>
+              <select className="vp-select" value={activeServer} onChange={(e) => setActiveServer(e.target.value)}>
+                {SERVERS.map((srv) => (
+                  <option key={srv.id} value={srv.id}>{srv.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {movie.type === 'SHOW' && (
+              <>
+                <div className="vp-selector-group">
+                  <label className="vp-selector-label">Season</label>
+                  <select className="vp-select" value={season} onChange={(e) => { setSeason(parseInt(e.target.value, 10)); setEpisode(1); }}>
+                    {Array.from({ length: getSeasonsCount() }, (_, i) => i + 1).map((s) => (
+                      <option key={s} value={s}>S{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="vp-selector-group">
+                  <label className="vp-selector-label">Episode</label>
+                  <select className="vp-select" value={episode} onChange={(e) => setEpisode(parseInt(e.target.value, 10))}>
+                    {Array.from({ length: getEpisodesCount() }, (_, i) => i + 1).map((ep) => (
+                      <option key={ep} value={ep}>E{ep}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
