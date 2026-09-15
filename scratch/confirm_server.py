@@ -1,50 +1,38 @@
 import paramiko
+import sys
+import subprocess
 
-def check_server():
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect('69.164.245.17', username='root', password='Vico@2026', timeout=15)
+sys.stdout.reconfigure(encoding='utf-8')
 
-    # 1. Check docker container status and image build date/commit
-    stdin, stdout, stderr = ssh.exec_command("docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'")
-    print("=== DOCKER CONTAINERS ===")
-    print(stdout.read().decode())
+def check_server_git():
+    # 1. Local HEAD commit
+    local_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    local_log = subprocess.check_output(['git', 'log', '-1', '--oneline'], text=True).strip()
 
-    # 2. Check git commit on the server
-    cmd_git = """
-    for dir in /root/* /home/* /var/www/* /opt/*; do
-        if [ -d "$dir/.git" ]; then
-            echo "Found git repo in $dir"
-            cd "$dir"
-            git log -n 1 --oneline
-            git status -s
-        fi
-    done
+    print("=== LOCAL GIT REPOSITORY ===")
+    print("Local HEAD commit:", local_commit)
+    print("Local latest log:", local_log)
+    print()
+
+    # 2. VPS Server HEAD commit & status
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect('69.164.245.17', username='root', password='Vico@2026', timeout=15)
+
+    cmd = """
+    cd /root/MovieZone && \
+    git fetch origin main && \
+    echo "=== VPS REPOSITORY STATUS ===" && \
+    git status && \
+    echo "=== VPS LATEST COMMIT ===" && \
+    git log -1 --oneline
     """
-    stdin, stdout, stderr = ssh.exec_command(cmd_git)
-    print("=== GIT STATUS ON SERVER ===")
-    print(stdout.read().decode())
 
-    # 3. Pull & Rebuild directly in the found directory
-    cmd_deploy = """
-    for dir in /root/* /home/* /var/www/* /opt/*; do
-        if [ -f "$dir/docker-compose.yml" ]; then
-            echo "Deploying in $dir"
-            cd "$dir"
-            git fetch origin main
-            git reset --hard origin/main
-            docker compose build frontend || docker-compose build frontend
-            docker compose up -d || docker-compose up -d
-            break
-        fi
-    done
-    """
-    print("=== EXECUTING REBUILD & DEPLOY ===")
-    stdin, stdout, stderr = ssh.exec_command(cmd_deploy)
-    print(stdout.read().decode())
-    print(stderr.read().decode())
+    stdin, stdout, stderr = client.exec_command(cmd)
+    server_output = stdout.read().decode('utf-8', errors='ignore')
+    print(server_output)
 
-    ssh.close()
+    client.close()
 
 if __name__ == '__main__':
-    check_server()
+    check_server_git()

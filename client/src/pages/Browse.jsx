@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import HeroBanner from '../components/HeroBanner';
+import CategoryDiscovery from '../components/CategoryDiscovery';
 import MovieRow from '../components/MovieRow';
 import DetailModal from '../components/DetailModal';
 import VideoPlayer from '../components/VideoPlayer';
@@ -215,6 +216,38 @@ export default function Browse() {
               isSubscribed={isSubscribed}
             />
           )}
+
+          {/* Interactive Category Discovery Section ("What are you interested in?") */}
+          <CategoryDiscovery
+            onSelectPill={(genre) => {
+              if (genre === 'All') {
+                setActiveTab('home');
+                setActiveVJ('');
+                setActiveRegion('');
+              } else if (genre === 'K-Drama') {
+                setActiveRegion('kdrama');
+                setActiveVJ('');
+              } else if (genre === 'Anime') {
+                setActiveRegion('anime');
+                setActiveVJ('');
+              } else if (genre === 'Action' || genre === 'Comedy' || genre === 'Drama' || genre === 'Horror' || genre === 'Romance' || genre === 'Thriller' || genre === 'Fantasy') {
+                setActiveTab('movies');
+              }
+            }}
+            onSelectTopic={(card) => {
+              if (card.regionKey) {
+                setActiveRegion(card.regionKey);
+                setActiveVJ('');
+              } else if (card.vjKey) {
+                setActiveVJ(card.vjKey);
+                setActiveRegion('');
+              } else if (card.genreKey) {
+                setActiveTab('movies');
+                setActiveVJ('');
+                setActiveRegion('');
+              }
+            }}
+          />
 
           <div style={{ paddingBottom: '60px', position: 'relative', zIndex: '5', background: '#141414' }}>
             
