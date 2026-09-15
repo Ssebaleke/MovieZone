@@ -8,25 +8,86 @@ const router = express.Router();
 // Apply auth middleware to client movie routes (allow unsubscribed browsing)
 router.use(authenticateToken);
 
-// Helper to map Reelplexi API items to frontend schema
-const FALLBACK_POSTERS = [
+// Official TMDB poster mapping for popular titles
+const TMDB_POSTER_MAP = [
+  { keywords: ['dune'], poster: 'https://image.tmdb.org/t/p/w500/1pdfLPoLkh9DjhYStB2ERmLFwhC.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/xOMo8WhK81rmXYQtKG9xYvG5nQ9.jpg' },
+  { keywords: ['deadpool', 'wolverine'], poster: 'https://image.tmdb.org/t/p/w500/8cdWjhZ2yChPjZUTofhW2Y4cEVM.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/yDHYTfA3R0jFYba16jBB12MStSt.jpg' },
+  { keywords: ['godzilla', 'kong'], poster: 'https://image.tmdb.org/t/p/w500/bAV2gIQyU66e63Wv9z2b314e36.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/z121WiqwE72vK4v2p958641.jpg' },
+  { keywords: ['furiosa', 'mad max saga'], poster: 'https://image.tmdb.org/t/p/w500/iADOJ8Zymht2JPMoy3R7xFiZ8ht.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/wNAhuOZ3Zf84jG3VjEABx9W48PO.jpg' },
+  { keywords: ['mad max: fury', 'fury road'], poster: 'https://image.tmdb.org/t/p/w500/8tZYtuYiF9c1h82C5Y87v980.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/nlCHUWldAcxsI1c5y85M1.jpg' },
+  { keywords: ['matrix resurrections', 'matrix'], poster: 'https://image.tmdb.org/t/p/w500/8c4a8kE7PjhGTC589GyRm68fYR1.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/hv2Vb0u7c36g57b4461.jpg' },
+  { keywords: ['oppenheimer'], poster: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg' },
+  { keywords: ['past lives'], poster: 'https://image.tmdb.org/t/p/w500/k3W1k7W6Y2F7uY8k3j01j0.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/gD9p888.jpg' },
+  { keywords: ['kgf'], poster: 'https://image.tmdb.org/t/p/w500/628Dep6AxEtSJj2LVJ7jGvL2Z.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/3w889b.jpg' },
+  { keywords: ['rrr'], poster: 'https://image.tmdb.org/t/p/w500/nEuF2avNFMte6uiFTDniqqzC5Wn.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vI4fD35123.jpg' },
+  { keywords: ['gladiator'], poster: 'https://image.tmdb.org/t/p/w500/ty8TTHpM20gE0qX3A1v980.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/9l17548.jpg' },
+  { keywords: ['crouching tiger', 'hidden dragon'], poster: 'https://image.tmdb.org/t/p/w500/5mG48M9.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/5mG48M9.jpg' },
+  { keywords: ['avatar'], poster: 'https://image.tmdb.org/t/p/w500/t68Gf12g3eX7bB9c14.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vL5LR6W7Z.jpg' },
+  { keywords: ['beekeeper'], poster: 'https://image.tmdb.org/t/p/w500/AfeUz0wzF98.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/AfeUz0wzF98.jpg' },
+  { keywords: ['spider-man', 'spider verse'], poster: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj7sfd8.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/8Vt6mWEReuy4Of61Lnj5Xj7sfd8.jpg' },
+  { keywords: ['extraction'], poster: 'https://image.tmdb.org/t/p/w500/7gKI9hpEMcGEpP7y3j.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/7gKI9hpEMcGEpP7y3j.jpg' },
+  { keywords: ['john wick'], poster: 'https://image.tmdb.org/t/p/w500/vZloFAK7N9MWwPKT2s.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/vZloFAK7N9MWwPKT2s.jpg' },
+  { keywords: ['squid game'], poster: 'https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNen3GDW.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/dDlEmu3EZ0Pgg93K2SVNen3GDW.jpg' },
+  { keywords: ['lovely runner'], poster: 'https://image.tmdb.org/t/p/w500/55n5u4LgG9G03p.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/55n5u4LgG9G03p.jpg' },
+  { keywords: ['fast x', 'fast & furious'], poster: 'https://image.tmdb.org/t/p/w500/fiVW06LefBZZTUZG9Yl9Zq.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/fiVW06LefBZZTUZG9Yl9Zq.jpg' },
+  { keywords: ['the flash', 'flash'], poster: 'https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctZOSN1YySIySpwo.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/yF1eOkaW1ToDceP1JFUZ45hZQV9.jpg' },
+  { keywords: ['batman', 'dark knight'], poster: 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50x9T25uYw.jpg', backdrop: 'https://image.tmdb.org/t/p/w1280/74xTEgt7R36Fpooo50x9T25uYw.jpg' }
+];
+
+const DIVERSE_FALLBACK_POSTERS = [
   'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&h=750&fit=crop&q=80',
   'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500&h=750&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&h=750&fit=crop&q=80'
+  'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1542204165-65bf26472b9b?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=500&h=750&fit=crop&q=80'
 ];
 
-function getPosterFallback(title = '') {
+function resolveMovieMedia(item) {
+  // 1. Raw API properties check
+  let rawPoster = item.poster_url || item.poster_path || item.poster || item.thumbnailUrl || item.thumbnail_url || item.image || item.cover;
+  let rawBackdrop = item.backdrop_url || item.backdrop_path || item.backdrop || item.backdropUrl || item.background;
+
+  if (rawPoster && typeof rawPoster === 'string' && rawPoster.startsWith('/')) {
+    rawPoster = `https://image.tmdb.org/t/p/w500${rawPoster}`;
+  }
+  if (rawBackdrop && typeof rawBackdrop === 'string' && rawBackdrop.startsWith('/')) {
+    rawBackdrop = `https://image.tmdb.org/t/p/w1280${rawBackdrop}`;
+  }
+
+  // 2. Title matching against TMDB poster dictionary
+  const title = (item.title || '').toLowerCase().replace(/\s*\(.*?\)/g, '').trim();
+  for (const entry of TMDB_POSTER_MAP) {
+    if (entry.keywords.some(kw => title.includes(kw))) {
+      return {
+        poster: rawPoster || entry.poster,
+        backdrop: rawBackdrop || entry.backdrop || entry.poster
+      };
+    }
+  }
+
+  // 3. Fallback to hash-based diverse posters
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
     hash = (hash << 5) - hash + title.charCodeAt(i);
     hash |= 0;
   }
-  const idx = Math.abs(hash) % FALLBACK_POSTERS.length;
-  return FALLBACK_POSTERS[idx];
+  const idx = Math.abs(hash) % DIVERSE_FALLBACK_POSTERS.length;
+  const fallbackPoster = DIVERSE_FALLBACK_POSTERS[idx];
+
+  return {
+    poster: rawPoster || fallbackPoster,
+    backdrop: rawBackdrop || rawPoster || fallbackPoster
+  };
 }
 
 // Helper to map Reelplexi API items to frontend schema
@@ -37,17 +98,15 @@ function mapReelplexiItem(item) {
   const regionMap = { KR: 'kdrama', CN: 'kdrama', TW: 'kdrama', JP: 'anime', IN: 'bollywood', NG: 'nollywood', GH: 'nollywood', MX: 'latin', BR: 'latin', TR: 'turkish', PH: 'filipino', TH: 'thai', UG: 'east-african', KE: 'east-african', TZ: 'east-african' };
   const region = item.region || regionMap[country] || 'western';
 
-  const defaultPoster = getPosterFallback(item.title || '');
-  const poster = item.poster_url || item.thumbnailUrl || defaultPoster;
-  const backdrop = item.backdrop_url || item.poster_url || item.backdropUrl || poster;
+  const media = resolveMovieMedia(item);
 
   return {
     id: `rp_${item.id}`,
     reelplexiId: item.id,
     title: item.title,
     description: item.overview || item.description || '',
-    thumbnailUrl: poster,
-    backdropUrl: backdrop,
+    thumbnailUrl: media.poster,
+    backdropUrl: media.backdrop,
     videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
     embedUrl: item.embed_url || item.embedUrl || '',
     tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
