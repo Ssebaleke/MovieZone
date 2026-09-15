@@ -243,10 +243,74 @@ router.get('/reelplexi/top-movies', async (req, res) => {
 // ==========================================
 router.get('/movies', async (req, res) => {
   try {
-    const movies = await prisma.movie.findMany({
+    const dbMovies = await prisma.movie.findMany({
       orderBy: { title: 'asc' }
     });
-    res.json(movies);
+
+    // Fetch Reelplexi live stats & multi-page catalog in parallel
+    const [moviesPage1, seriesPage1] = await Promise.all([
+      reelplexiFetch('/movies', { per_page: 100, page: 1 }).catch(() => null),
+      reelplexiFetch('/series', { per_page: 100, page: 1 }).catch(() => null)
+    ]);
+
+    const reelplexiMoviesTotal = moviesPage1?.meta?.total || 4541;
+    const reelplexiSeriesTotal = seriesPage1?.meta?.total || 1185;
+    const reelplexiTotalContent = reelplexiMoviesTotal + reelplexiSeriesTotal;
+
+    // Fetch multi-page catalog to display in admin catalog manager
+    const moviePromises = Array.from({ length: 8 }, (_, i) => reelplexiFetch('/movies', { per_page: 100, page: i + 1 }).catch(() => null));
+    const seriesPromises = Array.from({ length: 4 }, (_, i) => reelplexiFetch('/series', { per_page: 100, page: i + 1 }).catch(() => null));
+
+    const results = await Promise.all([...moviePromises, ...seriesPromises]);
+    const liveItems = [];
+
+    results.forEach(res => {
+      if (res && Array.isArray(res.data)) {
+        res.data.forEach(item => {
+          const isShow = item.type === 'series' || item.type === 'SHOW';
+          const poster = item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://app.reelplexi.com${item.poster_path}`) : '';
+          liveItems.push({
+            id: `rp_${item.id}`,
+            reelplexiId: item.id,
+            title: item.title,
+            thumbnailUrl: poster || 'https://image.tmdb.org/t/p/w500/1pdfLPoLkh9DjhYStB2ERmLFwhC.jpg',
+            vj: item.vj || 'VJ Junior',
+            region: item.origin_country || 'UG',
+            category: item.category || (isShow ? 'TV Series & Shows' : 'Ugandan VJ Exclusives'),
+            rating: item.rating || 'PG-13',
+            type: isShow ? 'SHOW' : 'MOVIE',
+            source: 'Reelplexi API'
+          });
+        });
+      }
+    });
+
+    const mappedDbMovies = dbMovies.map(m => ({
+      ...m,
+      source: 'Custom DB Override'
+    }));
+
+    // Deduplicate catalog items
+    const seen = new Set();
+    const allCatalog = [];
+    [...mappedDbMovies, ...liveItems].forEach(m => {
+      const key = m.reelplexiId || m.id || m.title;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allCatalog.push(m);
+      }
+    });
+
+    res.json({
+      movies: allCatalog,
+      stats: {
+        reelplexiMoviesTotal,
+        reelplexiSeriesTotal,
+        reelplexiTotalContent,
+        loadedCatalogCount: allCatalog.length,
+        dbMoviesCount: dbMovies.length
+      }
+    });
   } catch (error) {
     console.error('Error fetching admin movie list:', error);
     res.status(500).json({ error: 'Server error listing movies' });

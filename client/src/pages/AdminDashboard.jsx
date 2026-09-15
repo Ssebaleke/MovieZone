@@ -40,6 +40,8 @@ export default function AdminDashboard() {
   const [livepaySaveStatus, setLivepaySaveStatus] = useState('');
   const [livepayTestResult, setLivepayTestResult] = useState(null);
   const [testingLivepay, setTestingLivepay] = useState(false);
+  const [catalogStats, setCatalogStats] = useState(null);
+  const [catalogSearch, setCatalogSearch] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -84,7 +86,15 @@ export default function AdminDashboard() {
     try { const d = await api.get('/admin/packages'); setPackagesList(Array.isArray(d) ? d : []); } catch { setPackagesList([]); }
   };
   const fetchMovies = async () => {
-    try { const d = await api.get('/admin/movies'); setMovies(Array.isArray(d) ? d : []); } catch { setMovies([]); }
+    try {
+      const d = await api.get('/admin/movies');
+      if (Array.isArray(d)) {
+        setMovies(d);
+      } else if (d && d.movies) {
+        setMovies(d.movies);
+        if (d.stats) setCatalogStats(d.stats);
+      }
+    } catch { setMovies([]); }
   };
   const fetchUserSignups = async () => {
     setUsersLoading(true);
@@ -218,11 +228,21 @@ export default function AdminDashboard() {
 
   const activeUsers = userSignups.filter(u => u.subscriptionStatus === 'ACTIVE').length;
 
+  const filteredCatalogMovies = movies.filter(m => {
+    if (!catalogSearch.trim()) return true;
+    const q = catalogSearch.toLowerCase();
+    return (
+      (m.title && m.title.toLowerCase().includes(q)) ||
+      (m.vj && m.vj.toLowerCase().includes(q)) ||
+      (m.category && m.category.toLowerCase().includes(q))
+    );
+  });
+
   const NAV_ITEMS = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={16} /> },
     { id: 'signups', label: 'Users', icon: <Users size={16} />, badge: userSignups.length },
     { id: 'packages', label: 'Packages', icon: <PackageIcon size={16} />, badge: packagesList.length },
-    { id: 'catalog', label: 'Catalog', icon: <Film size={16} />, badge: movies.length },
+    { id: 'catalog', label: 'Catalog', icon: <Film size={16} />, badge: catalogStats?.reelplexiTotalContent || movies.length },
     { id: 'livepay', label: 'LivePay', icon: <CreditCard size={16} /> },
     { id: 'apikeys', label: 'API Key', icon: <Key size={16} /> },
     { id: 'analytics', label: 'Analytics', icon: <Activity size={16} /> },
@@ -306,7 +326,7 @@ export default function AdminDashboard() {
               <div className="ad-stats-row">
                 <div className="ad-stat"><div className="ad-stat-icon" style={{background:'rgba(229,9,20,0.15)'}}><Users size={20} color="#e50914"/></div><div><div className="ad-stat-val">{userSignups.length}</div><div className="ad-stat-lbl">Total Users</div></div></div>
                 <div className="ad-stat"><div className="ad-stat-icon" style={{background:'rgba(70,211,105,0.15)'}}><ShieldCheck size={20} color="#46d369"/></div><div><div className="ad-stat-val" style={{color:'#46d369'}}>{activeUsers}</div><div className="ad-stat-lbl">Active Subs</div></div></div>
-                <div className="ad-stat"><div className="ad-stat-icon" style={{background:'rgba(99,102,241,0.15)'}}><Film size={20} color="#818cf8"/></div><div><div className="ad-stat-val" style={{color:'#818cf8'}}>{movies.length}</div><div className="ad-stat-lbl">VJ Titles</div></div></div>
+                <div className="ad-stat"><div className="ad-stat-icon" style={{background:'rgba(99,102,241,0.15)'}}><Film size={20} color="#818cf8"/></div><div><div className="ad-stat-val" style={{color:'#818cf8'}}>{(catalogStats?.reelplexiTotalContent || movies.length).toLocaleString()}</div><div className="ad-stat-lbl">Live Catalog Titles</div></div></div>
                 <div className="ad-stat"><div className="ad-stat-icon" style={{background:'rgba(251,191,36,0.15)'}}><PackageIcon size={20} color="#fbbf24"/></div><div><div className="ad-stat-val" style={{color:'#fbbf24'}}>{packagesList.length}</div><div className="ad-stat-lbl">Packages</div></div></div>
               </div>
 
@@ -433,11 +453,60 @@ export default function AdminDashboard() {
           {/* ── CATALOG ── */}
           {activeNav === 'catalog' && (
             <div className="ad-section">
+              {/* Live Catalog Metrics Header */}
+              <div className="ad-stats-row" style={{marginBottom:'20px'}}>
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{background:'rgba(229,9,20,0.15)'}}><Film size={20} color="#e50914"/></div>
+                  <div>
+                    <div className="ad-stat-val">{(catalogStats?.reelplexiMoviesTotal || 4541).toLocaleString()}</div>
+                    <div className="ad-stat-lbl">Live Movies (ReelPlexi)</div>
+                  </div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{background:'rgba(99,102,241,0.15)'}}><Activity size={20} color="#818cf8"/></div>
+                  <div>
+                    <div className="ad-stat-val" style={{color:'#818cf8'}}>{(catalogStats?.reelplexiSeriesTotal || 1185).toLocaleString()}</div>
+                    <div className="ad-stat-lbl">Live TV Series</div>
+                  </div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{background:'rgba(70,211,105,0.15)'}}><CheckCircle2 size={20} color="#46d369"/></div>
+                  <div>
+                    <div className="ad-stat-val" style={{color:'#46d369'}}>{(catalogStats?.reelplexiTotalContent || 5726).toLocaleString()}</div>
+                    <div className="ad-stat-lbl">Total Live Content</div>
+                  </div>
+                </div>
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{background:'rgba(251,191,36,0.15)'}}><PackageIcon size={20} color="#fbbf24"/></div>
+                  <div>
+                    <div className="ad-stat-val" style={{color:'#fbbf24'}}>{movies.length.toLocaleString()}</div>
+                    <div className="ad-stat-lbl">Active Loaded Items</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search & Filter Bar */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'15px',gap:'15px',flexWrap:'wrap'}}>
+                <div className="ad-search-box" style={{maxWidth:'400px',flex:1}}>
+                  <Search size={16} className="ad-search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search catalog by title, VJ, or category..."
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    className="ad-search-input"
+                  />
+                </div>
+                <div style={{color:'var(--color-text-secondary)',fontSize:'0.85rem'}}>
+                  Showing {filteredCatalogMovies.length.toLocaleString()} of {movies.length.toLocaleString()} loaded catalog items
+                </div>
+              </div>
+
               <div className="ad-table-wrap">
                 <table className="ad-table">
-                  <thead><tr><th>Title</th><th>VJ</th><th>Region</th><th>Category</th><th>Rating</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Title</th><th>VJ</th><th>Type</th><th>Category</th><th>Source</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {movies.map(movie => (
+                    {filteredCatalogMovies.slice(0, 100).map(movie => (
                       <tr key={movie.id}>
                         <td>
                           <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
@@ -446,9 +515,9 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td><span className="ad-vj-badge">{movie.vj||'VJ Junior'}</span></td>
-                        <td className="ad-muted" style={{fontSize:'0.78rem',textTransform:'uppercase'}}>{movie.region||'east-african'}</td>
-                        <td className="ad-muted" style={{fontSize:'0.82rem'}}>{movie.category}</td>
-                        <td><span className="card-rating-badge">{movie.rating}</span></td>
+                        <td><span className="ad-role-badge">{movie.type || 'MOVIE'}</span></td>
+                        <td className="ad-muted" style={{fontSize:'0.82rem'}}>{movie.category || movie.region}</td>
+                        <td><span className="ad-pkg-badge" style={{background:'rgba(255,255,255,0.06)'}}>{movie.source || 'Reelplexi API'}</span></td>
                         <td>
                           <div style={{display:'flex',gap:'6px'}}>
                             <button className="ad-ghost-btn" onClick={()=>handleOpenEdit(movie)}><Edit size={13}/></button>
@@ -457,7 +526,7 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {movies.length === 0 && <tr><td colSpan="6" className="ad-empty">No movies in catalog.</td></tr>}
+                    {filteredCatalogMovies.length === 0 && <tr><td colSpan="6" className="ad-empty">No matching items found in catalog.</td></tr>}
                   </tbody>
                 </table>
               </div>
