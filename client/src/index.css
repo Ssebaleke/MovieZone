@@ -3756,3 +3756,236 @@ a {
     border: 1px solid rgba(255,255,255,0.2);
   }
 }
+
+/* ==========================================================================
+   Category Discovery ("What are you interested in?")
+   ========================================================================== */
+.category-discovery-section {
+  padding: 24px 4% 12px 4%;
+  position: relative;
+  z-index: 6;
+  background: #141414;
+}
+
+/* Scrollable Genre Pills Bar */
+.genre-pills-scroll-container {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 6px;
+  margin-bottom: 24px;
+}
+.genre-pills-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.genre-pills-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+}
+
+.genre-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e5e5e5;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+}
+
+.genre-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.genre-pill.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25);
+}
+
+/* Section Header */
+.discovery-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.discovery-title {
+  font-size: clamp(1.25rem, 3.5vw, 1.7rem);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.discovery-view-all {
+  background: transparent;
+  border: none;
+  color: #a3a3a3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.discovery-view-all:hover {
+  color: #ffffff;
+}
+
+/* Category Cards Row */
+.topic-cards-scroll-container {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 6px 2px 14px 2px;
+}
+.topic-cards-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.topic-cards-grid {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+}
+
+.topic-card {
+  width: 245px;
+  height: 135px;
+  border-radius: 16px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.topic-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+}
+
+.topic-card:hover .topic-card-poster-wrapper {
+  transform: rotate(15deg) scale(1.12);
+}
+
+.topic-card:hover .arrow {
+  transform: translateX(4px);
+}
+
+/* Gradients */
+.card-red {
+  background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+}
+
+.card-blue {
+  background: linear-gradient(135deg, #0284c7 0%, #1e3a8a 100%);
+}
+
+.card-green {
+  background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+}
+
+.card-purple {
+  background: linear-gradient(135deg, #be185d 0%, #701a75 100%);
+}
+
+.card-amber {
+  background: linear-gradient(135deg, #d97706 0%, #7c2d12 100%);
+}
+
+/* Card Content & Text */
+.topic-card-content {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+  max-width: 58%;
+}
+
+.topic-card-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.topic-card-action {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topic-card-action .arrow {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+/* Poster Card Transformation */
+.topic-card-poster-wrapper {
+  position: absolute;
+  right: -10px;
+  bottom: -18px;
+  top: 10px;
+  width: 100px;
+  z-index: 1;
+  transform: rotate(11deg) scale(1.05);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  filter: drop-shadow(-4px 6px 14px rgba(0,0,0,0.6));
+}
+
+.topic-card-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+@media (max-width: 768px) {
+  .category-discovery-section {
+    padding: 16px 4% 8px 4%;
+  }
+
+  .topic-card {
+    width: 205px;
+    height: 120px;
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+
+  .topic-card-title {
+    font-size: 1rem;
+  }
+
+  .topic-card-poster-wrapper {
+    width: 85px;
+    right: -8px;
+    bottom: -14px;
+  }
+}
+
