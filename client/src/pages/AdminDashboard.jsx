@@ -22,12 +22,35 @@ export default function AdminDashboard() {
   const [pkgName, setPkgName] = useState('');
   const [pkgPrice, setPkgPrice] = useState('');
   const [pkgCurrency, setPkgCurrency] = useState('UGX');
-  const [pkgInterval, setPkgInterval] = useState('MONTHLY');
+  const [pkgDurationVal, setPkgDurationVal] = useState(1);
+  const [pkgDurationUnit, setPkgDurationUnit] = useState('MONTHS');
   const [pkgDescription, setPkgDescription] = useState('');
   const [pkgFeatures, setPkgFeatures] = useState('');
   const [pkgResolution, setPkgResolution] = useState('1080p Full HD');
   const [pkgScreens, setPkgScreens] = useState(2);
   const [pkgIsActive, setPkgIsActive] = useState(true);
+
+  // Parse interval string into value and unit
+  const parseInterval = (str) => {
+    if (!str) return { val: 1, unit: 'MONTHS' };
+    const s = String(str).toUpperCase().trim();
+    const m = s.match(/^(\d+)[_\s:]*([A-Z]+)$/);
+    if (m) {
+      let u = m[2];
+      if (u.startsWith('MIN')) u = 'MINUTES';
+      else if (u.startsWith('HOUR') || u.startsWith('HR')) u = 'HOURS';
+      else if (u.startsWith('DAY')) u = 'DAYS';
+      else if (u.startsWith('WEEK')) u = 'WEEKS';
+      else if (u.startsWith('MONTH')) u = 'MONTHS';
+      else if (u.startsWith('YEAR')) u = 'YEARS';
+      return { val: parseInt(m[1], 10), unit: u };
+    }
+    if (s === 'DAILY') return { val: 1, unit: 'DAYS' };
+    if (s === 'WEEKLY') return { val: 7, unit: 'DAYS' };
+    if (s === 'MONTHLY') return { val: 1, unit: 'MONTHS' };
+    if (s === 'YEARLY') return { val: 1, unit: 'YEARS' };
+    return { val: 1, unit: 'MONTHS' };
+  };
 
   // User Signups State
   const [userSignups, setUserSignups] = useState([]);
@@ -88,7 +111,9 @@ export default function AdminDashboard() {
       setPkgName(pkg.name);
       setPkgPrice(pkg.price);
       setPkgCurrency(pkg.currency || 'UGX');
-      setPkgInterval(pkg.interval || 'MONTHLY');
+      const parsed = parseInterval(pkg.interval);
+      setPkgDurationVal(parsed.val);
+      setPkgDurationUnit(parsed.unit);
       setPkgDescription(pkg.description || '');
       setPkgFeatures(pkg.features || '');
       setPkgResolution(pkg.resolution || '1080p Full HD');
@@ -99,7 +124,8 @@ export default function AdminDashboard() {
       setPkgName('');
       setPkgPrice('');
       setPkgCurrency('UGX');
-      setPkgInterval('MONTHLY');
+      setPkgDurationVal(30);
+      setPkgDurationUnit('DAYS');
       setPkgDescription('');
       setPkgFeatures('');
       setPkgResolution('1080p Full HD');
@@ -114,11 +140,14 @@ export default function AdminDashboard() {
     setError('');
     setLoading(true);
 
+    const val = parseInt(pkgDurationVal, 10) || 0;
+    const intervalStr = `${val}_${pkgDurationUnit}`;
+
     const payload = {
       name: pkgName,
       price: parseFloat(pkgPrice),
       currency: pkgCurrency,
-      interval: pkgInterval,
+      interval: intervalStr,
       description: pkgDescription,
       features: pkgFeatures,
       resolution: pkgResolution,
@@ -1174,54 +1203,94 @@ export default function AdminDashboard() {
       {/* Package Create/Edit Modal */}
       {showPackageModal && (
         <div className="payment-modal-overlay">
-          <div className="profile-modal" style={{ maxWidth: '600px', background: '#161820' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>{editingPackageId ? 'Edit Package & Pricing' : 'Create Subscription Package'}</h2>
-              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => setShowPackageModal(false)}>
-                <X size={28} color="#fff" />
+          <div className="profile-modal" style={{ maxWidth: '640px', background: '#12141c', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(229,9,20,0.15)', border: '1px solid #e50914', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PackageIcon size={22} color="#e50914" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: '800', margin: 0, color: '#fff' }}>
+                    {editingPackageId ? 'Edit Package & Pricing' : 'Create Subscription Package'}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>Set custom pricing, access duration, and quality limits</span>
+                </div>
+              </div>
+              <button style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => setShowPackageModal(false)}>
+                <X size={20} color="#fff" />
               </button>
             </div>
 
-            {error && <div className="error-message" style={{ marginBottom: '15px' }}>{error}</div>}
+            {error && <div className="error-message" style={{ marginBottom: '16px', padding: '12px', background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: '8px', color: '#f87171', fontSize: '0.88rem' }}>{error}</div>}
 
-            <form onSubmit={handleSavePackage} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="cc-input-container">
-                <label>Package Name (e.g. Monthly VIP, Daily Pass)</label>
-                <input type="text" value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="Monthly Pass" required />
+            <form onSubmit={handleSavePackage} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+              <div className="cc-input-container" style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Package Name</label>
+                <input type="text" value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="e.g. Daily Pass, Monthly VIP, 12 Hours Special" style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }} required />
               </div>
 
               <div className="cc-input-container">
-                <label>Price Amount</label>
-                <input type="number" value={pkgPrice} onChange={(e) => setPkgPrice(e.target.value)} placeholder="20000" required />
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price Amount</label>
+                <input type="number" value={pkgPrice} onChange={(e) => setPkgPrice(e.target.value)} placeholder="e.g. 2000" style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }} required />
               </div>
 
               <div className="cc-input-container">
-                <label>Currency</label>
-                <select value={pkgCurrency} onChange={(e) => setPkgCurrency(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Currency</label>
+                <select value={pkgCurrency} onChange={(e) => setPkgCurrency(e.target.value)} style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', padding: '12px 14px', borderRadius: '8px', fontSize: '0.95rem', outline: 'none', fontWeight: '600' }}>
                   <option value="UGX">UGX (Ugandan Shilling)</option>
                   <option value="USD">USD ($)</option>
                   <option value="KES">KES (Kenyan Shilling)</option>
                 </select>
               </div>
 
+              {/* Session Duration Limit (Time value) & Time Unit Side-by-Side (Matching user design request) */}
               <div className="cc-input-container">
-                <label>Package Duration / Billing Cycle</label>
-                <select value={pkgInterval} onChange={(e) => setPkgInterval(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none', fontWeight: 'bold' }}>
-                  <option value="12_HOURS">⏱️ 12 Hours Pass (12 Hours)</option>
-                  <option value="DAILY">📅 24 Hours / 1 Day (DAILY)</option>
-                  <option value="3_DAYS">⚡ 3 Days Pass (3 Days)</option>
-                  <option value="WEEKLY">📆 7 Days / 1 Week (WEEKLY)</option>
-                  <option value="14_DAYS">🌟 14 Days / 2 Weeks (14 Days)</option>
-                  <option value="MONTHLY">👑 30 Days / 1 Month (MONTHLY)</option>
-                  <option value="3_MONTHS">🔥 3 Months Pass (90 Days)</option>
-                  <option value="6_MONTHS">🚀 6 Months Pass (180 Days)</option>
-                  <option value="YEARLY">💎 1 Year / 12 Months (YEARLY)</option>
-                </select>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#ccc', marginBottom: '6px' }}>
+                  Session Duration Limit (Time value)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={pkgDurationVal}
+                  onChange={(e) => setPkgDurationVal(e.target.value)}
+                  placeholder="0"
+                  style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.2)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '1rem', outline: 'none', width: '100%' }}
+                  required
+                />
+                <span style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px', display: 'block' }}>
+                  Use 0 for unlimited time.
+                </span>
               </div>
 
               <div className="cc-input-container">
-                <label>Resolution Quality</label>
-                <select value={pkgResolution} onChange={(e) => setPkgResolution(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#ccc', marginBottom: '6px' }}>
+                  Time Unit
+                </label>
+                <select
+                  value={pkgDurationUnit}
+                  onChange={(e) => setPkgDurationUnit(e.target.value)}
+                  style={{ background: '#1c1e28', border: '1.5px solid #3b82f6', color: '#fff', padding: '12px 14px', borderRadius: '8px', fontSize: '1rem', width: '100%', outline: 'none', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  <option value="MINUTES">Minutes</option>
+                  <option value="HOURS">Hours</option>
+                  <option value="DAYS">Days</option>
+                  <option value="WEEKS">Weeks</option>
+                  <option value="MONTHS">Months</option>
+                  <option value="YEARS">Years</option>
+                </select>
+              </div>
+
+              {/* Summary Duration Badge */}
+              <div style={{ gridColumn: 'span 2', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', padding: '10px 14px', color: '#60a5fa', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} color="#60a5fa" />
+                <span>
+                  Configured Pass Duration: <strong style={{ color: '#fff' }}>{pkgDurationVal == 0 ? 'Unlimited Access (No Expiration)' : `${pkgDurationVal} ${pkgDurationUnit.toLowerCase()}`}</strong>
+                </span>
+              </div>
+
+              <div className="cc-input-container">
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resolution Quality</label>
+                <select value={pkgResolution} onChange={(e) => setPkgResolution(e.target.value)} style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', padding: '12px 14px', borderRadius: '8px', fontSize: '0.95rem', outline: 'none' }}>
                   <option value="720p HD">720p HD</option>
                   <option value="1080p Full HD">1080p Full HD</option>
                   <option value="4K Ultra HD">4K Ultra HD</option>
@@ -1229,30 +1298,34 @@ export default function AdminDashboard() {
               </div>
 
               <div className="cc-input-container">
-                <label>Simultaneous Screens</label>
-                <input type="number" value={pkgScreens} onChange={(e) => setPkgScreens(e.target.value)} min="1" max="10" required />
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Simultaneous Screens</label>
+                <input type="number" value={pkgScreens} onChange={(e) => setPkgScreens(e.target.value)} min="1" max="10" style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }} required />
               </div>
 
               <div className="cc-input-container" style={{ gridColumn: 'span 2' }}>
-                <label>Short Description</label>
-                <input type="text" placeholder="Full 30 days access to all Luganda translated movies" value={pkgDescription} onChange={(e) => setPkgDescription(e.target.value)} />
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Short Description</label>
+                <input type="text" placeholder="Full access to all Luganda translated movies and series" value={pkgDescription} onChange={(e) => setPkgDescription(e.target.value)} style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }} />
               </div>
 
               <div className="cc-input-container" style={{ gridColumn: 'span 2' }}>
-                <label>Feature Bullet Points (Comma separated)</label>
-                <input type="text" placeholder="Unlimited Streaming, HD Quality, Luganda VJs" value={pkgFeatures} onChange={(e) => setPkgFeatures(e.target.value)} />
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Feature Bullet Points (Comma separated)</label>
+                <input type="text" placeholder="Unlimited Streaming, HD Quality, All VJ Downloads" value={pkgFeatures} onChange={(e) => setPkgFeatures(e.target.value)} style={{ background: '#1c1e28', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none' }} />
               </div>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input type="checkbox" id="isActiveCheck" checked={pkgIsActive} onChange={(e) => setPkgIsActive(e.target.checked)} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                <label htmlFor="isActiveCheck" style={{ cursor: 'pointer', fontWeight: 'bold' }}>Active & Visible for User Payments</label>
+              <div style={{ gridColumn: 'span 2', background: '#1c1e28', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label htmlFor="isActiveCheck" style={{ cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color={pkgIsActive ? '#46d369' : '#888'} /> Active & Visible on Checkout Page
+                </label>
+                <input type="checkbox" id="isActiveCheck" checked={pkgIsActive} onChange={(e) => setPkgIsActive(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#e50914' }} />
               </div>
 
-              <div className="payment-actions" style={{ gridColumn: 'span 2', marginTop: '20px' }}>
-                <button type="submit" className="payment-confirm" disabled={loading} style={{ background: '#e50914' }}>
-                  {loading ? 'Saving...' : 'Save Package'}
+              <div className="payment-actions" style={{ gridColumn: 'span 2', marginTop: '12px', display: 'flex', gap: '12px' }}>
+                <button type="button" className="payment-cancel" onClick={() => setShowPackageModal(false)} style={{ flex: 1, background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#ccc', padding: '14px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
+                  Cancel
                 </button>
-                <button type="button" className="payment-cancel" onClick={() => setShowPackageModal(false)}>Cancel</button>
+                <button type="submit" className="payment-confirm" disabled={loading} style={{ flex: 2, background: '#e50914', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(229,9,20,0.4)' }}>
+                  {loading ? 'Saving...' : (editingPackageId ? 'Update Package' : 'Create Package')}
+                </button>
               </div>
             </form>
           </div>

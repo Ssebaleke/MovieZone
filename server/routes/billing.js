@@ -11,6 +11,60 @@ if (stripeSecret) {
   stripeInstance = new Stripe(stripeSecret);
 }
 
+// Calculate dynamic subscription end date from value + unit string (e.g. "12_HOURS", "3_DAYS", "30_DAYS", "1_YEARS")
+function calculateExpirationDate(intervalStr) {
+  const now = new Date();
+  const expiration = new Date(now);
+
+  if (!intervalStr) {
+    expiration.setMonth(expiration.getMonth() + 1);
+    return expiration;
+  }
+
+  const str = String(intervalStr).toUpperCase().trim();
+
+  // Parse pattern like "12_HOURS", "45_MINUTES", "3_DAYS", "2_WEEKS", "6_MONTHS", "1_YEARS"
+  const match = str.match(/^(\d+)[_\s:]*([A-Z]+)$/);
+  if (match) {
+    const val = parseInt(match[1], 10);
+    const unit = match[2];
+
+    if (val === 0) {
+      // 0 means unlimited duration / 100 years
+      expiration.setFullYear(expiration.getFullYear() + 100);
+      return expiration;
+    }
+
+    if (unit.startsWith('MIN')) {
+      expiration.setMinutes(expiration.getMinutes() + val);
+    } else if (unit.startsWith('HOUR') || unit.startsWith('HR')) {
+      expiration.setHours(expiration.getHours() + val);
+    } else if (unit.startsWith('DAY')) {
+      expiration.setDate(expiration.getDate() + val);
+    } else if (unit.startsWith('WEEK')) {
+      expiration.setDate(expiration.getDate() + (val * 7));
+    } else if (unit.startsWith('MONTH')) {
+      expiration.setMonth(expiration.getMonth() + val);
+    } else if (unit.startsWith('YEAR')) {
+      expiration.setFullYear(expiration.getFullYear() + val);
+    } else {
+      expiration.setMonth(expiration.getMonth() + 1);
+    }
+    return expiration;
+  }
+
+  // Legacy fallback strings
+  switch (str) {
+    case 'DAILY': expiration.setDate(expiration.getDate() + 1); break;
+    case 'WEEKLY': expiration.setDate(expiration.getDate() + 7); break;
+    case 'MONTHLY': expiration.setMonth(expiration.getMonth() + 1); break;
+    case 'YEARLY': expiration.setFullYear(expiration.getFullYear() + 1); break;
+    default: expiration.setMonth(expiration.getMonth() + 1); break;
+  }
+
+  return expiration;
+}
+
 // Get price list / details (Legacy plans)
 router.get('/plans', (req, res) => {
   res.json({
@@ -257,52 +311,8 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
       }
     }
 
-    // Calculate dynamic expiration based on package interval
-    const now = new Date();
-    const expiration = new Date(now);
-    const upperInterval = (pkg.interval || 'MONTHLY').toUpperCase();
-
-    switch (upperInterval) {
-      case '12_HOURS':
-      case '12HOURS':
-      case '12_HRS':
-        expiration.setHours(expiration.getHours() + 12);
-        break;
-      case '24_HOURS':
-      case '1_DAY':
-      case 'DAILY':
-        expiration.setHours(expiration.getHours() + 24);
-        break;
-      case '3_DAYS':
-      case '3DAYS':
-        expiration.setDate(expiration.getDate() + 3);
-        break;
-      case '7_DAYS':
-      case 'WEEKLY':
-        expiration.setDate(expiration.getDate() + 7);
-        break;
-      case '14_DAYS':
-      case '2_WEEKS':
-        expiration.setDate(expiration.getDate() + 14);
-        break;
-      case '30_DAYS':
-      case 'MONTHLY':
-        expiration.setMonth(expiration.getMonth() + 1);
-        break;
-      case '3_MONTHS':
-        expiration.setMonth(expiration.getMonth() + 3);
-        break;
-      case '6_MONTHS':
-        expiration.setMonth(expiration.getMonth() + 6);
-        break;
-      case '1_YEAR':
-      case 'YEARLY':
-        expiration.setFullYear(expiration.getFullYear() + 1);
-        break;
-      default:
-        expiration.setMonth(expiration.getMonth() + 1);
-        break;
-    }
+    // Calculate dynamic expiration based on package interval (Value + Unit)
+    const expiration = calculateExpirationDate(pkg.interval);
 
     const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
