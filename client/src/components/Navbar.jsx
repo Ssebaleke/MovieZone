@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -119,7 +119,7 @@ export default function Navbar({
         <div className="nav-left">
           {/* Mobile Hamburger Navigation Bar Icon */}
           <button
-            className="mobile-menu-toggle-btn"
+            className="mobile-menu-toggle-btn desktop-hidden"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle navigation menu"
             type="button"
@@ -238,8 +238,26 @@ export default function Navbar({
 
         {/* Right Section */}
         <div className="nav-right">
-          {/* Expanding Search Bar */}
-          <div className={`search-box ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
+          {/* Mobile Only Header Actions (Cast, Bell Badge 8, Search) */}
+          <div className="mobile-header-actions-right">
+            <button className="mobile-header-icon-btn" aria-label="Cast">
+              <Cast size={20} color="#ffffff" />
+            </button>
+            <button className="mobile-header-icon-btn notification-badge-btn" aria-label="Notifications">
+              <Bell size={20} color="#ffffff" />
+              <span className="bell-badge-count">8</span>
+            </button>
+            <button
+              className="mobile-header-icon-btn"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Search"
+            >
+              <Search size={20} color="#ffffff" />
+            </button>
+          </div>
+
+          {/* Desktop Search Bar */}
+          <div className={`search-box desktop-only-search ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
             <button
               className="search-btn-icon"
               onClick={() => {
@@ -274,19 +292,19 @@ export default function Navbar({
             )}
           </div>
 
-          {/* User Notifications */}
-          <button className="player-control-icon-btn notifications-btn" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          {/* User Notifications Desktop */}
+          <button className="player-control-icon-btn notifications-btn desktop-only-icon" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Bell size={20} />
-            <span className="notification-badge">11</span>
+            <span className="notification-badge">8</span>
           </button>
 
           {/* Profile Dropdown */}
           {currentProfile && (
-            <div className="nav-profile-menu">
+            <div className="nav-profile-menu desktop-only-icon">
               <div className="nav-profile-avatar">
                 <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
               </div>
-              <ChevronDown size={16} className="desktop-only-icon" />
+              <ChevronDown size={16} />
 
               <div className="profile-dropdown">
                 <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}>
@@ -470,49 +488,51 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Sleek Mobile Bottom Tab Bar for Smartphones */}
+      {/* Mobile Bottom Navigation Bar matching Mobile Design Screenshot */}
       <nav className="mobile-bottom-nav">
         <div
           className={`mobile-bottom-tab ${activeTab === 'home' && !searchQuery ? 'active' : ''}`}
           onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
         >
-          <Home size={20} />
+          <div className="tab-icon-pill">
+            <Home size={18} color={activeTab === 'home' && !searchQuery ? '#121212' : '#aaaaaa'} />
+          </div>
           <span>Home</span>
         </div>
 
         <div
-          className={`mobile-bottom-tab ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}
+          className={`mobile-bottom-tab ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => {
             setIsMobileMenuOpen(true);
-            setIsDrawerVjOpen(true);
+            setIsDrawerVjOpen(false);
           }}
         >
-          <Mic size={20} color="#e50914" />
-          <span>VJs</span>
+          <LayoutGrid size={20} color="#aaaaaa" />
+          <span>Categories</span>
         </div>
 
         <div
-          className={`mobile-bottom-tab ${activeTab === 'series' ? 'active' : ''}`}
+          className={`mobile-bottom-tab ${activeTab === 'radio' ? 'active' : ''}`}
+          onClick={() => alert('Radio Live Streaming Coming Soon!')}
+        >
+          <Radio size={20} color="#aaaaaa" />
+          <span>Radio</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'series' || activeTab === 'tv' ? 'active' : ''}`}
           onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
         >
-          <Tv size={20} />
-          <span>Series</span>
+          <Tv size={20} color="#aaaaaa" />
+          <span>Live TV</span>
         </div>
 
         <div
-          className={`mobile-bottom-tab ${activeTab === 'movies' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+          className={`mobile-bottom-tab ${location.pathname === '/account' || location.pathname === '/profiles' ? 'active' : ''}`}
+          onClick={() => navigate('/account')}
         >
-          <Film size={20} />
-          <span>Movies</span>
-        </div>
-
-        <div
-          className={`mobile-bottom-tab ${searchQuery ? 'active' : ''}`}
-          onClick={() => setIsMobileMenuOpen(true)}
-        >
-          <Search size={20} />
-          <span>Search</span>
+          <User size={20} color="#aaaaaa" />
+          <span>You</span>
         </div>
       </nav>
     </>

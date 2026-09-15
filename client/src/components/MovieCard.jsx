@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ThumbsUp, ChevronDown, Mic, Star } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, ChevronDown, Mic, Star, Info } from 'lucide-react';
 
 export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, onToggleWatchlist, isSubscribed }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -12,6 +12,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
   const userIsSubscribed = isSubscribed !== undefined ? isSubscribed : (user?.subscriptionStatus === 'ACTIVE' || user?.role === 'ADMIN');
 
   const handleMouseEnter = () => {
+    if (window.innerWidth <= 768) return; // Disable hover expansion on mobile touch
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(true);
       setIsPlayingVideo(true);
@@ -37,10 +38,12 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
   const isHls = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
   const matchPercentage = Math.floor(Math.random() * 15) + 85;
 
+  const firstGenre = movie.genres ? movie.genres.split(',')[0].trim().toUpperCase() : 'ACTION';
+  const releaseYear = movie.releaseYear || movie.year || 2026;
+
   return (
     <div
       className="movie-card-item"
-      style={{ backgroundImage: `url(${movie.thumbnailUrl})` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => {
@@ -49,26 +52,47 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
         }
       }}
     >
-      {/* Premium Star Badge when subscription is not active */}
-      {!userIsSubscribed && !isHovered && (
-        <div style={{
-          position: 'absolute', top: '8px', right: '8px',
-          background: 'rgba(10, 10, 15, 0.85)', border: '1px solid #ffc107', color: '#ffc107',
-          fontSize: '0.65rem', fontWeight: 'bold', padding: '3px 7px', borderRadius: '4px',
-          display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10, backdropFilter: 'blur(4px)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.6)'
-        }}>
-          <Star size={11} fill="#ffc107" color="#ffc107" /> Premium
-        </div>
-      )}
+      {/* Poster Image Container */}
+      <div className="card-poster-wrapper">
+        <img src={movie.thumbnailUrl} alt={movie.title} className="card-poster-img" loading="lazy" />
 
-      {/* VJ Badge overlay on static thumbnail */}
-      {movie.vj && !isHovered && (
-        <div className="vj-pill-badge">
-          <Mic size={10} color="#fff" /> {movie.vj}
-        </div>
-      )}
+        {/* Premium Star Badge when subscription is not active */}
+        {!userIsSubscribed && !isHovered && (
+          <div className="card-premium-badge">
+            <Star size={10} fill="#ffc107" color="#ffc107" /> Premium
+          </div>
+        )}
 
+        {/* Blue VJ Pill Badge (matching mobile screenshot) */}
+        {movie.vj && !isHovered && (
+          <div className="vj-pill-badge-blue">
+            {movie.vj}
+          </div>
+        )}
+
+        {/* Circular Info Button (i) top right */}
+        <button
+          className="card-info-btn-topright"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenModal(movie);
+          }}
+          type="button"
+          aria-label="Movie details"
+        >
+          <Info size={13} color="#ffffff" />
+        </button>
+      </div>
+
+      {/* Title & Metadata Subtitle below poster */}
+      <div className="card-details-below">
+        <div className="card-mobile-title" title={movie.title}>{movie.title}</div>
+        <div className="card-mobile-subtitle">
+          {firstGenre} • {releaseYear}
+        </div>
+      </div>
+
+      {/* Expanded Hover Card for Desktop */}
       {isHovered && (
         <div className="hover-card-expanded">
           <div className="hover-card-video-container" onClick={() => onPlay(movie)}>
@@ -112,7 +136,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
               <span className="card-rating-badge">{movie.rating}</span>
               <span style={{ color: '#fff' }}>{movie.duration}</span>
               {movie.vj && (
-                <span style={{ background: '#e50914', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold' }}>
+                <span className="vj-pill-badge-blue" style={{ position: 'static' }}>
                   {movie.vj}
                 </span>
               )}

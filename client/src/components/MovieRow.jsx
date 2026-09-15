@@ -28,7 +28,10 @@ export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist
 
   return (
     <div className="movie-row-container" style={{ overflow: 'visible' }}>
-      <h2 className="movie-row-title">{title}</h2>
+      <div className="movie-row-header-line">
+        <h2 className="movie-row-title">{title}</h2>
+        <span className="row-view-all-link">View all</span>
+      </div>
       
       <div className="slider-wrapper" style={{ overflow: 'visible' }}>
         <button className="slider-arrow left" onClick={() => handleScroll('left')}>
