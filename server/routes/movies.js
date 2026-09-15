@@ -157,35 +157,24 @@ router.get('/', async (req, res) => {
         vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
       }
     } else {
-      // Fetch multi-page catalog from Reelplexi API (optimized to 4 parallel calls for speed & stability)
-      const [
-        liveMoviesP1, liveMoviesP2,
-        liveSeriesP1,
-        trendingRes
-      ] = await Promise.all([
-        reelplexiFetch('/movies', { per_page: 100, page: 1 }),
-        reelplexiFetch('/movies', { per_page: 100, page: 2 }),
-        reelplexiFetch('/series', { per_page: 100, page: 1 }),
-        reelplexiFetch('/trending', { per_page: 100 })
-      ]);
+      // Fetch extensive multi-page catalog from Reelplexi API (parallel fetching for maximum content volume)
+      const pageNum = parseInt(page, 10) || 1;
+      const moviePages = [pageNum, pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4, pageNum + 5];
+      const seriesPages = [pageNum, pageNum + 1, pageNum + 2, pageNum + 3];
 
-      [liveMoviesP1, liveMoviesP2].forEach(res => {
+      const fetchPromises = [
+        ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p })),
+        ...seriesPages.map(p => reelplexiFetch('/series', { per_page: 100, page: p })),
+        reelplexiFetch('/trending', { per_page: 100 }),
+        reelplexiFetch('/latest', { per_page: 100 })
+      ];
+
+      const results = await Promise.all(fetchPromises);
+      results.forEach(res => {
         if (res && Array.isArray(res.data)) {
           res.data.forEach(item => movies.push(mapReelplexiItem(item)));
         }
       });
-
-      if (liveSeriesP1 && Array.isArray(liveSeriesP1.data)) {
-        liveSeriesP1.data.forEach(item => movies.push(mapReelplexiItem(item)));
-      }
-
-      if (trendingRes && Array.isArray(trendingRes.data)) {
-        trendingRes.data.forEach(item => {
-          const mapped = mapReelplexiItem(item);
-          mapped.category = 'Trending VJ Movies';
-          movies.push(mapped);
-        });
-      }
     }
 
     // Always combine with local database movies so no content is ever lost
