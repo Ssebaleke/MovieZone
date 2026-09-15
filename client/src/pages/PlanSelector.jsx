@@ -87,6 +87,26 @@ export default function PlanSelector() {
     }
   };
 
+  const formatIntervalLabel = (intervalStr) => {
+    if (!intervalStr) return 'Duration';
+    const clean = intervalStr.toUpperCase();
+    switch (clean) {
+      case '12_HOURS': return '12 Hours Pass';
+      case '24_HOURS':
+      case 'DAILY': return '24 Hours Pass';
+      case '3_DAYS': return '3 Days Pass';
+      case '7_DAYS':
+      case 'WEEKLY': return '7 Days Pass';
+      case '14_DAYS': return '14 Days Pass';
+      case '30_DAYS':
+      case 'MONTHLY': return 'Monthly Pass (30 Days)';
+      case '3_MONTHS': return '3 Months Pass';
+      case '6_MONTHS': return '6 Months Pass';
+      case 'YEARLY': return '1 Year Pass';
+      default: return intervalStr.replace(/_/g, ' ');
+    }
+  };
+
   const selectedPkg = packages.find(p => p.id === selectedPkgId);
 
   return (
@@ -167,12 +187,12 @@ export default function PlanSelector() {
                       )}
 
                       <h3 style={{ fontSize: '1.4rem', fontWeight: '800', margin: '0 0 4px 0', color: '#fff' }}>{pkg.name}</h3>
-                      <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.1)', color: '#ccc', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', marginBottom: '16px' }}>
-                        {pkg.interval} DURATION
+                      <div style={{ display: 'inline-block', background: 'rgba(229, 9, 20, 0.15)', border: '1px solid rgba(229, 9, 20, 0.4)', color: '#ff4d4d', padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', marginBottom: '16px' }}>
+                        ⏱️ {formatIntervalLabel(pkg.interval)}
                       </div>
 
                       <div style={{ fontSize: '2rem', fontWeight: '900', color: isSelected ? '#ff4d4d' : '#fff', marginBottom: '12px' }}>
-                        {pkg.price.toLocaleString()} <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: '600' }}>{pkg.currency} / {pkg.interval.toLowerCase()}</span>
+                        {pkg.price.toLocaleString()} <span style={{ fontSize: '0.9rem', color: '#aaa', fontWeight: '600' }}>{pkg.currency}</span>
                       </div>
 
                       <p style={{ color: '#aaa', fontSize: '0.88rem', marginBottom: '20px', lineHeight: '1.4' }}>

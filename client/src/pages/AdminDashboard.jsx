@@ -1205,12 +1205,17 @@ export default function AdminDashboard() {
               </div>
 
               <div className="cc-input-container">
-                <label>Billing Cycle / Interval</label>
-                <select value={pkgInterval} onChange={(e) => setPkgInterval(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none' }}>
-                  <option value="DAILY">DAILY (24 Hours)</option>
-                  <option value="WEEKLY">WEEKLY (7 Days)</option>
-                  <option value="MONTHLY">MONTHLY (30 Days)</option>
-                  <option value="YEARLY">YEARLY (365 Days)</option>
+                <label>Package Duration / Billing Cycle</label>
+                <select value={pkgInterval} onChange={(e) => setPkgInterval(e.target.value)} style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', border: 'none', fontWeight: 'bold' }}>
+                  <option value="12_HOURS">⏱️ 12 Hours Pass (12 Hours)</option>
+                  <option value="DAILY">📅 24 Hours / 1 Day (DAILY)</option>
+                  <option value="3_DAYS">⚡ 3 Days Pass (3 Days)</option>
+                  <option value="WEEKLY">📆 7 Days / 1 Week (WEEKLY)</option>
+                  <option value="14_DAYS">🌟 14 Days / 2 Weeks (14 Days)</option>
+                  <option value="MONTHLY">👑 30 Days / 1 Month (MONTHLY)</option>
+                  <option value="3_MONTHS">🔥 3 Months Pass (90 Days)</option>
+                  <option value="6_MONTHS">🚀 6 Months Pass (180 Days)</option>
+                  <option value="YEARLY">💎 1 Year / 12 Months (YEARLY)</option>
                 </select>
               </div>
 

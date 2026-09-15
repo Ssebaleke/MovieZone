@@ -260,18 +260,45 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
     // Calculate dynamic expiration based on package interval
     const now = new Date();
     const expiration = new Date(now);
+    const upperInterval = (pkg.interval || 'MONTHLY').toUpperCase();
 
-    switch (pkg.interval.toUpperCase()) {
-      case 'DAILY':
-        expiration.setDate(expiration.getDate() + 1);
+    switch (upperInterval) {
+      case '12_HOURS':
+      case '12HOURS':
+      case '12_HRS':
+        expiration.setHours(expiration.getHours() + 12);
         break;
+      case '24_HOURS':
+      case '1_DAY':
+      case 'DAILY':
+        expiration.setHours(expiration.getHours() + 24);
+        break;
+      case '3_DAYS':
+      case '3DAYS':
+        expiration.setDate(expiration.getDate() + 3);
+        break;
+      case '7_DAYS':
       case 'WEEKLY':
         expiration.setDate(expiration.getDate() + 7);
         break;
+      case '14_DAYS':
+      case '2_WEEKS':
+        expiration.setDate(expiration.getDate() + 14);
+        break;
+      case '30_DAYS':
+      case 'MONTHLY':
+        expiration.setMonth(expiration.getMonth() + 1);
+        break;
+      case '3_MONTHS':
+        expiration.setMonth(expiration.getMonth() + 3);
+        break;
+      case '6_MONTHS':
+        expiration.setMonth(expiration.getMonth() + 6);
+        break;
+      case '1_YEAR':
       case 'YEARLY':
         expiration.setFullYear(expiration.getFullYear() + 1);
         break;
-      case 'MONTHLY':
       default:
         expiration.setMonth(expiration.getMonth() + 1);
         break;
