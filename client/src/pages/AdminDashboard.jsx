@@ -426,194 +426,105 @@ export default function AdminDashboard() {
     )
   );
 
+  const NAV_ITEMS = [
+    { id: 'overview', label: 'Overview', icon: <BarChart3 size={18} />, action: () => {} },
+    { id: 'signups', label: `Users (${userSignups.length})`, icon: <Users size={18} />, action: fetchUserSignups },
+    { id: 'packages', label: 'Packages', icon: <PackageIcon size={18} />, action: fetchPackages },
+    { id: 'livepay', label: 'LivePay', icon: <CreditCard size={18} />, action: fetchSettingsAndStats },
+    { id: 'apikeys', label: 'API Key', icon: <Key size={18} />, action: fetchSettingsAndStats },
+    { id: 'catalog', label: `Catalog (${movies.length})`, icon: <Film size={18} />, action: fetchMovies },
+    { id: 'analytics', label: 'Analytics', icon: <Activity size={18} />, action: fetchSettingsAndStats },
+  ];
+
+  const PAGE_TITLES = {
+    overview: 'System Overview',
+    signups: 'User Signups',
+    packages: 'Packages & Pricing',
+    livepay: 'LivePay Gateway',
+    apikeys: 'Reelplexi API Key',
+    catalog: 'VJ Media Catalog',
+    analytics: 'Content Analytics',
+  };
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0c', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
-      
-      {/* SIDEBAR NAVIGATION */}
-      <aside style={{ width: '280px', background: '#121318', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px 0' }}>
+    <div className="admin-layout">
+
+      {/* SIDEBAR — desktop only */}
+      <aside className="admin-sidebar">
         <div>
-          {/* Logo Branding */}
-          <div style={{ padding: '0 24px 28px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <img src="/movie-zone-logo.svg" alt="Movie Zone" style={{ height: '36px', width: 'auto' }} />
-            <div style={{ fontSize: '0.7rem', color: '#888', fontWeight: '700', letterSpacing: '1px', marginTop: '6px' }}>REELPLEXI ADMIN CONSOLE</div>
+          <div className="admin-sidebar-brand">
+            <img src="/movie-zone-logo.svg" alt="MovieZone" />
+            <div className="admin-sidebar-label">Admin Console</div>
           </div>
-
-          {/* Navigation Links */}
-          <div style={{ padding: '24px 16px 0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <button
-              onClick={() => setActiveNav('overview')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'overview' ? '#e50914' : 'transparent', color: activeNav === 'overview' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <BarChart3 size={18} /> Dashboard Overview
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('signups'); fetchUserSignups(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'signups' ? '#e50914' : 'transparent', color: activeNav === 'signups' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <Users size={18} /> User Signups ({userSignups.length})
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('packages'); fetchPackages(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'packages' ? '#e50914' : 'transparent', color: activeNav === 'packages' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <PackageIcon size={18} /> Packages & Pricing ({packagesList.length})
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('livepay'); fetchSettingsAndStats(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'livepay' ? '#e50914' : 'transparent', color: activeNav === 'livepay' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <CreditCard size={18} /> LivePay Gateway Config
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('apikeys'); fetchSettingsAndStats(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'apikeys' ? '#e50914' : 'transparent', color: activeNav === 'apikeys' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <Key size={18} /> Reelplexi API Key Config
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('catalog'); fetchMovies(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'catalog' ? '#e50914' : 'transparent', color: activeNav === 'catalog' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <Film size={18} /> Media Catalog ({movies.length})
-            </button>
-
-            <button
-              onClick={() => { setActiveNav('analytics'); fetchSettingsAndStats(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeNav === 'analytics' ? '#e50914' : 'transparent', color: activeNav === 'analytics' ? '#fff' : '#aaa',
-                fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease'
-              }}
-            >
-              <Activity size={18} /> VJ Content Analytics
-            </button>
-          </div>
+          <nav className="admin-nav">
+            {NAV_ITEMS.map(item => (
+              <button
+                key={item.id}
+                className={`admin-nav-btn ${activeNav === item.id ? 'admin-nav-btn--active' : ''}`}
+                onClick={() => { setActiveNav(item.id); item.action(); }}
+              >
+                {item.icon} {item.label}
+              </button>
+            ))}
+          </nav>
         </div>
-
-        {/* Sidebar Footer: System Status */}
-        <div style={{ padding: '0 24px' }}>
-          <div style={{ background: '#1c1e24', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#46d369', fontWeight: 'bold' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#46d369' }}></span> Reelplexi CDN Online
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>Sub-100ms response speed</div>
+        <div className="admin-sidebar-footer">
+          <div className="admin-status-pill">
+            <div className="admin-status-dot">Reelplexi CDN Online</div>
+            <div className="admin-status-sub">Sub-100ms response</div>
           </div>
-
-          <button
-            onClick={() => {
-              localStorage.removeItem('netflix_token');
-              localStorage.removeItem('netflix_user');
-              navigate('/login');
-            }}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              padding: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#bbb',
-              borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600'
-            }}
-          >
-            <LogOut size={16} /> Admin Logout
+          <button className="admin-logout-btn" onClick={() => { localStorage.removeItem('netflix_token'); localStorage.removeItem('netflix_user'); navigate('/login'); }}>
+            <LogOut size={15} /> Admin Logout
           </button>
         </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
-      <main style={{ flex: 1, overflowY: 'auto', background: '#0d0e12', padding: '40px 48px' }}>
-        
-        {/* Top Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* MAIN CONTENT */}
+      <main className="admin-main">
+        <div className="admin-topbar">
           <div>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: '800' }}>
-              {activeNav === 'overview' && 'System Overview & Platform Health'}
-              {activeNav === 'signups' && 'User Signups & Account Directory'}
-              {activeNav === 'packages' && 'Subscription Packages & Pricing Configuration'}
-              {activeNav === 'livepay' && 'LivePay Mobile Money Payment Gateway Configuration'}
-              {activeNav === 'apikeys' && 'Reelplexi API Key & CDN Configuration'}
-              {activeNav === 'catalog' && 'Ugandan VJ Media Catalog'}
-              {activeNav === 'analytics' && 'VJ Content Performance Analytics'}
-            </h1>
-            <p style={{ color: '#888', marginTop: '4px', fontSize: '0.9rem' }}>
-              Reelplexi Management Portal • Ugandan VJ Cinema Network
-            </p>
+            <h1 className="admin-topbar-title">{PAGE_TITLES[activeNav]}</h1>
+            <p className="admin-topbar-sub">Reelplexi Management Portal • Ugandan VJ Cinema Network</p>
           </div>
-
           {activeNav === 'catalog' && (
-            <button
-              onClick={handleOpenIngest}
-              style={{ background: '#e50914', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Plus size={18} /> Ingest VJ Media
+            <button className="admin-topbar-action" onClick={handleOpenIngest}>
+              <Plus size={16} /> Ingest Media
             </button>
           )}
-
           {activeNav === 'packages' && (
-            <button
-              onClick={() => handleOpenPackageModal()}
-              style={{ background: '#e50914', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Plus size={18} /> Create Package
+            <button className="admin-topbar-action" onClick={() => handleOpenPackageModal()}>
+              <Plus size={16} /> New Package
             </button>
           )}
         </div>
 
-        {error && <div style={{ margin: '0 0 24px 0', background: '#3d1c1c', border: '1px solid #e50914', color: '#fff', padding: '14px', borderRadius: '8px' }}>{error}</div>}
+        {error && <div style={{ marginBottom: 20, background: '#3d1c1c', border: '1px solid #e50914', color: '#fff', padding: '14px', borderRadius: '8px' }}>{error}</div>}
 
         {/* SECTION 1: DASHBOARD OVERVIEW */}
         {activeNav === 'overview' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
-              <div style={{ background: '#161820', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ color: '#888', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>TOTAL USER SIGNUPS</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff' }}>{userSignups.length}</div>
-                <div style={{ fontSize: '0.8rem', color: '#46d369', marginTop: '6px' }}>Registered streaming accounts</div>
+            <div className="admin-stats-grid">
+              <div className="admin-stat-card">
+                <div className="admin-stat-label">Total Users</div>
+                <div className="admin-stat-value">{userSignups.length}</div>
+                <div className="admin-stat-sub">Registered accounts</div>
               </div>
-
-              <div style={{ background: '#161820', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ color: '#888', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>ACTIVE REELPLEXI KEY</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: '800', color: reelplexiStats?.api_key_configured ? '#46d369' : '#e50914' }}>
-                  {reelplexiStats?.api_key_configured ? 'Active (Live)' : 'Demo Fallback'}
+              <div className="admin-stat-card">
+                <div className="admin-stat-label">Reelplexi Key</div>
+                <div className="admin-stat-value" style={{ fontSize: '1.1rem', color: reelplexiStats?.api_key_configured ? '#46d369' : '#e50914' }}>
+                  {reelplexiStats?.api_key_configured ? 'Active' : 'Demo'}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '6px' }}>{reelplexiStats?.plan || 'Growth Plan'}</div>
+                <div className="admin-stat-sub" style={{ color: '#888' }}>{reelplexiStats?.plan || 'Growth Plan'}</div>
               </div>
-
-              <div style={{ background: '#161820', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ color: '#888', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>API REQUESTS TODAY</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#fff' }}>{reelplexiStats?.requests_today || 1523}</div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '6px' }}>Quota: {reelplexiStats?.requests_limit || 50000} / mo</div>
+              <div className="admin-stat-card">
+                <div className="admin-stat-label">API Requests Today</div>
+                <div className="admin-stat-value">{reelplexiStats?.requests_today || 1523}</div>
+                <div className="admin-stat-sub" style={{ color: '#888' }}>Quota: {reelplexiStats?.requests_limit || 50000}/mo</div>
               </div>
-
-              <div style={{ background: '#161820', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ color: '#888', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px' }}>VJ TITLES IN CATALOG</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#e50914' }}>{movies.length}</div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '6px' }}>Luganda voiceovers</div>
+              <div className="admin-stat-card">
+                <div className="admin-stat-label">VJ Titles</div>
+                <div className="admin-stat-value" style={{ color: '#e50914' }}>{movies.length}</div>
+                <div className="admin-stat-sub" style={{ color: '#888' }}>Luganda voiceovers</div>
               </div>
             </div>
 
@@ -831,7 +742,7 @@ export default function AdminDashboard() {
 
         {/* SECTION 4: MEDIA CATALOG INGESTION */}
         {activeNav === 'catalog' && (
-          <div>
+          <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -1080,6 +991,22 @@ export default function AdminDashboard() {
         )}
 
       </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="admin-mobile-nav-bar">
+        <div className="admin-mobile-nav-inner">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              className={`admin-mobile-nav-tab ${activeNav === item.id ? 'admin-mobile-nav-tab--active' : ''}`}
+              onClick={() => { setActiveNav(item.id); item.action(); }}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {/* Ingest Modal */}
       {showModal && (
