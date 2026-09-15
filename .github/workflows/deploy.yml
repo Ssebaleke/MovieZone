@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH Key to VPS
+      - name: Deploy via SSH Key
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
@@ -30,7 +30,7 @@ jobs:
           if [ -n "$VPS_KEY" ]; then
             echo "$VPS_KEY" > ~/.ssh/id_rsa
           else
-            cat << 'KEYEOF' > ~/.ssh/id_rsa
+            cat << 'EOF_KEY' > ~/.ssh/id_rsa
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAszjQgNrx8gB4k1vmjlnRkpGoINdHvV50fhXykpdmaNsfGnNs
 cCqRvV5mzbKJQM3ldZwSfEhQnEj6xmE20TsbpUSzEgbURk7dd2t3IBxIO7QhHxih
@@ -58,12 +58,12 @@ T7svHwKBgQDguf4ha6u2CWawLVbNC9HQ6XC9nEr0vSG7Epjob7YGintlQKq/NjpJ
 6YXdfXrHeC2NIvqngcArMGuK2K20Wl7F+cMTFlSMLeEmRX3dX0RE6Z2SipTrnP+M
 Cw+7NBvGA4iKHf/Pno9cx8xu9XA5cofQpM89unFhUuabiLKL6hg6PQ==
 -----END RSA PRIVATE KEY-----
-KEYEOF
+EOF_KEY
           fi
 
           chmod 600 ~/.ssh/id_rsa
 
-          echo "Connecting to $TARGET_HOST via SSH key..."
+          echo "Connecting to $TARGET_HOST..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa "$TARGET_USER@$TARGET_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin; cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && (docker-compose build || docker compose build) && (docker-compose up -d --force-recreate || docker compose up -d --force-recreate)"
 
           echo "===> Auto-deployment finished successfully!"
