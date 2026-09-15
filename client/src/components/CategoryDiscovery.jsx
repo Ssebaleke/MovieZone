@@ -40,14 +40,14 @@ const TOPIC_CARDS = [
     title: 'Romance',
     genreKey: 'Romance',
     gradientClass: 'card-purple',
-    posterUrl: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=400&h=600&fit=crop&q=80'
+    posterUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=600&fit=crop&q=80'
   },
   {
     id: 'c-drama',
     title: 'C-Drama',
     regionKey: 'cdrama',
     gradientClass: 'card-amber',
-    posterUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=600&fit=crop&q=80'
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=600&fit=crop&q=80'
   }
 ];
 
@@ -118,9 +118,12 @@ export default function CategoryDiscovery({ onSelectPill, onSelectTopic, activeP
               <div className="topic-card-poster-wrapper">
                 <img
                   src={card.posterUrl}
-                  alt={card.title}
+                  alt=""
                   className="topic-card-poster-img"
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
             </div>
