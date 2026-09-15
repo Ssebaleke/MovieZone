@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Info, Volume2, VolumeX } from 'lucide-react';
+import { Play, Info, Volume2, VolumeX, Plus } from 'lucide-react';
 
 export default function HeroBanner({ movie, onPlay, onOpenModal }) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
@@ -32,14 +32,6 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
       {isPlayingVideo && (
         <div className="billboard-video-container">
           {isHls ? (
-            // Native player doesn't stream HLS easily without hls.js, 
-            // so we fallback to backdrop if it's HLS, or stream it if hls.js is loaded.
-            // For the hero banner, standard MP4 previews are easiest, 
-            // but we can initialize hls.js for HLS as well.
-            // Let's implement HLS banner autoplay in a simplified way or fallback to poster.
-            // To ensure 100% video play, if HLS, we will try to use native player (Safari) 
-            // or simply play it since hls.js is installed. 
-            // For now, let's load a standard video element with hls.js:
             <HlsPlayer
               src={movie.videoUrl}
               videoRef={videoRef}
@@ -62,22 +54,45 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
       <div className="billboard-overlay"></div>
 
       <div className="billboard-info">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
-          <span className="brand-gradient-text" style={{ fontSize: '1.1rem', fontWeight: '900', letterSpacing: '2px' }}>
-            MOVIEZONE EXCLUSIVE
-          </span>
-          <span style={{ fontSize: '0.8rem', color: '#e5e5e5', fontWeight: '800', letterSpacing: '3px', textTransform: 'uppercase' }}>
-            • {movie.type === 'SHOW' ? 'Series' : 'Film'}
-          </span>
+        <h1 className="billboard-title-desktop">{movie.title}</h1>
+
+        {/* Metadata Row: 2026 | SERIES | 1 Season | VJ Ice p */}
+        <div className="billboard-meta-badges-row">
+          <span className="meta-year-green">{movie.releaseYear || movie.year || 2026}</span>
+          <span className="meta-type-badge">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+          <span className="meta-season-text">{movie.type === 'SHOW' ? '1 Season' : (movie.duration || '2h 15m')}</span>
+          {movie.vj && (
+            <span className="meta-vj-badge">{movie.vj}</span>
+          )}
         </div>
-        <h1 className="billboard-title">{movie.title}</h1>
+
+        {/* Genre Pills Row */}
+        <div className="billboard-genre-pills-row">
+          {movie.genres ? (
+            movie.genres.split(',').map((g, idx) => (
+              <span key={idx} className="genre-pill-item">{g.trim()}</span>
+            ))
+          ) : (
+            <>
+              <span className="genre-pill-item">Action & Adventure</span>
+              <span className="genre-pill-item">Crime</span>
+              <span className="genre-pill-item">Drama</span>
+            </>
+          )}
+        </div>
+
         <p className="billboard-desc">{movie.description}</p>
-        <div className="billboard-actions">
-          <button className="billboard-btn billboard-play" onClick={() => onPlay(movie)}>
-            <Play size={20} fill="#000" /> Play
+
+        {/* 3 Action Buttons Row: Play, More Info, My List */}
+        <div className="billboard-actions-row">
+          <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
+            <Play size={18} fill="#000" color="#000" /> Play
           </button>
-          <button className="billboard-btn billboard-info-btn" onClick={() => onOpenModal(movie)}>
-            <Info size={20} /> More Info
+          <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+            <Info size={18} color="#fff" /> More Info
+          </button>
+          <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
+            <Plus size={18} color="#fff" /> My List
           </button>
         </div>
       </div>
@@ -86,12 +101,18 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
         <button
           className="billboard-control-btn"
           onClick={() => setIsMuted(!isMuted)}
+          aria-label="Toggle mute"
         >
-          {isMuted ? <VolumeX size={20} color="#fff" /> : <Volume2 size={20} color="#fff" />}
+          {isMuted ? <VolumeX size={18} color="#fff" /> : <Volume2 size={18} color="#fff" />}
         </button>
-        <span className="billboard-rating-label">
-          {movie.rating}
-        </span>
+
+        {/* Carousel indicators matching desktop screenshot */}
+        <div className="carousel-indicators">
+          <span className="indicator-line active"></span>
+          <span className="indicator-dot"></span>
+          <span className="indicator-dot"></span>
+          <span className="indicator-dot"></span>
+        </div>
       </div>
     </div>
   );

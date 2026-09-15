@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio, Share2, Download } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -16,6 +16,8 @@ export default function Navbar({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [selectedLang, setSelectedLang] = useState('English');
   const [currentUser, setCurrentUser] = useState(() => {
     const userStr = localStorage.getItem('netflix_user');
     return userStr ? JSON.parse(userStr) : null;
@@ -25,7 +27,7 @@ export default function Navbar({
   const [isDrawerVjOpen, setIsDrawerVjOpen] = useState(false);
   const [isDrawerRegionOpen, setIsDrawerRegionOpen] = useState(false);
 
-  // Top mobile header dropdown toggle
+  // Window width tracking
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -39,7 +41,6 @@ export default function Navbar({
   const navigate = useNavigate();
   const location = useLocation();
   const searchInputRef = useRef(null);
-  const vjDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,17 +58,6 @@ export default function Navbar({
   useEffect(() => {
     const profile = localStorage.getItem('netflix_profile');
     if (profile) setCurrentProfile(JSON.parse(profile));
-  }, []);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (vjDropdownRef.current && !vjDropdownRef.current.contains(e.target)) {
-        setIsMobileVjDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSignOut = () => {
@@ -116,12 +106,21 @@ export default function Navbar({
     { name: 'Anime (Japanese)', slug: 'anime' }
   ];
 
-  const filteredVjs = vjsList.filter(vj => 
-    vj.name.toLowerCase().includes(vjSearchTerm.toLowerCase())
-  );
-
   return (
-    <>
+    <div className="navbar-wrapper">
+      {/* Top Announcement Banner matching labafilms.online */}
+      {showAnnouncement && (
+        <div className="announcement-bar">
+          <div className="announcement-content" onClick={() => alert('Share your referral link with friends to get free credits!')}>
+            <Share2 size={13} color="#d97706" style={{ marginRight: '6px' }} />
+            <span>Share any movie & earn 2 free credits — <strong className="tap-link">tap to learn more</strong></span>
+          </div>
+          <button className="announcement-close-btn" onClick={() => setShowAnnouncement(false)} type="button" aria-label="Close banner">
+            <X size={14} color="#888" />
+          </button>
+        </div>
+      )}
+
       <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="nav-left">
           {/* Mobile Hamburger Navigation Bar Icon */}
@@ -145,52 +144,20 @@ export default function Navbar({
               setActiveRegion('');
               onSearchChange('');
               setIsMobileMenuOpen(false);
-              setIsMobileVjDropdownOpen(false);
               navigate('/browse');
             }}
           >
-            <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
+            <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '36px', width: 'auto' }} />
           </div>
 
-          {/* Desktop Navigation Links (Visible ONLY on widescreen > 1024px) */}
+          {/* Desktop Navigation Links (Visible ONLY on widescreen > 1024px matching labafilms.online screenshot) */}
           {!isMobileDevice && (
             <ul className="nav-links desktop-only-links">
               <li
-                className={activeTab === 'home' && !searchQuery ? 'active' : ''}
+                className={activeTab === 'home' && !searchQuery && !activeVJ ? 'active' : ''}
                 onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
               >
                 Home
-              </li>
-
-              {/* Ugandan VJs Desktop Mega Dropdown (4-5 Columns) */}
-              <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
-                </span>
-                <div className="nav-dropdown-menu vj-mega-dropdown">
-                  {vjsList.map((vj) => (
-                    <div
-                      key={vj.name}
-                      className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
-                      onClick={() => {
-                        setActiveVJ(vj.value);
-                        setActiveTab('vj');
-                        onSearchChange('');
-                        navigate('/browse');
-                      }}
-                    >
-                      <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} style={{ marginRight: '6px' }} />
-                      {vj.name}
-                    </div>
-                  ))}
-                </div>
-              </li>
-
-              <li
-                className={activeTab === 'series' ? 'active' : ''}
-                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-              >
-                TV Series
               </li>
 
               <li
@@ -201,39 +168,10 @@ export default function Navbar({
               </li>
 
               <li
-                className={activeTab === 'latest' ? 'active' : ''}
-                onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+                className={activeTab === 'series' ? 'active' : ''}
+                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
               >
-                Latest
-              </li>
-
-              <li
-                className={activeTab === 'trending' ? 'active' : ''}
-                onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-              >
-                Trending
-              </li>
-
-              <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
-                </span>
-                <div className="nav-dropdown-menu">
-                  {REGIONS_LIST.map((reg) => (
-                    <div
-                      key={reg.name}
-                      className={`dropdown-item ${activeRegion === reg.slug ? 'selected' : ''}`}
-                      onClick={() => {
-                        setActiveRegion(reg.slug);
-                        setActiveTab('regions');
-                        onSearchChange('');
-                        navigate('/browse');
-                      }}
-                    >
-                      {reg.name}
-                    </div>
-                  ))}
-                </div>
+                TV Shows
               </li>
 
               <li
@@ -241,6 +179,18 @@ export default function Navbar({
                 onClick={() => navigate('/mylist')}
               >
                 My List
+              </li>
+
+              {/* Language Selector matching screenshot */}
+              <li className="nav-item-dropdown">
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                  {selectedLang} <ChevronDown size={14} color="#aaa" />
+                </span>
+                <div className="nav-dropdown-menu">
+                  <div className="dropdown-item selected" onClick={() => setSelectedLang('English')}>English</div>
+                  <div className="dropdown-item" onClick={() => setSelectedLang('Luganda')}>Luganda</div>
+                  <div className="dropdown-item" onClick={() => setSelectedLang('Swahili')}>Swahili</div>
+                </div>
               </li>
             </ul>
           )}
@@ -265,16 +215,16 @@ export default function Navbar({
           )}
         </div>
 
-        {/* Right Section */}
+        {/* Right Section matching labafilms.online screenshot */}
         <div className="nav-right">
-          {/* Mobile Only Header Actions (Cast, Bell Badge 8, Search) */}
+          {/* Mobile Only Header Actions */}
           <div className="mobile-header-actions-right">
             <button className="mobile-header-icon-btn" aria-label="Cast">
               <Cast size={20} color="#ffffff" />
             </button>
             <button className="mobile-header-icon-btn notification-badge-btn" aria-label="Notifications">
               <Bell size={20} color="#ffffff" />
-              <span className="bell-badge-count">8</span>
+              <span className="bell-badge-count">1</span>
             </button>
             <button
               className="mobile-header-icon-btn"
@@ -297,7 +247,7 @@ export default function Navbar({
               }}
               type="button"
             >
-              <Search size={18} />
+              <Search size={18} color="#fff" />
             </button>
             <input
               ref={searchInputRef}
@@ -321,19 +271,39 @@ export default function Navbar({
             )}
           </div>
 
-          {/* User Notifications Desktop */}
-          <button className="player-control-icon-btn notifications-btn desktop-only-icon" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Bell size={20} />
-            <span className="notification-badge">8</span>
+          {/* Desktop Share Button with Orange Badge Dot */}
+          <button
+            className="nav-icon-action-btn desktop-only-icon"
+            onClick={() => alert('Share MovieZone & Earn Credits!')}
+            title="Share & Earn"
+            type="button"
+          >
+            <Share2 size={18} color="#ffffff" />
+            <span className="share-orange-dot" />
+          </button>
+
+          {/* Desktop Notifications Bell with Red Circular Badge '1' */}
+          <button className="nav-icon-action-btn notifications-btn desktop-only-icon" type="button" title="Notifications">
+            <Bell size={18} color="#ffffff" />
+            <span className="notification-badge-red">1</span>
+          </button>
+
+          {/* Desktop INSTALL APP Button matching screenshot */}
+          <button
+            className="desktop-install-app-btn desktop-only-btn"
+            onClick={() => alert('Install MovieZone App on Desktop / Mobile')}
+            type="button"
+          >
+            <Download size={14} style={{ marginRight: '6px' }} /> INSTALL APP
           </button>
 
           {/* Profile Dropdown */}
           {currentProfile && (
             <div className="nav-profile-menu desktop-only-icon">
-              <div className="nav-profile-avatar">
+              <div className="laba-avatar-box">
                 <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
               </div>
-              <ChevronDown size={16} />
+              <ChevronDown size={14} color="#aaaaaa" />
 
               <div className="profile-dropdown">
                 <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}>
@@ -515,6 +485,6 @@ export default function Navbar({
           <span>You</span>
         </div>
       </nav>
-    </>
+    </div>
   );
 }
