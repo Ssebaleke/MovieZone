@@ -21,9 +21,13 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USERNAME }}
           VPS_PASS: ${{ secrets.VPS_PASSWORD }}
         run: |
+          TARGET_HOST="${VPS_HOST:-69.164.245.17}"
+          TARGET_USER="${VPS_USER:-root}"
+          TARGET_PASS="${VPS_PASS:-Vico@2026}"
+
           sudo apt-get update -qq && sudo apt-get install -y sshpass -qq
 
-          echo "Connecting to $VPS_HOST via SSH..."
-          sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$VPS_USER@$VPS_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin; cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && docker-compose build && docker-compose up -d --force-recreate"
+          echo "Connecting to $TARGET_HOST via SSH..."
+          sshpass -p "$TARGET_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no "$TARGET_USER@$TARGET_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin; cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && (docker-compose build || docker compose build) && (docker-compose up -d --force-recreate || docker compose up -d --force-recreate)"
 
           echo "===> Auto-deployment completed successfully on VPS!"
