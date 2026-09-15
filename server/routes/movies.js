@@ -31,9 +31,11 @@ function resolveMovieMedia(item) {
   let rawPoster = item.poster_url || item.poster_path || item.poster || item.thumbnailUrl || item.thumbnail_url || item.image || item.cover;
   let rawBackdrop = item.backdrop_url || item.backdrop_path || item.backdrop || item.backdropUrl || item.background;
 
-  // Resolve relative Reelplexi storage paths against https://app.reelplexi.com
+  // Filter out any legacy TMDB poster/backdrop URLs completely
   if (rawPoster && typeof rawPoster === 'string') {
-    if (rawPoster.startsWith('/')) {
+    if (rawPoster.includes('tmdb.org')) {
+      rawPoster = null;
+    } else if (rawPoster.startsWith('/')) {
       rawPoster = `https://app.reelplexi.com${rawPoster}`;
     } else if (!rawPoster.startsWith('http://') && !rawPoster.startsWith('https://')) {
       rawPoster = `https://app.reelplexi.com/${rawPoster}`;
@@ -41,7 +43,9 @@ function resolveMovieMedia(item) {
   }
 
   if (rawBackdrop && typeof rawBackdrop === 'string') {
-    if (rawBackdrop.startsWith('/')) {
+    if (rawBackdrop.includes('tmdb.org')) {
+      rawBackdrop = null;
+    } else if (rawBackdrop.startsWith('/')) {
       rawBackdrop = `https://app.reelplexi.com${rawBackdrop}`;
     } else if (!rawBackdrop.startsWith('http://') && !rawBackdrop.startsWith('https://')) {
       rawBackdrop = `https://app.reelplexi.com/${rawBackdrop}`;
