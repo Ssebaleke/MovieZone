@@ -16,21 +16,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy via SSH to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: 22
-          script_stop: true
-          script: |
-            echo "===> Pulling latest code from GitHub main branch..."
-            cd /root/MovieZone
-            git fetch origin main
-            git reset --hard origin/main
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USERNAME }}
+          VPS_PASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y sshpass -qq
 
-            echo "===> Building and recreating Docker containers..."
-            docker-compose build
-            docker-compose up -d --force-recreate
+          echo "Connecting to $VPS_HOST via SSH..."
+          sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$VPS_USER@$VPS_HOST" "export PATH=\$PATH:/usr/local/bin:/usr/bin; cd /root/MovieZone && git fetch origin main && git reset --hard origin/main && docker-compose build && docker-compose up -d --force-recreate"
 
-            echo "===> Auto-deployment finished successfully!"
+          echo "===> Auto-deployment completed successfully on VPS!"
