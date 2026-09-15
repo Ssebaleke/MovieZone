@@ -1,5 +1,7 @@
 # Movie Zone 🎬
 
+![Auto Deploy to VPS Server](https://github.com/Ssebaleke/MovieZone/actions/workflows/deploy.yml/badge.svg)
+
 **Movie Zone** is a modern streaming web application tailored for African & International content, featuring a specialized catalog of **Ugandan VJ translated movies** (VJ Junior, VJ Emmy, VJ Ice P, VJ Jingo, VJ Mark), East African cinema, K-Dramas, Nollywood, Western movies, Bollywood, and Anime. Powered by the **Reelplexi API** (`https://api.reelplexi.com/v1`).
 
 ---
