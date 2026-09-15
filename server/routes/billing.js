@@ -82,71 +82,14 @@ async function fetchActivePackages() {
       orderBy: { price: 'asc' }
     });
 
-    if (pkgs.length === 0) {
-      const defaults = [
-        {
-          name: 'Daily Pass',
-          slug: 'daily-pass',
-          price: 2000,
-          currency: 'UGX',
-          interval: 'DAILY',
-          description: 'Full 24-hour access to all VJ Luganda movies and series',
-          features: 'Unlimited Streaming, 1 Screen, HD Quality, Luganda Translations',
-          resolution: '1080p Full HD',
-          screens: 1,
-          isActive: true
-        },
-        {
-          name: 'Weekly Special',
-          slug: 'weekly-special',
-          price: 7000,
-          currency: 'UGX',
-          interval: 'WEEKLY',
-          description: '7 days unlimited streaming access across all devices',
-          features: 'Unlimited Streaming, 2 Screens, HD Quality, All VJ Downloads',
-          resolution: '1080p Full HD',
-          screens: 2,
-          isActive: true
-        },
-        {
-          name: 'Monthly VIP',
-          slug: 'monthly-vip',
-          price: 20000,
-          currency: 'UGX',
-          interval: 'MONTHLY',
-          description: '30 days VIP access with 4K Ultra HD & Multi-Screen',
-          features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD, Priority VJ Releases',
-          resolution: '4K Ultra HD',
-          screens: 4,
-          isActive: true
-        }
-      ];
-
-      for (const item of defaults) {
-        const existing = await prisma.package.findFirst({ where: { slug: item.slug } });
-        if (!existing) {
-          await prisma.package.create({ data: item });
-        }
-      }
-
-      pkgs = await prisma.package.findMany({
-        where: { isActive: true },
-        orderBy: { price: 'asc' }
-      });
-    }
     return pkgs;
   }
 
-  // Fallback Raw SQL Query if PrismaClient model delegate is not cached
   try {
     const rawPkgs = await prisma.$queryRawUnsafe(`SELECT * FROM "Package" WHERE "isActive" = 1 ORDER BY "price" ASC`);
     return rawPkgs;
   } catch (err) {
-    return [
-      { id: 'def_daily', name: 'Daily Pass', slug: 'daily-pass', price: 2000, currency: 'UGX', interval: 'DAILY', description: 'Full 24-hour access', features: 'Unlimited Streaming, 1 Screen', resolution: '1080p Full HD', screens: 1, isActive: true },
-      { id: 'def_weekly', name: 'Weekly Special', slug: 'weekly-special', price: 7000, currency: 'UGX', interval: 'WEEKLY', description: '7 days unlimited streaming', features: 'Unlimited Streaming, 2 Screens', resolution: '1080p Full HD', screens: 2, isActive: true },
-      { id: 'def_monthly', name: 'Monthly VIP', slug: 'monthly-vip', price: 20000, currency: 'UGX', interval: 'MONTHLY', description: '30 days VIP access', features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD', resolution: '4K Ultra HD', screens: 4, isActive: true }
-    ];
+    return [];
   }
 }
 

@@ -107,6 +107,8 @@ export default function PlanSelector() {
 
         {fetching ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>Loading plans...</div>
+        ) : packages.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>No subscription plans available yet. Please check back soon.</div>
         ) : (
           <>
             <div className="plans-grid">
