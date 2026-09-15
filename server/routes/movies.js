@@ -9,19 +9,45 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Helper to map Reelplexi API items to frontend schema
+const FALLBACK_POSTERS = [
+  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500&h=750&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&h=750&fit=crop&q=80'
+];
+
+function getPosterFallback(title = '') {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = (hash << 5) - hash + title.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % FALLBACK_POSTERS.length;
+  return FALLBACK_POSTERS[idx];
+}
+
+// Helper to map Reelplexi API items to frontend schema
 function mapReelplexiItem(item) {
   const isShow = item.type === 'series' || item.type === 'SHOW';
   // Derive region from origin country
   const country = (item.origin_country || item.originCountry || 'UG').toUpperCase();
   const regionMap = { KR: 'kdrama', CN: 'kdrama', TW: 'kdrama', JP: 'anime', IN: 'bollywood', NG: 'nollywood', GH: 'nollywood', MX: 'latin', BR: 'latin', TR: 'turkish', PH: 'filipino', TH: 'thai', UG: 'east-african', KE: 'east-african', TZ: 'east-african' };
   const region = item.region || regionMap[country] || 'western';
+
+  const defaultPoster = getPosterFallback(item.title || '');
+  const poster = item.poster_url || item.thumbnailUrl || defaultPoster;
+  const backdrop = item.backdrop_url || item.poster_url || item.backdropUrl || poster;
+
   return {
     id: `rp_${item.id}`,
     reelplexiId: item.id,
     title: item.title,
     description: item.overview || item.description || '',
-    thumbnailUrl: item.poster_url || item.thumbnailUrl || null,
-    backdropUrl: item.backdrop_url || item.poster_url || item.backdropUrl || null,
+    thumbnailUrl: poster,
+    backdropUrl: backdrop,
     videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
     embedUrl: item.embed_url || item.embedUrl || '',
     tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
