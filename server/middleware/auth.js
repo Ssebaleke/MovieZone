@@ -12,12 +12,27 @@ export const authenticateToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'netflix_clone_jwt_secret_key_12345!');
     
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: decoded.userId }
     });
 
     if (!user) {
       return res.status(403).json({ error: 'User not found or deleted' });
+    }
+
+    // Auto-expire subscription if time is up
+    if (user.role !== 'ADMIN' && user.subscriptionEnd && new Date(user.subscriptionEnd) < new Date()) {
+      if (user.subscriptionStatus === 'ACTIVE') {
+        try {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { subscriptionStatus: 'INACTIVE', plan: 'NONE' }
+          });
+        } catch (e) {
+          user.subscriptionStatus = 'INACTIVE';
+          user.plan = 'NONE';
+        }
+      }
     }
 
     req.user = user;
@@ -40,7 +55,9 @@ export const requireSubscription = (req, res, next) => {
     return next();
   }
   
-  if (!req.user || req.user.subscriptionStatus !== 'ACTIVE') {
+  const isExpired = req.user?.subscriptionEnd && new Date(req.user.subscriptionEnd) < new Date();
+
+  if (!req.user || req.user.subscriptionStatus !== 'ACTIVE' || isExpired) {
     return res.status(403).json({ 
       error: 'Active subscription required', 
       subscriptionRequired: true 
