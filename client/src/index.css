@@ -6191,3 +6191,33 @@ a {
   .lp-footer-inner { flex-direction: column; text-align: center; }
   .lp-faq-q { font-size: 0.95rem; }
 }
+
+/* Landing page overrides — compact hero, Vicotech branding */
+.lp-hero {
+  min-height: 75vh !important;
+  padding: 100px 5% 60px !important;
+}
+
+.lp-hero-title {
+  font-size: clamp(2rem, 5vw, 3.8rem) !important;
+  margin-bottom: 16px !important;
+}
+
+.lp-hero-sub {
+  font-size: clamp(0.95rem, 2vw, 1.1rem) !important;
+  margin-bottom: 28px !important;
+}
+
+.lp-features { padding: 60px 0 !important; }
+.lp-vj-section { padding: 60px 0 !important; }
+.lp-faq { padding: 60px 0 !important; }
+
+.lp-section-title {
+  font-size: clamp(1.5rem, 3vw, 2.2rem) !important;
+  margin-bottom: 12px !important;
+}
+
+.lp-footer-brand {
+  color: #e50914;
+  font-weight: 700;
+}
