@@ -1142,7 +1142,6 @@ a {
 .movie-card-item {
   flex: 0 0 calc(16.666% - 7px); /* 6 items per view */
   min-width: 200px;
-  height: 120px;
   background-size: cover;
   background-position: center;
   border-radius: 4px;
@@ -2722,11 +2721,12 @@ a {
     scroll-snap-type: x mandatory;
   }
 
-  /* Compact Vertical Poster Ratio: Fits 3.2 to 3.5 cards across on phone viewports */
+  /* Vertical portrait cards — 3 across on mobile */
   .movie-card-item {
-    flex: 0 0 calc(30% - 6px);
-    min-width: 100px;
-    max-width: 125px;
+    flex: 0 0 calc(33.333% - 8px);
+    min-width: 0;
+    max-width: none;
+    height: auto;
     scroll-snap-align: start;
   }
 
@@ -2825,9 +2825,10 @@ a {
 
 @media (max-width: 480px) {
   .movie-card-item {
-    flex: 0 0 calc(31% - 5px);
-    min-width: 90px;
-    max-width: 115px;
+    flex: 0 0 calc(33.333% - 6px);
+    min-width: 0;
+    max-width: none;
+    height: auto;
   }
 
   .movie-grid-container {
@@ -3257,6 +3258,117 @@ a {
   .mobile-banner-actions .billboard-btn {
     padding: 7px 12px;
     font-size: 0.78rem;
+    border-radius: 5px;
+    gap: 5px;
+  }
+}
+
+/* ==========================================
+   Mobile Vertical Banner
+   ========================================== */
+
+/* Desktop banner — shown by default, hidden on mobile */
+.billboard-hero-desktop {
+  display: flex;
+}
+
+/* Mobile vertical banner — hidden on desktop, shown on mobile */
+.billboard-hero-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .billboard-hero-desktop {
+    display: none !important;
+  }
+
+  .billboard-hero-mobile {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 72px 14px 20px;
+    background: #141414;
+  }
+
+  .mobile-banner-poster {
+    position: relative;
+    flex: 0 0 120px;
+    width: 120px;
+    aspect-ratio: 2 / 3;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  }
+
+  .mobile-banner-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mobile-banner-poster-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
+    border-radius: 10px;
+  }
+
+  .mobile-banner-vj-badge {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+    background: linear-gradient(135deg, #e50914 0%, #b80710 100%);
+    color: #fff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    z-index: 5;
+  }
+
+  .mobile-banner-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 2px;
+    min-width: 0;
+  }
+
+  .mobile-banner-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .mobile-banner-desc {
+    font-size: 0.76rem;
+    color: #cccccc;
+    line-height: 1.45;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .mobile-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mobile-banner-actions .billboard-btn {
+    padding: 7px 12px !important;
+    font-size: 0.78rem !important;
     border-radius: 5px;
     gap: 5px;
   }
