@@ -26,8 +26,15 @@ export default function Navbar({
   const [isDrawerRegionOpen, setIsDrawerRegionOpen] = useState(false);
 
   // Top mobile header dropdown toggle
-  const [isMobileVjDropdownOpen, setIsMobileVjDropdownOpen] = useState(false);
-  const [vjSearchTerm, setVjSearchTerm] = useState('');
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobileDevice = windowWidth <= 1024;
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,112 +152,116 @@ export default function Navbar({
             <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '38px', width: 'auto' }} />
           </div>
 
-          {/* Desktop Navigation Links */}
-          <ul className="nav-links desktop-only-links">
-            <li
-              className={activeTab === 'home' && !searchQuery ? 'active' : ''}
-              onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-            >
-              Home
-            </li>
+          {/* Desktop Navigation Links (Visible ONLY on widescreen > 1024px) */}
+          {!isMobileDevice && (
+            <ul className="nav-links desktop-only-links">
+              <li
+                className={activeTab === 'home' && !searchQuery ? 'active' : ''}
+                onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+              >
+                Home
+              </li>
 
-            {/* Ugandan VJs Desktop Mega Dropdown (4-5 Columns) */}
-            <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
-              </span>
-              <div className="nav-dropdown-menu vj-mega-dropdown">
-                {vjsList.map((vj) => (
-                  <div
-                    key={vj.name}
-                    className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
-                    onClick={() => {
-                      setActiveVJ(vj.value);
-                      setActiveTab('vj');
-                      onSearchChange('');
-                      navigate('/browse');
-                    }}
-                  >
-                    <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} style={{ marginRight: '6px' }} />
-                    {vj.name}
-                  </div>
-                ))}
-              </div>
-            </li>
+              {/* Ugandan VJs Desktop Mega Dropdown (4-5 Columns) */}
+              <li className={`nav-item-dropdown ${activeTab === 'vj' || activeVJ ? 'active' : ''}`}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Mic size={14} color="#e50914" /> Ugandan VJs <ChevronDown size={14} />
+                </span>
+                <div className="nav-dropdown-menu vj-mega-dropdown">
+                  {vjsList.map((vj) => (
+                    <div
+                      key={vj.name}
+                      className={`dropdown-item ${activeVJ === vj.value ? 'selected' : ''}`}
+                      onClick={() => {
+                        setActiveVJ(vj.value);
+                        setActiveTab('vj');
+                        onSearchChange('');
+                        navigate('/browse');
+                      }}
+                    >
+                      <Mic size={12} color={activeVJ === vj.value ? '#fff' : '#e50914'} style={{ marginRight: '6px' }} />
+                      {vj.name}
+                    </div>
+                  ))}
+                </div>
+              </li>
 
-            <li
-              className={activeTab === 'series' ? 'active' : ''}
-              onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-            >
-              TV Series
-            </li>
+              <li
+                className={activeTab === 'series' ? 'active' : ''}
+                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+              >
+                TV Series
+              </li>
 
-            <li
-              className={activeTab === 'movies' ? 'active' : ''}
-              onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-            >
-              Movies
-            </li>
+              <li
+                className={activeTab === 'movies' ? 'active' : ''}
+                onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+              >
+                Movies
+              </li>
 
-            <li
-              className={activeTab === 'latest' ? 'active' : ''}
-              onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-            >
-              Latest
-            </li>
+              <li
+                className={activeTab === 'latest' ? 'active' : ''}
+                onClick={() => { setActiveTab('latest'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+              >
+                Latest
+              </li>
 
-            <li
-              className={activeTab === 'trending' ? 'active' : ''}
-              onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-            >
-              Trending
-            </li>
+              <li
+                className={activeTab === 'trending' ? 'active' : ''}
+                onClick={() => { setActiveTab('trending'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+              >
+                Trending
+              </li>
 
-            <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
-              </span>
-              <div className="nav-dropdown-menu">
-                {REGIONS_LIST.map((reg) => (
-                  <div
-                    key={reg.name}
-                    className={`dropdown-item ${activeRegion === reg.slug ? 'selected' : ''}`}
-                    onClick={() => {
-                      setActiveRegion(reg.slug);
-                      setActiveTab('regions');
-                      onSearchChange('');
-                      navigate('/browse');
-                    }}
-                  >
-                    {reg.name}
-                  </div>
-                ))}
-              </div>
-            </li>
+              <li className={`nav-item-dropdown ${activeTab === 'regions' || activeRegion ? 'active' : ''}`}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Globe size={14} color="#46d369" /> Regions <ChevronDown size={14} />
+                </span>
+                <div className="nav-dropdown-menu">
+                  {REGIONS_LIST.map((reg) => (
+                    <div
+                      key={reg.name}
+                      className={`dropdown-item ${activeRegion === reg.slug ? 'selected' : ''}`}
+                      onClick={() => {
+                        setActiveRegion(reg.slug);
+                        setActiveTab('regions');
+                        onSearchChange('');
+                        navigate('/browse');
+                      }}
+                    >
+                      {reg.name}
+                    </div>
+                  ))}
+                </div>
+              </li>
 
-            <li
-              className={location.pathname === '/mylist' ? 'active' : ''}
-              onClick={() => navigate('/mylist')}
-            >
-              My List
-            </li>
-          </ul>
-        </div>
+              <li
+                className={location.pathname === '/mylist' ? 'active' : ''}
+                onClick={() => navigate('/mylist')}
+              >
+                My List
+              </li>
+            </ul>
+          )}
 
-        {/* Mobile Header Search Bar (Replaces text links on small devices) */}
-        <div className="mobile-header-search-bar mobile-only-search">
-          <Search size={16} color="#aaaaaa" style={{ flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search titles, VJs..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="mobile-search-input"
-          />
-          {searchQuery && (
-            <button className="mobile-search-clear-btn" onClick={() => onSearchChange('')} type="button">
-              <X size={14} color="#aaaaaa" />
-            </button>
+          {/* Mobile Header Search Bar replacing text links on small devices */}
+          {isMobileDevice && (
+            <div className="mobile-header-search-bar" style={{ display: 'flex', marginLeft: '10px', flex: 1, maxWidth: '280px' }}>
+              <Search size={16} color="#aaaaaa" style={{ flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Search titles, VJs..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="mobile-search-input"
+              />
+              {searchQuery && (
+                <button className="mobile-search-clear-btn" onClick={() => onSearchChange('')} type="button">
+                  <X size={14} color="#aaaaaa" />
+                </button>
+              )}
+            </div>
           )}
         </div>
 

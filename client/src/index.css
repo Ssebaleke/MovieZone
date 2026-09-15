@@ -2638,10 +2638,14 @@ a {
   padding: 0;
 }
 
-@media (max-width: 1024px) {
-  .desktop-only-links {
+@media (max-width: 1200px) {
+  .nav-links,
+  .desktop-only-links,
+  .nav-links.desktop-only-links,
+  ul.nav-links {
     display: none !important;
   }
+  .mobile-header-search-bar,
   .mobile-only-search {
     display: flex !important;
   }
