@@ -13,10 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Set email from landing page redirect state if present
+  // Set email and mode from landing page redirect state if present
   useEffect(() => {
-    if (location.state && location.state.email) {
-      setEmail(location.state.email);
+    if (location.state) {
+      if (location.state.email) setEmail(location.state.email);
+      if (location.state.signUp) setIsSignUp(true);
     }
   }, [location]);
 

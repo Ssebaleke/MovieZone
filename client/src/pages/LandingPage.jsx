@@ -64,7 +64,7 @@ export default function LandingPage() {
   const handleGetStarted = (e) => {
     e.preventDefault();
     if (!email) return;
-    navigate('/login', { state: { email } });
+    navigate('/login', { state: { email, signUp: true } });
   };
 
   return (
