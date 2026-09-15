@@ -65,22 +65,9 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
           className="card-poster-img"
           loading="lazy"
           onError={(e) => {
-            setImageError(true);
             e.target.src = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80';
           }}
         />
-
-        {/* Dynamic Netflix-Style Title Overlay for fallback/missing posters */}
-        {showTitleOverlay && (
-          <div className="dynamic-title-card-overlay">
-            <div className="title-card-brand-tag">MOVIEZONE EXCLUSIVE</div>
-            <div className="title-card-main-title">{cleanTitle}</div>
-            <div className="title-card-sub-info">
-              <span>{firstGenre}</span>
-              {releaseYear && <span> • {releaseYear}</span>}
-            </div>
-          </div>
-        )}
 
         {/* Premium Star Badge when subscription is not active */}
         {!userIsSubscribed && !isHovered && (
