@@ -108,19 +108,6 @@ export default function Navbar({
 
   return (
     <div className="navbar-wrapper">
-      {/* Top Announcement Banner matching labafilms.online */}
-      {showAnnouncement && (
-        <div className="announcement-bar">
-          <div className="announcement-content" onClick={() => alert('Share your referral link with friends to get free credits!')}>
-            <Share2 size={13} color="#d97706" style={{ marginRight: '6px' }} />
-            <span>Share any movie & earn 2 free credits — <strong className="tap-link">tap to learn more</strong></span>
-          </div>
-          <button className="announcement-close-btn" onClick={() => setShowAnnouncement(false)} type="button" aria-label="Close banner">
-            <X size={14} color="#888" />
-          </button>
-        </div>
-      )}
-
       <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="nav-left">
           {/* Mobile Hamburger Navigation Bar Icon */}
@@ -441,7 +428,7 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar matching Mobile Design Screenshot */}
+      {/* Mobile Bottom Navigation Bar */}
       <nav className="mobile-bottom-nav">
         <div
           className={`mobile-bottom-tab ${activeTab === 'home' && !searchQuery ? 'active' : ''}`}
@@ -452,6 +439,22 @@ export default function Navbar({
         </div>
 
         <div
+          className={`mobile-bottom-tab ${activeTab === 'movies' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+        >
+          <Film size={20} color={activeTab === 'movies' ? '#e50914' : '#aaaaaa'} />
+          <span>Movies</span>
+        </div>
+
+        <div
+          className={`mobile-bottom-tab ${activeTab === 'series' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+        >
+          <Tv size={20} color={activeTab === 'series' ? '#e50914' : '#aaaaaa'} />
+          <span>Series</span>
+        </div>
+
+        <div
           className={`mobile-bottom-tab ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => {
             setIsMobileMenuOpen(true);
@@ -459,22 +462,6 @@ export default function Navbar({
         >
           <LayoutGrid size={20} color={activeTab === 'categories' ? '#e50914' : '#aaaaaa'} />
           <span>Categories</span>
-        </div>
-
-        <div
-          className={`mobile-bottom-tab ${activeTab === 'radio' ? 'active' : ''}`}
-          onClick={() => alert('Radio Live Streaming Coming Soon!')}
-        >
-          <Radio size={20} color={activeTab === 'radio' ? '#e50914' : '#aaaaaa'} />
-          <span>Radio</span>
-        </div>
-
-        <div
-          className={`mobile-bottom-tab ${activeTab === 'series' || activeTab === 'tv' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-        >
-          <Tv size={20} color={activeTab === 'series' || activeTab === 'tv' ? '#e50914' : '#aaaaaa'} />
-          <span>Live TV</span>
         </div>
 
         <div

@@ -65,7 +65,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
 
         {/* Blue VJ Pill Badge (matching mobile screenshot) */}
         {movie.vj && !isHovered && (
-          <div className="vj-pill-badge-blue">
+          <div className="vj-pill-badge-red">
             {movie.vj}
           </div>
         )}
@@ -136,7 +136,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
               <span className="card-rating-badge">{movie.rating}</span>
               <span style={{ color: '#fff' }}>{movie.duration}</span>
               {movie.vj && (
-                <span className="vj-pill-badge-blue" style={{ position: 'static' }}>
+                <span className="vj-pill-badge-red" style={{ position: 'static' }}>
                   {movie.vj}
                 </span>
               )}
