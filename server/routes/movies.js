@@ -157,16 +157,18 @@ router.get('/', async (req, res) => {
         vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
       }
     } else {
-      // Fetch extensive multi-page catalog from Reelplexi API (parallel fetching for maximum content volume)
+      // Fetch extensive multi-page catalog from Reelplexi API (12 pages of movies + 6 pages of series)
       const pageNum = parseInt(page, 10) || 1;
-      const moviePages = [pageNum, pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4, pageNum + 5];
-      const seriesPages = [pageNum, pageNum + 1, pageNum + 2, pageNum + 3];
+      const startMovie = (pageNum - 1) * 10 + 1;
+      const moviePages = Array.from({ length: 12 }, (_, i) => startMovie + i);
+      const startSeries = (pageNum - 1) * 5 + 1;
+      const seriesPages = Array.from({ length: 6 }, (_, i) => startSeries + i);
 
       const fetchPromises = [
-        ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p })),
-        ...seriesPages.map(p => reelplexiFetch('/series', { per_page: 100, page: p })),
-        reelplexiFetch('/trending', { per_page: 100 }),
-        reelplexiFetch('/latest', { per_page: 100 })
+        ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p }).catch(() => null)),
+        ...seriesPages.map(p => reelplexiFetch('/series', { per_page: 100, page: p }).catch(() => null)),
+        reelplexiFetch('/trending', { per_page: 100 }).catch(() => null),
+        reelplexiFetch('/latest', { per_page: 100 }).catch(() => null)
       ];
 
       const results = await Promise.all(fetchPromises);
