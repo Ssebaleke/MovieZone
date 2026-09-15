@@ -39,7 +39,7 @@ export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist
         </button>
         
         <div className={isTop10 ? "top10-cards-track" : "movie-cards-track"} ref={trackRef} style={{ overflowY: 'visible' }}>
-          {movies.slice(0, 10).map((movie, idx) => (
+          {movies.map((movie, idx) => (
             isTop10 ? (
               <div className="top10-item-container" key={movie.id}>
                 <div className="top10-rank-number">{idx + 1}</div>

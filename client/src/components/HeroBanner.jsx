@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Info, Volume2, VolumeX, Plus } from 'lucide-react';
 
-export default function HeroBanner({ movie, onPlay, onOpenModal }) {
+export default function HeroBanner({ movie, onPlay, onOpenModal, isSubscribed }) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef(null);
@@ -60,7 +60,7 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
           <p className="billboard-desc">{movie.description}</p>
           <div className="billboard-actions-row">
             <button className="billboard-btn billboard-play-solid" onClick={() => onPlay(movie)}>
-              <Play size={18} fill="#000" color="#000" /> Play
+              {isSubscribed ? <><Play size={18} fill="#000" color="#000" /> Play</> : <>🔒 Subscribe to Watch</>}
             </button>
             <button className="billboard-btn billboard-translucent-btn" onClick={() => onOpenModal(movie)}>
               <Info size={18} color="#fff" /> More Info
@@ -126,7 +126,7 @@ export default function HeroBanner({ movie, onPlay, onOpenModal }) {
           {/* Action buttons */}
           <div className="mobile-banner-actions">
             <button className="mobile-banner-btn mobile-banner-btn-play" onClick={() => onPlay(movie)}>
-              <Play size={15} fill="#000" color="#000" /> Play
+              {isSubscribed ? <><Play size={15} fill="#000" color="#000" /> Play</> : <>🔒 Subscribe</>}
             </button>
             <button className="mobile-banner-btn mobile-banner-btn-info" onClick={() => onOpenModal(movie)}>
               <Info size={15} color="#fff" /> More Info

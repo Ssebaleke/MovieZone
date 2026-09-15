@@ -11,24 +11,29 @@ router.use(authenticateToken);
 // Helper to map Reelplexi API items to frontend schema
 function mapReelplexiItem(item) {
   const isShow = item.type === 'series' || item.type === 'SHOW';
+  // Derive region from origin country
+  const country = (item.origin_country || item.originCountry || 'UG').toUpperCase();
+  const regionMap = { KR: 'kdrama', CN: 'kdrama', TW: 'kdrama', JP: 'anime', IN: 'bollywood', NG: 'nollywood', GH: 'nollywood', MX: 'latin', BR: 'latin', TR: 'turkish', PH: 'filipino', TH: 'thai', UG: 'east-african', KE: 'east-african', TZ: 'east-african' };
+  const region = item.region || regionMap[country] || 'western';
   return {
     id: `rp_${item.id}`,
     reelplexiId: item.id,
     title: item.title,
-    description: item.overview || item.description || `Translated in Luganda by ${item.vj || 'Ugandan VJ'}`,
+    description: item.overview || item.description || '',
     thumbnailUrl: item.poster_url || item.thumbnailUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
     backdropUrl: item.backdrop_url || item.poster_url || item.backdropUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
-    videoUrl: item.stream_url || item.video_url || item.videoUrl || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+    videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
+    embedUrl: item.embed_url || item.embedUrl || '',
     tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
-    duration: isShow ? 'Series' : '2h 15m',
-    releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
-    rating: item.rating || 'PG-13',
-    genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Action, Drama'),
+    duration: isShow ? (item.seasons ? `${item.seasons} Season${item.seasons > 1 ? 's' : ''}` : 'Series') : (item.runtime ? `${item.runtime}m` : '2h'),
+    releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : (item.releaseYear || 2024),
+    rating: item.rating || item.content_rating || 'PG-13',
+    genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || ''),
     type: isShow ? 'SHOW' : 'MOVIE',
-    category: isShow ? 'Reelplexi Series Feed' : (item.vj ? 'Ugandan VJ Exclusives' : 'Reelplexi Movies Feed'),
-    vj: item.vj || 'VJ Junior',
-    originCountry: 'UG',
-    region: isShow ? 'kdrama' : 'east-african'
+    category: item.category || (isShow ? 'Popular TV Series & Shows' : 'Ugandan VJ Exclusives'),
+    vj: item.vj || '',
+    originCountry: country,
+    region
   };
 }
 
@@ -231,26 +236,29 @@ router.get('/:id', async (req, res) => {
   try {
     if (id.startsWith('rp_') || !isNaN(id)) {
       const cleanId = id.replace('rp_movie_', '').replace('rp_series_', '').replace('rp_', '');
-      
-      const [detailRes, streamRes] = await Promise.all([
-        reelplexiFetch(`/movies/${cleanId}`).catch(() => null) || reelplexiFetch(`/series/${cleanId}`).catch(() => null),
-        reelplexiFetch(`/movies/${cleanId}/stream`).catch(() => null)
-      ]);
+
+      // Try movie first, then series
+      let detailRes = await reelplexiFetch(`/movies/${cleanId}`).catch(() => null);
+      let isSeries = false;
+      if (!detailRes || (!detailRes.id && !detailRes.data)) {
+        detailRes = await reelplexiFetch(`/series/${cleanId}`).catch(() => null);
+        isSeries = true;
+      }
+
+      const streamRes = await reelplexiFetch(`/${isSeries ? 'series' : 'movies'}/${cleanId}/stream`).catch(() => null)
+        || await reelplexiFetch(`/stream/${isSeries ? 'tv' : 'movie'}/${cleanId}`).catch(() => null);
 
       const rawDetail = detailRes?.data || detailRes;
-      if (rawDetail) {
+      if (rawDetail && rawDetail.id) {
         const movie = mapReelplexiItem(rawDetail);
         if (streamRes) {
           movie.videoUrl = streamRes.stream_url || streamRes.video_url || streamRes.remux_url || movie.videoUrl;
           movie.embedUrl = streamRes.embed_url || movie.embedUrl;
-          movie.isMkv = streamRes.is_mkv;
-          movie.format = streamRes.format;
         }
-
         const available_vj_versions = [
-          { id: `${movie.id}_vj1`, vj: movie.vj || 'VJ Junior', title: `${movie.title} (Voiced by ${movie.vj || 'VJ Junior'})` },
-          { id: `${movie.id}_vj2`, vj: 'VJ Emmy', title: `${movie.title} (Voiced by VJ Emmy)` },
-          { id: `${movie.id}_vj3`, vj: 'VJ Ice P', title: `${movie.title} (Voiced by VJ Ice P)` }
+          { id: `${movie.id}_vj1`, vj: movie.vj || 'VJ Junior' },
+          { id: `${movie.id}_vj2`, vj: 'VJ Emmy' },
+          { id: `${movie.id}_vj3`, vj: 'VJ Ice P' }
         ];
         return res.json({ movie: { ...movie, available_vj_versions }, recommendations: [] });
       }
