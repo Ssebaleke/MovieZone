@@ -115,131 +115,144 @@ export default function ProfileSelector() {
   };
 
   return (
-    <div className="profile-selection-bg">
-      <div className="profile-prompt-container">
-        <h1>{isManageMode ? 'Manage Profiles:' : "Who's watching?"}</h1>
+    <div className="ps-bg">
+      {/* Cinematic background blobs */}
+      <div className="ps-bg-blob ps-bg-blob-1" />
+      <div className="ps-bg-blob ps-bg-blob-2" />
 
-        <div className="profiles-list">
+      <div className="ps-container">
+        {/* Logo */}
+        <div className="ps-logo">
+          <span className="brand-gradient-text" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '2px' }}>MOVIEZONE</span>
+        </div>
+
+        <h1 className="ps-heading">
+          {isManageMode ? 'Manage Profiles' : "Who's watching?"}
+        </h1>
+        <p className="ps-subheading">
+          {isManageMode ? 'Select a profile to edit or delete it' : 'Select your profile to continue'}
+        </p>
+
+        {/* Profile grid */}
+        <div className="ps-profiles-grid">
           {profiles.map((profile) => (
-            <div
-              key={profile.id}
-              className="profile-wrapper"
-              onClick={() => handleProfileSelect(profile)}
-            >
-              <div className="profile-avatar-container">
-                <img src={profile.avatarUrl} alt={profile.name} />
+            <div key={profile.id} className="ps-profile-card" onClick={() => handleProfileSelect(profile)}>
+              <div className={`ps-avatar-ring ${isManageMode ? 'ps-avatar-ring--manage' : ''}`}>
+                <img src={profile.avatarUrl} alt={profile.name} className="ps-avatar-img" />
                 {isManageMode && (
-                  <div className="profile-edit-badge">
-                    <Edit2 size={36} color="#fff" />
+                  <div className="ps-edit-overlay">
+                    <Edit2 size={28} color="#fff" />
                   </div>
                 )}
               </div>
-              <span className="profile-name">{profile.name}</span>
+              <span className="ps-profile-name">{profile.name}</span>
+              {isManageMode && <span className="ps-edit-hint">Edit</span>}
             </div>
           ))}
 
           {profiles.length < 5 && (
-            <div className="profile-wrapper" onClick={handleOpenCreateModal}>
-              <div className="profile-avatar-container" style={{ background: '#1c1c1c', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Plus size={64} color="#555" />
+            <div className="ps-profile-card" onClick={handleOpenCreateModal}>
+              <div className="ps-avatar-ring ps-avatar-ring--add">
+                <Plus size={40} color="#666" />
               </div>
-              <span className="profile-name">Add Profile</span>
+              <span className="ps-profile-name">Add Profile</span>
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <button
-            className="manage-profiles-btn"
-            onClick={() => setIsManageMode(!isManageMode)}
-          >
+        {/* Action buttons */}
+        <div className="ps-actions">
+          <button className="ps-btn ps-btn--outline" onClick={() => setIsManageMode(!isManageMode)}>
             {isManageMode ? 'Done' : 'Manage Profiles'}
           </button>
-          
-          <button
-            className="manage-profiles-btn"
-            style={{ background: '#333', borderColor: '#333' }}
-            onClick={() => {
-              localStorage.removeItem('netflix_token');
-              localStorage.removeItem('netflix_user');
-              navigate('/login');
-            }}
-          >
+          <button className="ps-btn ps-btn--ghost" onClick={() => {
+            localStorage.removeItem('netflix_token');
+            localStorage.removeItem('netflix_user');
+            navigate('/login');
+          }}>
             Sign Out
           </button>
         </div>
       </div>
 
+      {/* Edit / Create Modal */}
       {showModal && (
-        <div className="payment-modal-overlay">
-          <div className="profile-modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>{editingProfileId ? 'Edit Profile' : 'Add Profile'}</h2>
-              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => setShowModal(false)}>
-                <X size={28} color="#fff" />
+        <div className="ps-modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="ps-modal">
+            <div className="ps-modal-header">
+              <h2 className="ps-modal-title">{editingProfileId ? 'Edit Profile' : 'New Profile'}</h2>
+              <button className="ps-modal-close" onClick={() => setShowModal(false)}>
+                <X size={22} color="#fff" />
               </button>
             </div>
 
-            {error && <div className="error-message" style={{ marginBottom: '15px' }}>{error}</div>}
+            {error && <p className="error-message" style={{ marginBottom: 12 }}>{error}</p>}
 
-            <form onSubmit={handleSaveProfile} className="profile-edit-form">
-              <div className="profile-avatar-picker">
-                <div className="profile-avatar-container" style={{ width: '100px', height: '100px' }}>
-                  <img src={profileAvatar} alt="Current" />
+            <form onSubmit={handleSaveProfile}>
+              {/* Avatar section */}
+              <div className="ps-modal-avatar-section">
+                <div className="ps-modal-current-avatar">
+                  <img src={profileAvatar} alt="Selected" />
+                  <div className="ps-modal-avatar-label">Tap to change</div>
                 </div>
-                <div className="avatar-previews-grid">
+                <div className="ps-modal-avatar-grid">
                   {DEFAULT_AVATARS.map((av, idx) => (
                     <div
                       key={idx}
-                      className={`avatar-thumbnail ${profileAvatar === av ? 'selected' : ''}`}
+                      className={`ps-avatar-option ${profileAvatar === av ? 'ps-avatar-option--active' : ''}`}
                       onClick={() => setProfileAvatar(av)}
                     >
-                      <img src={av} alt={`Option ${idx}`} />
+                      <img src={av} alt={`Avatar ${idx + 1}`} />
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="profile-input-fields">
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  maxLength={15}
-                  required
-                />
+              {/* Fields */}
+              <div className="ps-modal-fields">
+                <div className="ps-field">
+                  <label className="ps-field-label">Display Name</label>
+                  <input
+                    className="ps-field-input"
+                    type="text"
+                    placeholder="e.g. John"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    maxLength={15}
+                    required
+                  />
+                </div>
 
-                <div className="cc-input-container">
-                  <label>Maturity Level</label>
-                  <select value={maturityLimit} onChange={(e) => setMaturityLimit(e.target.value)}>
-                    <option value="G">G (All ages)</option>
-                    <option value="PG">PG (Parental Guidance)</option>
-                    <option value="13+">13+ (Teens)</option>
-                    <option value="R">R (Restricted)</option>
-                    <option value="TV-MA">TV-MA (Adults Only)</option>
+                <div className="ps-field">
+                  <label className="ps-field-label">Maturity Level</label>
+                  <select className="ps-field-input" value={maturityLimit} onChange={(e) => setMaturityLimit(e.target.value)}>
+                    <option value="G">G — All ages</option>
+                    <option value="PG">PG — Parental Guidance</option>
+                    <option value="13+">13+ — Teens</option>
+                    <option value="R">R — Restricted</option>
+                    <option value="TV-MA">TV-MA — Adults Only</option>
                   </select>
                 </div>
+              </div>
 
-                <div className="payment-actions" style={{ marginTop: '20px' }}>
-                  <button type="submit" className="payment-confirm" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save'}
+              {/* Modal actions */}
+              <div className="ps-modal-actions">
+                <button type="submit" className="ps-btn ps-btn--primary" disabled={loading}>
+                  {loading ? 'Saving…' : 'Save Profile'}
+                </button>
+                {editingProfileId && (
+                  <button
+                    type="button"
+                    className="ps-btn ps-btn--danger"
+                    onClick={handleDeleteProfile}
+                    disabled={loading}
+                  >
+                    <Trash2 size={15} /> Delete
                   </button>
-                  {editingProfileId && (
-                    <button
-                      type="button"
-                      className="payment-cancel"
-                      style={{ background: '#b80710', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                      onClick={handleDeleteProfile}
-                      disabled={loading}
-                    >
-                      <Trash2 size={16} /> Delete
-                    </button>
-                  )}
-                  <button type="button" className="payment-cancel" onClick={() => setShowModal(false)}>
-                    Cancel
-                  </button>
-                </div>
+                )}
+                <button type="button" className="ps-btn ps-btn--ghost" onClick={() => setShowModal(false)}>
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
