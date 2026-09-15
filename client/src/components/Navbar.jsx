@@ -109,207 +109,111 @@ export default function Navbar({
   return (
     <div className="navbar-wrapper">
       <header className={`navbar-header ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="nav-left">
-          {/* Mobile Hamburger Navigation Bar Icon */}
-          <button
-            className="mobile-menu-toggle-btn desktop-hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-            type="button"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
-          >
-            {isMobileMenuOpen ? <X size={24} color="#e50914" /> : <Menu size={24} color="#e50914" />}
-          </button>
 
-          {/* Logo */}
-          <div
-            className="logo"
-            style={{ cursor: 'pointer' }}
-            onClick={() => {
-              setActiveTab('home');
-              setActiveVJ('');
-              setActiveRegion('');
-              onSearchChange('');
-              setIsMobileMenuOpen(false);
-              navigate('/browse');
-            }}
-          >
-            <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '36px', width: 'auto' }} />
-          </div>
+        {/* ── MOBILE TOP BAR ── */}
+        {isMobileDevice ? (
+          <>
+            {/* Left: Logo */}
+            <div
+              className="logo"
+              style={{ cursor: 'pointer' }}
+              onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
+            >
+              <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '30px', width: 'auto' }} />
+            </div>
 
-          {/* Desktop Navigation Links (Visible ONLY on widescreen > 1024px matching labafilms.online screenshot) */}
-          {!isMobileDevice && (
-            <ul className="nav-links desktop-only-links">
-              <li
-                className={activeTab === 'home' && !searchQuery && !activeVJ ? 'active' : ''}
-                onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-              >
-                Home
-              </li>
-
-              <li
-                className={activeTab === 'movies' ? 'active' : ''}
-                onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-              >
-                Movies
-              </li>
-
-              <li
-                className={activeTab === 'series' ? 'active' : ''}
-                onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
-              >
-                TV Shows
-              </li>
-
-              <li
-                className={location.pathname === '/mylist' ? 'active' : ''}
-                onClick={() => navigate('/mylist')}
-              >
-                My List
-              </li>
-
-              {/* Language Selector matching screenshot */}
-              <li className="nav-item-dropdown">
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                  {selectedLang} <ChevronDown size={14} color="#aaa" />
-                </span>
-                <div className="nav-dropdown-menu">
-                  <div className="dropdown-item selected" onClick={() => setSelectedLang('English')}>English</div>
-                  <div className="dropdown-item" onClick={() => setSelectedLang('Luganda')}>Luganda</div>
-                  <div className="dropdown-item" onClick={() => setSelectedLang('Swahili')}>Swahili</div>
-                </div>
-              </li>
-            </ul>
-          )}
-
-          {/* Mobile Header Search Bar replacing text links on small devices */}
-          {isMobileDevice && (
-            <div className="mobile-header-search-bar" style={{ display: 'flex', marginLeft: '10px', flex: 1, maxWidth: '280px' }}>
-              <Search size={16} color="#aaaaaa" style={{ flexShrink: 0 }} />
+            {/* Center: Search bar */}
+            <div className="mobile-topbar-search">
               <input
                 type="text"
-                placeholder="Search titles, VJs..."
+                placeholder="Search movies, VJs..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="mobile-search-input"
               />
-              {searchQuery && (
+              {searchQuery ? (
                 <button className="mobile-search-clear-btn" onClick={() => onSearchChange('')} type="button">
-                  <X size={14} color="#aaaaaa" />
+                  <X size={13} color="#aaa" />
+                </button>
+              ) : (
+                <Search size={14} color="#aaa" style={{ flexShrink: 0 }} />
+              )}
+            </div>
+
+            {/* Right: Bell + Avatar */}
+            <div className="mobile-topbar-right">
+              <button className="mobile-header-icon-btn notification-badge-btn" aria-label="Notifications">
+                <Bell size={20} color="#fff" />
+                <span className="bell-badge-count">1</span>
+              </button>
+              {currentProfile ? (
+                <div className="mobile-topbar-avatar" onClick={() => setIsMobileMenuOpen(true)}>
+                  <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
+                </div>
+              ) : (
+                <button className="mobile-header-icon-btn" onClick={() => setIsMobileMenuOpen(true)} aria-label="Menu">
+                  <Menu size={22} color="#fff" />
                 </button>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Right Section matching labafilms.online screenshot */}
-        <div className="nav-right">
-          {/* Mobile Only Header Actions */}
-          <div className="mobile-header-actions-right">
-            <button className="mobile-header-icon-btn" aria-label="Cast">
-              <Cast size={20} color="#ffffff" />
-            </button>
-            <button className="mobile-header-icon-btn notification-badge-btn" aria-label="Notifications">
-              <Bell size={20} color="#ffffff" />
-              <span className="bell-badge-count">1</span>
-            </button>
-            <button
-              className="mobile-header-icon-btn"
-              onClick={() => setIsMobileMenuOpen(true)}
-              aria-label="Search"
-            >
-              <Search size={20} color="#ffffff" />
-            </button>
-          </div>
-
-          {/* Desktop Search Bar */}
-          <div className={`search-box desktop-only-search ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
-            <button
-              className="search-btn-icon"
-              onClick={() => {
-                setIsSearchExpanded(true);
-                setTimeout(() => {
-                  if (searchInputRef.current) searchInputRef.current.focus();
-                }, 100);
-              }}
-              type="button"
-            >
-              <Search size={18} color="#fff" />
-            </button>
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Titles, VJs, genres..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onBlur={() => { if (!searchQuery) setIsSearchExpanded(false); }}
-            />
-            {searchQuery && (
-              <button
-                className="search-clear-btn"
-                onClick={() => {
-                  onSearchChange('');
-                  if (searchInputRef.current) searchInputRef.current.focus();
-                }}
-                type="button"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          {/* Desktop Share Button with Orange Badge Dot */}
-          <button
-            className="nav-icon-action-btn desktop-only-icon"
-            onClick={() => alert('Share MovieZone & Earn Credits!')}
-            title="Share & Earn"
-            type="button"
-          >
-            <Share2 size={18} color="#ffffff" />
-            <span className="share-orange-dot" />
-          </button>
-
-          {/* Desktop Notifications Bell with Red Circular Badge '1' */}
-          <button className="nav-icon-action-btn notifications-btn desktop-only-icon" type="button" title="Notifications">
-            <Bell size={18} color="#ffffff" />
-            <span className="notification-badge-red">1</span>
-          </button>
-
-          {/* Desktop INSTALL APP Button matching screenshot */}
-          <button
-            className="desktop-install-app-btn desktop-only-btn"
-            onClick={() => alert('Install MovieZone App on Desktop / Mobile')}
-            type="button"
-          >
-            <Download size={14} style={{ marginRight: '6px' }} /> INSTALL APP
-          </button>
-
-          {/* Profile Dropdown */}
-          {currentProfile && (
-            <div className="nav-profile-menu desktop-only-icon">
-              <div className="laba-avatar-box">
-                <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
+          </>
+        ) : (
+          /* ── DESKTOP TOP BAR ── */
+          <>
+            <div className="nav-left">
+              <div className="logo" style={{ cursor: 'pointer' }} onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>
+                <img src="/movie-zone-logo.svg" alt="Movie Zone" className="logo-svg" style={{ height: '36px', width: 'auto' }} />
               </div>
-              <ChevronDown size={14} color="#aaaaaa" />
-
-              <div className="profile-dropdown">
-                <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}>
-                  <strong>{currentProfile.name}</strong>
-                </div>
-                <div className="dropdown-item" onClick={() => navigate('/profiles')}>
-                  <User size={16} /> Manage Profiles
-                </div>
-                <div className="dropdown-item" onClick={() => navigate('/account')}>
-                  <Settings size={16} /> Account Settings
-                </div>
-                <div className="dropdown-divider" />
-                <div className="dropdown-item" onClick={handleSignOut}>
-                  <LogOut size={16} /> Sign out
-                </div>
-              </div>
+              <ul className="nav-links desktop-only-links">
+                <li className={activeTab === 'home' && !searchQuery && !activeVJ ? 'active' : ''} onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Home</li>
+                <li className={activeTab === 'movies' ? 'active' : ''} onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Movies</li>
+                <li className={activeTab === 'series' ? 'active' : ''} onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>TV Shows</li>
+                <li className={location.pathname === '/mylist' ? 'active' : ''} onClick={() => navigate('/mylist')}>My List</li>
+                <li className="nav-item-dropdown">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    {selectedLang} <ChevronDown size={14} color="#aaa" />
+                  </span>
+                  <div className="nav-dropdown-menu">
+                    <div className="dropdown-item selected" onClick={() => setSelectedLang('English')}>English</div>
+                    <div className="dropdown-item" onClick={() => setSelectedLang('Luganda')}>Luganda</div>
+                    <div className="dropdown-item" onClick={() => setSelectedLang('Swahili')}>Swahili</div>
+                  </div>
+                </li>
+              </ul>
             </div>
-          )}
-        </div>
+            <div className="nav-right">
+              <div className={`search-box desktop-only-search ${isSearchExpanded || searchQuery ? 'expanded' : ''}`}>
+                <button className="search-btn-icon" onClick={() => { setIsSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 100); }} type="button">
+                  <Search size={18} color="#fff" />
+                </button>
+                <input ref={searchInputRef} type="text" placeholder="Titles, VJs, genres..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} onBlur={() => { if (!searchQuery) setIsSearchExpanded(false); }} />
+                {searchQuery && <button className="search-clear-btn" onClick={() => { onSearchChange(''); searchInputRef.current?.focus(); }} type="button"><X size={16} /></button>}
+              </div>
+              <button className="nav-icon-action-btn" onClick={() => alert('Share MovieZone & Earn Credits!')} title="Share & Earn" type="button">
+                <Share2 size={18} color="#fff" /><span className="share-orange-dot" />
+              </button>
+              <button className="nav-icon-action-btn" type="button" title="Notifications">
+                <Bell size={18} color="#fff" /><span className="notification-badge-red">1</span>
+              </button>
+              <button className="desktop-install-app-btn" onClick={() => alert('Install MovieZone App')} type="button">
+                <Download size={14} style={{ marginRight: '6px' }} /> INSTALL APP
+              </button>
+              {currentProfile && (
+                <div className="nav-profile-menu">
+                  <div className="laba-avatar-box"><img src={currentProfile.avatarUrl} alt={currentProfile.name} /></div>
+                  <ChevronDown size={14} color="#aaa" />
+                  <div className="profile-dropdown">
+                    <div className="dropdown-item" style={{ cursor: 'default', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '5px' }}><strong>{currentProfile.name}</strong></div>
+                    <div className="dropdown-item" onClick={() => navigate('/profiles')}><User size={16} /> Manage Profiles</div>
+                    <div className="dropdown-item" onClick={() => navigate('/account')}><Settings size={16} /> Account Settings</div>
+                    <div className="dropdown-divider" />
+                    <div className="dropdown-item" onClick={handleSignOut}><LogOut size={16} /> Sign out</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </header>
 
       {/* Slide-Out Mobile Navigation Drawer (Opened via Nav Bar Icon ☰) */}
@@ -331,22 +235,6 @@ export default function Navbar({
               <button className="mobile-drawer-close" onClick={() => setIsMobileMenuOpen(false)}>
                 <X size={24} color="#fff" />
               </button>
-            </div>
-
-            {/* Search inside navbar icon drawer */}
-            <div className="mobile-drawer-search">
-              <Search size={18} color="#aaa" />
-              <input
-                type="text"
-                placeholder="Search movies, Ugandan VJs..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-              />
-              {searchQuery && (
-                <button onClick={() => onSearchChange('')} style={{ background: 'none', border: 'none' }}>
-                  <X size={16} color="#aaa" />
-                </button>
-              )}
             </div>
 
             {/* Navigation Links inside Navbar Icon Menu */}
