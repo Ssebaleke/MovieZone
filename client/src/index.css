@@ -7248,3 +7248,15 @@ a {
     padding: 16px 3%;
   }
 }
+
+/* ── View All link override ── */
+.row-view-all-link {
+  cursor: pointer;
+  color: #e50914 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.2s, opacity 0.2s;
+}
+.row-view-all-link:hover { color: #ff3d2e !important; opacity: 0.85; }
