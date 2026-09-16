@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ThumbsUp, X, Volume2, VolumeX, Mic, ChevronDown } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, X, Volume2, VolumeX, Mic, ChevronDown, List } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggleWatchlist, isSubscribed }) {
@@ -192,31 +192,22 @@ export default function DetailModal({ movie, onClose, onPlay, watchlist, onToggl
           <div className="modal-billboard-details">
             <h1 className="modal-billboard-title">{currentMovie.title}</h1>
 
-            {/* VJ Version Selection pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Mic size={14} color="#e50914" /> AUDIO VERSION:
-              </span>
-              {availableVJs.map(vj => (
+            {/* Series link */}
+            {currentMovie.type === 'SHOW' && (
+              <div style={{ marginBottom: '16px' }}>
                 <button
-                  key={vj.name}
-                  onClick={() => setActiveVJVersion(vj.name)}
+                  onClick={() => onPlay({ ...currentMovie, activeVJ: activeVJVersion, openEpisodes: true })}
                   style={{
-                    background: activeVJVersion === vj.name ? '#e50914' : 'rgba(0,0,0,0.6)',
-                    border: `1px solid ${activeVJVersion === vj.name ? '#e50914' : 'rgba(255,255,255,0.3)'}`,
-                    color: '#fff',
-                    padding: '4px 10px',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
+                    color: '#fff', padding: '6px 14px', borderRadius: '4px',
+                    fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer'
                   }}
                 >
-                  {vj.name}
+                  <List size={15} /> View Episodes
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
             <div className="billboard-actions" style={{ flexWrap: 'wrap', gap: '10px' }}>
               {isSubscribed ? (

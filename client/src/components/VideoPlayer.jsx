@@ -30,6 +30,11 @@ export default function VideoPlayer({ movie, onClose }) {
 
   const isSeries = currentMovie?.type === 'SHOW' || movie?.type === 'SHOW';
 
+  // Auto-open episodes panel if triggered from detail modal
+  useEffect(() => {
+    if (movie?.openEpisodes && isSeries) setShowEpisodes(true);
+  }, [movie?.openEpisodes, isSeries]);
+
   // Fetch stream details
   useEffect(() => {
     setCurrentMovie(movie);
