@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Plus, Check, Search, X, Headphones } from 'lucide-react';
+import { ArrowLeft, Search, X, Headphones, Play, Film } from 'lucide-react';
 import { api } from '../utils/api';
 import Navbar from '../components/Navbar';
+import MovieCard from '../components/MovieCard';
 import VideoPlayer from '../components/VideoPlayer';
 import DetailModal from '../components/DetailModal';
 import UpgradeModal from '../components/UpgradeModal';
+
+const VJ_META = {
+  'VJ Junior': { color: '#f59e0b', tagline: 'The Voice of Uganda', specialty: 'Action • Drama • Nollywood' },
+  'VJ Emmy':   { color: '#8b5cf6', tagline: 'Smooth & Soulful',    specialty: 'Romance • K-Drama' },
+  'VJ Ice P':  { color: '#06b6d4', tagline: 'Cool & Crisp',        specialty: 'Thriller • Sci-Fi' },
+  'VJ Jingo':  { color: '#10b981', tagline: 'Energy & Vibes',      specialty: 'Comedy • Animation' },
+  'VJ Mark':   { color: '#e50914', tagline: 'Deep & Dramatic',     specialty: 'Drama • Bollywood' },
+  'VJ KIIWA':  { color: '#f97316', tagline: 'Bold & Fearless',     specialty: 'Horror • Western' },
+};
+
+function avatarUrl(name, color) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color.replace('#', '')}&color=fff&size=200&bold=true&font-size=0.4`;
+}
 
 export default function VJMoviesPage() {
   const { vjName } = useParams();
   const navigate = useNavigate();
   const decodedVJ = decodeURIComponent(vjName);
+  const meta = VJ_META[decodedVJ] || { color: '#e50914', tagline: 'Ugandan VJ', specialty: 'Movies & Series' };
 
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +52,6 @@ export default function VJMoviesPage() {
       profile ? api.get(`/mylist/${profile.id}`) : Promise.resolve([]),
     ])
       .then(([catalog, list]) => {
-        // flatten all categories into one list, deduplicated by id
         const all = [];
         const seen = new Set();
         (catalog.categories || []).forEach(cat => {
@@ -86,71 +100,77 @@ export default function VJMoviesPage() {
         activeRegion=""
         setActiveRegion={() => {}}
       />
-      {/* Header */}
-      <div className="vjm-header">
-        <button className="vjm-back-btn" onClick={() => navigate('/vjs')}>
-          <ArrowLeft size={20} />
-        </button>
-        <div className="vjm-title-wrap">
-          <Headphones size={18} color="#e50914" />
-          <h1>{decodedVJ}</h1>
-        </div>
-        <div style={{ width: 38 }} />
-      </div>
 
-      {/* Search */}
-      <div className="vjm-search-wrap">
-        <Search size={15} color="#666" />
-        <input
-          className="vjm-search-input"
-          placeholder={`Search ${decodedVJ} movies...`}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-        {query && <button className="vjm-search-clear" onClick={() => setQuery('')}><X size={13} /></button>}
-      </div>
-
-      {/* Count */}
-      {!loading && (
-        <div className="vjm-count">
-          {filtered.length} title{filtered.length !== 1 ? 's' : ''}{q ? ` matching "${query}"` : ` by ${decodedVJ}`}
-        </div>
-      )}
-
-      {/* Grid */}
-      {loading ? (
-        <div className="vjm-loading">Loading {decodedVJ} movies...</div>
-      ) : filtered.length === 0 ? (
-        <div className="vjm-empty">{q ? `No results for "${query}"` : `No movies found for ${decodedVJ} yet.`}</div>
-      ) : (
-        <div className="vjm-grid">
-          {filtered.map(movie => {
-            const inList = watchlist.some(m => m.id === movie.id);
-            return (
-              <div key={movie.id} className="vjm-card" onClick={() => setSelectedMovie(movie)}>
-                <div className="vjm-card-poster">
-                  <img
-                    src={movie.posterUrl || movie.poster}
-                    alt={movie.title}
-                    loading="lazy"
-                    onError={e => { e.currentTarget.style.background = '#1a1a22'; e.currentTarget.style.display = 'none'; }}
-                  />
-                  <div className="vjm-card-overlay">
-                    <button className="vjm-play-btn" onClick={e => { e.stopPropagation(); handlePlay(movie); }}>
-                      <Play size={16} fill="#fff" />
-                    </button>
-                    <button className="vjm-list-btn" onClick={e => { e.stopPropagation(); handleToggleWatchlist(movie); }}>
-                      {inList ? <Check size={14} /> : <Plus size={14} />}
-                    </button>
-                  </div>
-                </div>
-                <div className="vjm-card-title">{movie.title}</div>
-                {movie.year && <div className="vjm-card-year">{movie.year}</div>}
+      {/* VJ Hero Banner */}
+      <div className="vjm-hero" style={{ '--vj-color': meta.color }}>
+        <div className="vjm-hero-bg" style={{ background: `linear-gradient(135deg, ${meta.color}22 0%, #0a0a0f 70%)` }} />
+        <div className="vjm-hero-content">
+          <button className="vjm-back-btn" onClick={() => navigate('/vjs')}>
+            <ArrowLeft size={18} />
+          </button>
+          <div className="vjm-hero-avatar-wrap">
+            <img src={avatarUrl(decodedVJ, meta.color)} alt={decodedVJ} className="vjm-hero-avatar" />
+            <div className="vjm-hero-avatar-ring" style={{ borderColor: meta.color }} />
+          </div>
+          <div className="vjm-hero-info">
+            <div className="vjm-hero-badge" style={{ background: meta.color, color: meta.color === '#f59e0b' ? '#000' : '#fff' }}>
+              <Headphones size={11} /> VJ
+            </div>
+            <h1 className="vjm-hero-name">{decodedVJ}</h1>
+            <p className="vjm-hero-tagline">{meta.tagline}</p>
+            <p className="vjm-hero-specialty">{meta.specialty}</p>
+            {!loading && (
+              <div className="vjm-hero-count">
+                <Film size={13} color={meta.color} />
+                <span>{movies.length} titles available</span>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Search + results */}
+      <div className="vjm-body">
+        <div className="vjm-search-wrap">
+          <Search size={15} color="#666" />
+          <input
+            className="vjm-search-input"
+            placeholder={`Search ${decodedVJ} movies...`}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {query && <button className="vjm-search-clear" onClick={() => setQuery('')}><X size={13} /></button>}
+        </div>
+
+        {q && (
+          <div className="vjm-count">{filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{query}"</div>
+        )}
+
+        {loading ? (
+          <div className="vjm-loading">
+            <div className="vjm-loading-spinner" />
+            Loading {decodedVJ} movies...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="vjm-empty">
+            {q ? `No results for "${query}"` : `No movies found for ${decodedVJ} yet.`}
+          </div>
+        ) : (
+          <div className="vjm-grid">
+            {filtered.map(movie => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                onPlay={handlePlay}
+                onOpenModal={setSelectedMovie}
+                isInWatchlist={watchlist.some(m => m.id === movie.id)}
+                onToggleWatchlist={handleToggleWatchlist}
+                isSubscribed={isSubscribed}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {selectedMovie && (
         <DetailModal
