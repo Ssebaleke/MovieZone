@@ -14,10 +14,9 @@ router.use(requireAdmin);
 // ==========================================
 router.get('/users', async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
+    const rawUsers = await prisma.user.findMany({
       select: {
         id: true,
-        name: true,
         email: true,
         role: true,
         plan: true,
@@ -25,11 +24,16 @@ router.get('/users', async (req, res) => {
         subscriptionEnd: true,
         createdAt: true,
         profiles: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, avatarUrl: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    const users = rawUsers.map(u => ({
+      ...u,
+      name: (u.profiles && u.profiles.length > 0 && u.profiles[0].name) ? u.profiles[0].name : u.email.split('@')[0]
+    }));
 
     res.json(users);
   } catch (error) {
