@@ -141,24 +141,30 @@ function mapReelplexiItem(item, defaultType = null) {
 
 // Get full movies/series catalog grouped by categories (100% Reelplexi.com API)
 router.get('/', async (req, res) => {
-  const { vj, region, type, latest, trending, page = 1 } = req.query;
+  const { vj, region, type, latest, trending, page = 1, genre } = req.query;
 
   try {
     let movies = [];
 
     if (vj) {
-      // Direct VJ filter query on Reelplexi API
       const [vjMoviesRes, vjSeriesRes] = await Promise.all([
         reelplexiFetch('/movies', { vj, per_page: 100, page }),
         reelplexiFetch('/series', { vj, per_page: 100, page })
       ]);
-
-      if (vjMoviesRes && Array.isArray(vjMoviesRes.data)) {
-        vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'MOVIE')));
-      }
-      if (vjSeriesRes && Array.isArray(vjSeriesRes.data)) {
-        vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'SHOW')));
-      }
+      if (vjMoviesRes && Array.isArray(vjMoviesRes.data)) vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'MOVIE')));
+      if (vjSeriesRes && Array.isArray(vjSeriesRes.data)) vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'SHOW')));
+    } else if (genre) {
+      // Pass genre directly to Reelplexi so it filters server-side
+      const genreParam = { genre, per_page: 100, page };
+      const onlyShows = type === 'SHOW';
+      const onlyMovies = type === 'MOVIE';
+      const fetchList = [];
+      if (!onlyShows) fetchList.push(reelplexiFetch('/movies', genreParam).then(r => ({ type: 'MOVIE', res: r })));
+      if (!onlyMovies) fetchList.push(reelplexiFetch('/series', genreParam).then(r => ({ type: 'SHOW', res: r })));
+      const results = await Promise.all(fetchList.map(p => p.catch(() => null)));
+      results.forEach(entry => {
+        if (entry?.res && Array.isArray(entry.res.data)) entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
+      });
     } else {
       // Fetch extensive multi-page catalog from Reelplexi API
       const pageNum = parseInt(page, 10) || 1;
