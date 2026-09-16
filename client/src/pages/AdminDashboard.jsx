@@ -42,6 +42,11 @@ export default function AdminDashboard() {
   const [testingLivepay, setTestingLivepay] = useState(false);
   const [catalogStats, setCatalogStats] = useState(null);
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [txStats, setTxStats] = useState({ totalRevenue: 0, successCount: 0, pendingCount: 0, failedCount: 0, totalCount: 0 });
+  const [txFilterStatus, setTxFilterStatus] = useState('ALL');
+  const [txSearchQuery, setTxSearchQuery] = useState('');
+  const [txLoading, setTxLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -100,6 +105,27 @@ export default function AdminDashboard() {
     setUsersLoading(true);
     try { const d = await api.get('/admin/users'); setUserSignups(Array.isArray(d) ? d : []); } catch { setUserSignups([]); } finally { setUsersLoading(false); }
   };
+  const fetchTransactions = async (statusFilter = txFilterStatus) => {
+    setTxLoading(true);
+    try {
+      const res = await api.get(`/admin/transactions?status=${statusFilter}`);
+      setTransactions(res.transactions || []);
+      if (res.stats) setTxStats(res.stats);
+    } catch {
+      setTransactions([]);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+  const handleUpdateTxStatus = async (txId, newStatus) => {
+    try {
+      await api.put(`/admin/transactions/${txId}/status`, { status: newStatus });
+      fetchTransactions(txFilterStatus);
+      fetchUserSignups();
+    } catch (err) {
+      alert(err.message || 'Failed to update transaction status');
+    }
+  };
   const fetchSettingsAndStats = async () => {
     try {
       const s = await api.get('/admin/settings');
@@ -122,7 +148,7 @@ export default function AdminDashboard() {
         if (res.user.role !== 'ADMIN') navigate('/browse');
       }
     }).catch(() => {});
-    fetchMovies(); fetchUserSignups(); fetchPackages(); fetchSettingsAndStats();
+    fetchMovies(); fetchUserSignups(); fetchPackages(); fetchTransactions(); fetchSettingsAndStats();
   }, [navigate]);
 
   const handleSaveApiKey = async (e) => {
@@ -239,9 +265,21 @@ export default function AdminDashboard() {
     );
   });
 
+  const filteredTransactions = transactions.filter(tx => {
+    if (!txSearchQuery.trim()) return true;
+    const q = txSearchQuery.toLowerCase();
+    return (
+      (tx.email && tx.email.toLowerCase().includes(q)) ||
+      (tx.phoneNumber && tx.phoneNumber.toLowerCase().includes(q)) ||
+      (tx.reference && tx.reference.toLowerCase().includes(q)) ||
+      (tx.packageName && tx.packageName.toLowerCase().includes(q))
+    );
+  });
+
   const NAV_ITEMS = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={16} /> },
     { id: 'signups', label: 'Users', icon: <Users size={16} />, badge: userSignups.length },
+    { id: 'payments', label: 'Payments', icon: <CreditCard size={16} />, badge: txStats?.pendingCount > 0 ? txStats.pendingCount : undefined },
     { id: 'packages', label: 'Packages', icon: <PackageIcon size={16} />, badge: packagesList.length },
     { id: 'catalog', label: 'Catalog', icon: <Film size={16} />, badge: catalogStats?.reelplexiTotalContent || movies.length },
     { id: 'livepay', label: 'LivePay', icon: <CreditCard size={16} /> },
@@ -249,7 +287,7 @@ export default function AdminDashboard() {
     { id: 'analytics', label: 'Analytics', icon: <Activity size={16} /> },
   ];
 
-  const PAGE_TITLES = { overview: 'Overview', signups: 'Users', packages: 'Packages', livepay: 'LivePay', apikeys: 'API Key', catalog: 'Catalog', analytics: 'Analytics' };
+  const PAGE_TITLES = { overview: 'Overview', signups: 'Users', payments: 'Payments & Transactions Tracker', packages: 'Packages', livepay: 'LivePay', apikeys: 'API Key', catalog: 'Catalog', analytics: 'Analytics' };
 
   const inp = { background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)', padding: '11px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', width: '100%' };
   const sel = { ...inp, cursor: 'pointer' };
@@ -273,6 +311,7 @@ export default function AdminDashboard() {
                 onClick={() => {
                   setActiveNav(item.id);
                   if (item.id === 'signups') fetchUserSignups();
+                  if (item.id === 'payments') fetchTransactions();
                   if (item.id === 'packages') fetchPackages();
                   if (item.id === 'catalog') fetchMovies();
                   if (['apikeys','livepay','analytics'].includes(item.id)) fetchSettingsAndStats();
@@ -352,8 +391,8 @@ export default function AdminDashboard() {
                 <div className="ad-card">
                   <div className="ad-card-header"><TrendingUp size={16} color="#e50914"/> Quick Actions</div>
                   <div style={{display:'flex',flexDirection:'column',gap:'10px',marginTop:'4px'}}>
-                    {[['signups','Manage Users',<Users size={14}/>],['packages','Manage Packages',<PackageIcon size={14}/>],['catalog','Add Content',<Film size={14}/>],['livepay','Configure LivePay',<CreditCard size={14}/>]].map(([id,label,icon])=>(
-                      <button key={id} className="ad-quick-btn" onClick={()=>setActiveNav(id)}>{icon}{label} →</button>
+                    {[['signups','Manage Users',<Users size={14}/>],['payments','Track Payments & Revenue',<CreditCard size={14}/>],['packages','Manage Packages',<PackageIcon size={14}/>],['catalog','Add Content',<Film size={14}/>],['livepay','Configure LivePay',<CreditCard size={14}/>]].map(([id,label,icon])=>(
+                      <button key={id} className="ad-quick-btn" onClick={()=>{ setActiveNav(id); if(id==='payments')fetchTransactions(); }}>{icon}{label} →</button>
                     ))}
                   </div>
                 </div>
@@ -416,6 +455,214 @@ export default function AdminDashboard() {
                         </tr>
                       ))}
                       {filteredUsers.length === 0 && <tr><td colSpan="8" className="ad-empty">No users found.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PAYMENTS / TRANSACTIONS ── */}
+          {activeNav === 'payments' && (
+            <div className="ad-section">
+              <div className="ad-stats-row">
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{ background: 'rgba(70,211,105,0.15)' }}>
+                    <TrendingUp size={20} color="#46d369" />
+                  </div>
+                  <div>
+                    <div className="ad-stat-val" style={{ color: '#46d369' }}>
+                      UGX {txStats.totalRevenue.toLocaleString()}
+                    </div>
+                    <div className="ad-stat-lbl">Total Revenue</div>
+                  </div>
+                </div>
+
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{ background: 'rgba(70,211,105,0.15)' }}>
+                    <CheckCircle2 size={20} color="#46d369" />
+                  </div>
+                  <div>
+                    <div className="ad-stat-val" style={{ color: '#46d369' }}>{txStats.successCount}</div>
+                    <div className="ad-stat-lbl">Successful Payments</div>
+                  </div>
+                </div>
+
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{ background: 'rgba(251,191,36,0.15)' }}>
+                    <Clock size={20} color="#fbbf24" />
+                  </div>
+                  <div>
+                    <div className="ad-stat-val" style={{ color: '#fbbf24' }}>
+                      {txStats.pendingCount}
+                      {txStats.pendingCount > 0 && <span style={{ fontSize: '0.65rem', marginLeft: '6px', background: '#fbbf24', color: '#000', padding: '2px 6px', borderRadius: '10px', fontWeight: 800 }}>PENDING</span>}
+                    </div>
+                    <div className="ad-stat-lbl">Pending Confirmation</div>
+                  </div>
+                </div>
+
+                <div className="ad-stat">
+                  <div className="ad-stat-icon" style={{ background: 'rgba(229,9,20,0.15)' }}>
+                    <AlertCircle size={20} color="#e50914" />
+                  </div>
+                  <div>
+                    <div className="ad-stat-val" style={{ color: '#e50914' }}>{txStats.failedCount}</div>
+                    <div className="ad-stat-lbl">Failed Payments</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ad-toolbar" style={{ flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['ALL', 'PENDING', 'SUCCESS', 'FAILED'].map(st => (
+                    <button
+                      key={st}
+                      className="ad-ghost-btn"
+                      style={{
+                        background: txFilterStatus === st ? '#e50914' : 'rgba(255,255,255,0.06)',
+                        color: '#fff',
+                        borderColor: txFilterStatus === st ? '#e50914' : 'transparent',
+                        fontWeight: txFilterStatus === st ? '700' : '500'
+                      }}
+                      onClick={() => {
+                        setTxFilterStatus(st);
+                        fetchTransactions(st);
+                      }}
+                    >
+                      {st === 'ALL' ? 'All Payments' : st}
+                      {st === 'PENDING' && txStats.pendingCount > 0 && ` (${txStats.pendingCount})`}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="ad-search-wrap" style={{ flex: 1, minWidth: '220px' }}>
+                  <Search size={15} className="ad-search-icon" />
+                  <input
+                    className="ad-search-input"
+                    placeholder="Search by email, phone, or reference..."
+                    value={txSearchQuery}
+                    onChange={e => setTxSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <button className="ad-ghost-btn" onClick={() => fetchTransactions(txFilterStatus)}>
+                  <RefreshCw size={14} /> Refresh
+                </button>
+              </div>
+
+              {txLoading ? (
+                <div className="ad-loading">Loading payment history...</div>
+              ) : (
+                <div className="ad-table-wrap">
+                  <table className="ad-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>User Email / Phone</th>
+                        <th>Package</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.map(tx => {
+                        const isPending = tx.status === 'PENDING';
+                        const isSuccess = tx.status === 'SUCCESS';
+                        const isFailed = tx.status === 'FAILED';
+
+                        return (
+                          <tr key={tx.id} style={{ background: isPending ? 'rgba(251, 191, 36, 0.04)' : 'transparent' }}>
+                            <td className="ad-muted" style={{ fontSize: '0.8rem' }}>
+                              {new Date(tx.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>{tx.email}</div>
+                              {tx.phoneNumber && (
+                                <div style={{ fontSize: '0.78rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Smartphone size={11} /> +256 {tx.phoneNumber}
+                                </div>
+                              )}
+                            </td>
+                            <td><span className="ad-pkg-badge">{tx.packageName}</span></td>
+                            <td style={{ fontWeight: 700, color: '#fff' }}>
+                              {tx.amount?.toLocaleString()} <span style={{ fontSize: '0.75rem', color: '#888' }}>{tx.currency}</span>
+                            </td>
+                            <td>
+                              <span className="ad-pkg-badge" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                {tx.paymentMethod === 'mobile_money' ? '📱 Mobile Money' : '💳 Card'}
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: '#aaa' }}>
+                              <div>{tx.reference}</div>
+                              {tx.livepayRef && <div style={{ color: '#46d369', fontSize: '0.7rem' }}>Ref: {tx.livepayRef}</div>}
+                              {tx.errorMessage && <div style={{ color: '#e50914', fontSize: '0.7rem' }}>{tx.errorMessage}</div>}
+                            </td>
+                            <td>
+                              <span className={`ad-status-badge ${isSuccess ? 'ad-status-badge--active' : ''}`} style={{
+                                background: isPending ? 'rgba(251,191,36,0.15)' : isFailed ? 'rgba(229,9,20,0.15)' : 'rgba(70,211,105,0.15)',
+                                color: isPending ? '#fbbf24' : isFailed ? '#e50914' : '#46d369',
+                                border: `1px solid ${isPending ? '#fbbf24' : isFailed ? '#e50914' : '#46d369'}`
+                              }}>
+                                {isPending ? '⏳ PENDING' : isSuccess ? '✅ SUCCESS' : '❌ FAILED'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="ad-row-actions">
+                                {isPending ? (
+                                  <>
+                                    <button
+                                      className="ad-action-btn"
+                                      style={{ background: '#46d369', padding: '6px 12px', fontSize: '0.78rem' }}
+                                      onClick={() => {
+                                        if (window.confirm(`Confirm & Approve payment of ${tx.amount} ${tx.currency} from ${tx.email}? This will activate premium access for the user.`)) {
+                                          handleUpdateTxStatus(tx.id, 'SUCCESS');
+                                        }
+                                      }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      className="ad-btn-danger-icon"
+                                      style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                                      onClick={() => {
+                                        if (window.confirm(`Mark transaction from ${tx.email} as FAILED?`)) {
+                                          handleUpdateTxStatus(tx.id, 'FAILED');
+                                        }
+                                      }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                ) : isFailed ? (
+                                  <button
+                                    className="ad-ghost-btn"
+                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                                    onClick={() => handleUpdateTxStatus(tx.id, 'SUCCESS')}
+                                  >
+                                    Approve
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="ad-ghost-btn"
+                                    style={{ fontSize: '0.75rem', padding: '4px 8px', color: '#e50914' }}
+                                    onClick={() => handleUpdateTxStatus(tx.id, 'FAILED')}
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredTransactions.length === 0 && (
+                        <tr>
+                          <td colSpan="8" className="ad-empty">No payment transactions found.</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

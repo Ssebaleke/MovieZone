@@ -8,17 +8,37 @@ generator client {
 }
 
 model User {
-  id                 String    @id @default(uuid())
-  email              String    @unique
+  id                 String        @id @default(uuid())
+  email              String        @unique
   passwordHash       String
-  role               String    @default("USER") // USER, ADMIN
-  createdAt          DateTime  @default(now())
-  plan               String    @default("NONE") // NONE, BASIC, STANDARD, PREMIUM
-  subscriptionStatus String    @default("INACTIVE") // INACTIVE, ACTIVE, CANCELED, PAST_DUE
+  role               String        @default("USER") // USER, ADMIN
+  createdAt          DateTime      @default(now())
+  plan               String        @default("NONE") // NONE, BASIC, STANDARD, PREMIUM
+  subscriptionStatus String        @default("INACTIVE") // INACTIVE, ACTIVE, CANCELED, PAST_DUE
   subscriptionEnd    DateTime?
   stripeCustomerId   String?
   stripeSubId        String?
   profiles           Profile[]
+  transactions       Transaction[]
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email         String
+  phoneNumber   String?
+  packageId     String?
+  packageName   String
+  amount        Float
+  currency      String   @default("UGX")
+  paymentMethod String   @default("mobile_money") // mobile_money, card
+  reference     String   @unique
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  livepayRef    String?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Profile {

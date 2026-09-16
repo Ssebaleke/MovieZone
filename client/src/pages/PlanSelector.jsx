@@ -51,13 +51,17 @@ export default function PlanSelector() {
         paymentMethod: 'mobile_money',
         phoneNumber: phoneNumber.trim()
       });
-      if (res.success && res.user) {
-        const stored = JSON.parse(localStorage.getItem('netflix_user') || '{}');
-        stored.plan = res.user.plan;
-        stored.subscriptionStatus = res.user.subscriptionStatus;
-        localStorage.setItem('netflix_user', JSON.stringify(stored));
-        setSuccessMsg(`Payment successful! Check your phone to confirm.`);
-        setTimeout(() => navigate('/browse'), 2000);
+      if (res.success) {
+        if (res.status === 'SUCCESS' && res.user) {
+          const stored = JSON.parse(localStorage.getItem('netflix_user') || '{}');
+          stored.plan = res.user.plan;
+          stored.subscriptionStatus = res.user.subscriptionStatus;
+          localStorage.setItem('netflix_user', JSON.stringify(stored));
+          setSuccessMsg(`Payment confirmed! Subscription active.`);
+          setTimeout(() => navigate('/browse'), 2000);
+        } else {
+          setSuccessMsg(res.message || 'Payment prompt sent to your phone! Please complete PIN entry on your phone. Access will be granted once payment is confirmed.');
+        }
       }
     } catch (err) {
       setError(err.message || 'Payment failed. Please try again.');

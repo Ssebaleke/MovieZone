@@ -68,22 +68,25 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
         return;
       }
 
-      if (response.success && response.user) {
-        // Update cached user in localStorage
-        const storedUser = JSON.parse(localStorage.getItem('netflix_user') || '{}');
-        const updatedUser = {
-          ...storedUser,
-          plan: response.user.plan,
-          subscriptionStatus: response.user.subscriptionStatus
-        };
-        localStorage.setItem('netflix_user', JSON.stringify(updatedUser));
+      if (response.success) {
+        if (response.status === 'SUCCESS' && response.user) {
+          const storedUser = JSON.parse(localStorage.getItem('netflix_user') || '{}');
+          const updatedUser = {
+            ...storedUser,
+            plan: response.user.plan,
+            subscriptionStatus: response.user.subscriptionStatus
+          };
+          localStorage.setItem('netflix_user', JSON.stringify(updatedUser));
 
-        setSuccessMsg(`Payment Successful! You are now subscribed to ${response.user.plan}.`);
-        
-        setTimeout(() => {
-          onSubscriptionSuccess(updatedUser, movie);
-          onClose();
-        }, 1200);
+          setSuccessMsg(`Payment Successful! You are now subscribed to ${response.user.plan}.`);
+          
+          setTimeout(() => {
+            onSubscriptionSuccess(updatedUser, movie);
+            onClose();
+          }, 1200);
+        } else {
+          setSuccessMsg(response.message || 'Payment prompt sent to your phone! Please complete PIN entry on your phone. Access will be activated once payment is confirmed.');
+        }
       }
     } catch (err) {
       console.error('Payment error:', err);

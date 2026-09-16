@@ -627,7 +627,161 @@ router.delete('/packages/:id', async (req, res) => {
     res.json({ success: true, message: 'Package deleted successfully' });
   } catch (error) {
     console.error('Error deleting package:', error);
-    res.status(500).json({ error: 'Failed to delete package: ' + error.message });
+// ==========================================
+// 7. Payment Transactions Management & Tracking
+// ==========================================
+router.get('/transactions', async (req, res) => {
+  const { status } = req.query;
+
+  try {
+    const whereClause = {};
+    if (status && status !== 'ALL') {
+      whereClause.status = String(status).toUpperCase();
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: { id: true, email: true, plan: true, subscriptionStatus: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const allTx = await prisma.transaction.findMany({
+      select: { amount: true, status: true }
+    });
+
+    let totalRevenue = 0;
+    let successCount = 0;
+    let pendingCount = 0;
+    let failedCount = 0;
+
+    allTx.forEach(tx => {
+      if (tx.status === 'SUCCESS') {
+        totalRevenue += Number(tx.amount || 0);
+        successCount++;
+      } else if (tx.status === 'PENDING') {
+        pendingCount++;
+      } else if (tx.status === 'FAILED') {
+        failedCount++;
+      }
+    });
+
+    res.json({
+      transactions,
+      stats: {
+        totalRevenue,
+        successCount,
+        pendingCount,
+        failedCount,
+        totalCount: allTx.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin transactions:', error);
+    res.status(500).json({ error: 'Server error fetching transaction history' });
+  }
+});
+
+// Update payment transaction status (Approve payment / Mark failed)
+router.put('/transactions/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, errorMessage } = req.body; // status: 'SUCCESS' | 'FAILED' | 'PENDING'
+
+  if (!['SUCCESS', 'FAILED', 'PENDING'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid transaction status' });
+  }
+
+  try {
+    const tx = await prisma.transaction.findUnique({
+      where: { id }
+    });
+
+    if (!tx) {
+      return res.status(404).json({ error: 'Transaction record not found' });
+    }
+
+    const updatedTx = await prisma.transaction.update({
+      where: { id },
+      data: {
+        status,
+        errorMessage: errorMessage !== undefined ? errorMessage : (status === 'FAILED' ? 'Rejected by Admin' : null)
+      }
+    });
+
+    // If marked SUCCESS, activate user subscription automatically!
+    if (status === 'SUCCESS') {
+      let targetUser = null;
+      if (tx.userId) {
+        targetUser = await prisma.user.findUnique({ where: { id: tx.userId } });
+      } else if (tx.email) {
+        targetUser = await prisma.user.findUnique({ where: { email: tx.email } });
+      }
+
+      if (targetUser) {
+        // Calculate expiry based on package if exists
+        let pkg = null;
+        if (tx.packageId) {
+          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } });
+        }
+
+        const now = new Date();
+        const expiration = new Date(now);
+
+        if (pkg && pkg.interval) {
+          const str = String(pkg.interval).toUpperCase().trim();
+          const match = str.match(/^(\d+)[_\s:]*([A-Z]+)$/);
+          if (match) {
+            const val = parseInt(match[1], 10);
+            const unit = match[2];
+            if (val === 0) expiration.setFullYear(expiration.getFullYear() + 100);
+            else if (unit.startsWith('MIN')) expiration.setMinutes(expiration.getMinutes() + val);
+            else if (unit.startsWith('HOUR')) expiration.setHours(expiration.getHours() + val);
+            else if (unit.startsWith('DAY')) expiration.setDate(expiration.getDate() + val);
+            else if (unit.startsWith('WEEK')) expiration.setDate(expiration.getDate() + val * 7);
+            else if (unit.startsWith('MONTH')) expiration.setMonth(expiration.getMonth() + val);
+            else if (unit.startsWith('YEAR')) expiration.setFullYear(expiration.getFullYear() + val);
+          } else {
+            expiration.setMonth(expiration.getMonth() + 1);
+          }
+        } else {
+          expiration.setMonth(expiration.getMonth() + 1);
+        }
+
+        await prisma.user.update({
+          where: { id: targetUser.id },
+          data: {
+            plan: tx.packageName,
+            subscriptionStatus: 'ACTIVE',
+            subscriptionEnd: expiration
+          }
+        });
+      }
+    } else if (status === 'FAILED') {
+      // If payment was rejected/failed and user has no other active subscriptions, set INACTIVE
+      if (tx.userId) {
+        const activeTx = await prisma.transaction.findFirst({
+          where: { userId: tx.userId, status: 'SUCCESS', id: { not: tx.id } }
+        });
+        if (!activeTx) {
+          await prisma.user.update({
+            where: { id: tx.userId },
+            data: { subscriptionStatus: 'INACTIVE', plan: 'NONE' }
+          }).catch(() => {});
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Transaction status updated to ${status}`,
+      transaction: updatedTx
+    });
+  } catch (error) {
+    console.error('Error updating transaction status:', error);
+    res.status(500).json({ error: 'Failed to update transaction status: ' + error.message });
   }
 });
 
