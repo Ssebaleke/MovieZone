@@ -169,6 +169,26 @@ export default function Navbar({
                 <li className={activeTab === 'series' ? 'active' : ''} onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Series</li>
                 <li className={activeTab === 'movies' ? 'active' : ''} onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Movies</li>
                 <li className={location.pathname === '/mylist' ? 'active' : ''} onClick={() => navigate('/mylist')}>My List</li>
+                <li className={`nav-vj-item ${location.pathname.startsWith('/vjs') ? 'active' : ''}`}>
+                  <span className="nav-vj-trigger" onClick={() => navigate('/vjs')}>
+                    <Headphones size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
+                    VJs <ChevronDown size={13} style={{ marginLeft: '3px', verticalAlign: 'middle' }} />
+                  </span>
+                  <div className="nav-vj-dropdown">
+                    <div className="nav-vj-dropdown-header" onClick={() => navigate('/vjs')}>
+                      <Headphones size={14} color="#e50914" /> All VJ Voices
+                    </div>
+                    {vjsList.filter(v => v.value).map(vj => (
+                      <div
+                        key={vj.value}
+                        className="nav-vj-dropdown-item"
+                        onClick={() => navigate(`/vjs/${encodeURIComponent(vj.value)}`)}
+                      >
+                        {vj.name}
+                      </div>
+                    ))}
+                  </div>
+                </li>
               </ul>
             </div>
             <div className="nav-right">
