@@ -1,211 +1,121 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ThumbsUp, ChevronDown, Mic, Star, Info } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Plus, Check, ThumbsUp, ChevronDown, Star } from 'lucide-react';
 
 export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, onToggleWatchlist, isSubscribed }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
-  const hoverTimeoutRef = useRef(null);
-  const videoRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
+  const enterTimer = useRef(null);
+  const cardRef = useRef(null);
 
-  const cachedUserStr = localStorage.getItem('netflix_user');
-  const user = cachedUserStr ? JSON.parse(cachedUserStr) : null;
+  const cachedUser = localStorage.getItem('netflix_user');
+  const user = cachedUser ? JSON.parse(cachedUser) : null;
   const userIsSubscribed = isSubscribed !== undefined ? isSubscribed : (user?.subscriptionStatus === 'ACTIVE' || user?.role === 'ADMIN');
 
-  const handleMouseEnter = () => {
-    if (window.innerWidth <= 768) return; // Disable hover expansion on mobile touch
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(true);
-      setIsPlayingVideo(true);
-    }, 500); // 500ms hover delay
-  };
+  const matchPct = useRef(Math.floor(Math.random() * 15) + 85);
+  const firstGenre = movie.genres ? movie.genres.split(',')[0].trim() : '';
+  const releaseYear = movie.releaseYear || movie.year || '';
 
-  const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    setIsHovered(false);
-    setIsPlayingVideo(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
+  const onEnter = useCallback(() => {
+    if (window.innerWidth <= 768) return;
+    enterTimer.current = setTimeout(() => setHovered(true), 400);
   }, []);
 
-  const isHls = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
-  const matchPercentage = Math.floor(Math.random() * 15) + 85;
+  const onLeave = useCallback(() => {
+    clearTimeout(enterTimer.current);
+    setHovered(false);
+  }, []);
 
-  const [imageError, setImageError] = useState(false);
-  const firstGenre = movie.genres ? movie.genres.split(',')[0].trim().toUpperCase() : 'ACTION';
-  const releaseYear = movie.releaseYear || movie.year || 2026;
+  useEffect(() => () => clearTimeout(enterTimer.current), []);
 
-  const isFallbackUrl = !movie.thumbnailUrl || movie.thumbnailUrl.includes('unsplash.com');
-  const showTitleOverlay = isFallbackUrl || imageError;
-  const cleanTitle = (movie.title || '').replace(/\s*\(.*?\)/g, '').trim();
+  const handlePlay = (e) => { e.stopPropagation(); onPlay(movie); };
+  const handleWatchlist = (e) => { e.stopPropagation(); onToggleWatchlist(movie); };
+  const handleModal = (e) => { e.stopPropagation(); onOpenModal(movie); };
 
   return (
     <div
-      className="movie-card-item"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onClick={() => {
-        if ('ontouchstart' in window || window.innerWidth <= 768) {
-          onOpenModal(movie);
-        }
-      }}
+      ref={cardRef}
+      className={`nf-card${hovered ? ' nf-card--hovered' : ''}`}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      onClick={() => { if (window.innerWidth <= 768) onOpenModal(movie); }}
     >
-      {/* Poster Image Container */}
-      <div className="card-poster-wrapper">
+      {/* Base poster — always visible */}
+      <div className="nf-card-poster">
         <img
-          src={movie.thumbnailUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80'}
+          src={movie.thumbnailUrl}
           alt={movie.title}
-          className="card-poster-img"
+          className="nf-card-img"
           loading="lazy"
-          onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=750&fit=crop&q=80';
-          }}
+          onError={e => { e.target.style.display = 'none'; e.target.parentElement.classList.add('nf-card-poster--broken'); }}
         />
+        {/* Broken poster fallback */}
+        <div className="nf-card-broken-label">{movie.title}</div>
 
-        {/* Premium Star Badge when subscription is not active */}
-        {!userIsSubscribed && !isHovered && (
-          <div className="card-premium-badge">
-            <Star size={10} fill="#ffc107" color="#ffc107" /> Premium
-          </div>
-        )}
-
-        {/* Blue VJ Pill Badge (matching mobile screenshot) */}
-        {movie.vj && !isHovered && (
-          <div className="vj-pill-badge-red">
-            {movie.vj}
-          </div>
-        )}
-
-        {/* Circular Info Button (i) top right */}
-        <button
-          className="card-info-btn-topright"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenModal(movie);
-          }}
-          type="button"
-          aria-label="Movie details"
-        >
-          <Info size={13} color="#ffffff" />
-        </button>
+        {!userIsSubscribed && <div className="nf-card-premium"><Star size={9} fill="#ffc107" color="#ffc107" /> Premium</div>}
+        {movie.vj && <div className="nf-card-vj">{movie.vj}</div>}
       </div>
 
-      {/* Title & Metadata Subtitle below poster */}
-      <div className="card-details-below">
-        <div className="card-mobile-title" title={movie.title}>{movie.title}</div>
-        <div className="card-mobile-subtitle">
-          {firstGenre} • {releaseYear}
-        </div>
+      {/* Title below poster (always shown) */}
+      <div className="nf-card-below">
+        <div className="nf-card-title">{movie.title}</div>
+        <div className="nf-card-sub">{firstGenre}{firstGenre && releaseYear ? ' • ' : ''}{releaseYear}</div>
       </div>
 
-      {/* Expanded Hover Card for Desktop */}
-      {isHovered && (
-        <div className="hover-card-expanded">
-          <div className="hover-card-video-container" onClick={() => onPlay(movie)}>
-            {isPlayingVideo && (
-              isHls ? (
-                <HlsCardPlayer src={movie.videoUrl} videoRef={videoRef} poster={movie.thumbnailUrl} />
-              ) : (
-                <video
-                  ref={videoRef}
-                  src={movie.videoUrl}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                />
-              )
-            )}
-            {!isPlayingVideo && <img src={movie.thumbnailUrl} alt={movie.title} />}
+      {/* Hover popup — Netflix style */}
+      {hovered && (
+        <div className="nf-hover-card" onClick={e => e.stopPropagation()}>
+          {/* Landscape preview image (backdrop or poster) */}
+          <div className="nf-hover-thumb" onClick={handlePlay}>
+            <img
+              src={movie.backdropUrl || movie.thumbnailUrl}
+              alt={movie.title}
+              className="nf-hover-thumb-img"
+            />
+            <div className="nf-hover-thumb-overlay" />
+            <div className="nf-hover-thumb-title">{movie.title}</div>
           </div>
 
-          <div className="hover-card-details">
-            <div className="card-control-row">
-              <div className="card-controls-left">
-                <button className="card-control-btn play" onClick={() => onPlay(movie)}>
-                  {userIsSubscribed ? <Play size={16} fill="#000" /> : <span style={{fontSize:'0.7rem',fontWeight:800}}>🔒</span>}
+          {/* Controls */}
+          <div className="nf-hover-body">
+            <div className="nf-hover-controls">
+              <div className="nf-hover-controls-left">
+                <button className="nf-ctrl-btn nf-ctrl-btn--play" onClick={handlePlay} title="Play">
+                  {userIsSubscribed
+                    ? <Play size={18} fill="#000" color="#000" />
+                    : <span style={{ fontSize: '0.75rem', fontWeight: 900 }}>🔒</span>}
                 </button>
-                <button className="card-control-btn" onClick={() => onToggleWatchlist(movie)}>
+                <button className="nf-ctrl-btn" onClick={handleWatchlist} title={isInWatchlist ? 'Remove' : 'Add to list'}>
                   {isInWatchlist ? <Check size={16} color="#fff" /> : <Plus size={16} color="#fff" />}
                 </button>
-                <button className="card-control-btn" onClick={() => alert('Liked!')}>
+                <button className="nf-ctrl-btn" onClick={e => { e.stopPropagation(); }} title="Like">
                   <ThumbsUp size={16} color="#fff" />
                 </button>
               </div>
-              <button className="card-control-btn" onClick={() => onOpenModal(movie)}>
-                <ChevronDown size={16} color="#fff" />
+              <button className="nf-ctrl-btn" onClick={handleModal} title="More info">
+                <ChevronDown size={18} color="#fff" />
               </button>
             </div>
 
-            <div className="card-metadata">
-              <span className="card-match">{matchPercentage}% Match</span>
-              <span className="card-rating-badge">{movie.rating}</span>
-              <span style={{ color: '#fff' }}>{movie.duration}</span>
-              {movie.vj && (
-                <span className="vj-pill-badge-red" style={{ position: 'static' }}>
-                  {movie.vj}
-                </span>
-              )}
+            {/* Meta row */}
+            <div className="nf-hover-meta">
+              <span className="nf-hover-match">{matchPct.current}% Match</span>
+              {movie.rating && <span className="nf-hover-rating">{movie.rating}</span>}
+              {movie.duration && <span className="nf-hover-duration">{movie.duration}</span>}
             </div>
 
-            <div className="card-genres">
-              {movie.genres && movie.genres.split(',').map((genre, idx) => (
-                <span key={idx} style={{ display: 'flex', gap: '6px' }}>
-                  {idx > 0 && <span className="genre-dot">•</span>}
-                  {genre.trim()}
-                </span>
-              ))}
-            </div>
+            {/* Genres */}
+            {movie.genres && (
+              <div className="nf-hover-genres">
+                {movie.genres.split(',').slice(0, 3).map((g, i) => (
+                  <span key={i} className="nf-hover-genre-item">
+                    {i > 0 && <span className="nf-hover-dot">•</span>}
+                    {g.trim()}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-// Inner helper component to initialize HLS stream in preview card thumbnail
-function HlsCardPlayer({ src, videoRef, poster }) {
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    let hls = null;
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    } else {
-      import('hls.js').then((Hls) => {
-        if (Hls.isSupported()) {
-          hls = new Hls.default();
-          hls.loadSource(src);
-          hls.attachMedia(video);
-        }
-      });
-    }
-
-    return () => {
-      if (hls) {
-        hls.destroy();
-      }
-    };
-  }, [src, videoRef]);
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      muted
-      loop
-      playsInline
-      poster={poster}
-      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-    />
   );
 }

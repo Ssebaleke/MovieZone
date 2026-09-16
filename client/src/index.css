@@ -6450,3 +6450,326 @@ a {
   .ad-field--full { grid-column: span 1; }
   .ad-modal-footer { grid-column: span 1; }
 }
+
+/* ==========================================================================
+   Netflix-Style Movie Card & Hover Card — Full Rewrite
+   ========================================================================== */
+
+/* Base card — sits in the row track */
+.nf-card {
+  flex: 0 0 calc(16.666% - 12px);
+  min-width: 140px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), z-index 0s 0.25s;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+/* When hovered — scale up and bring to front immediately */
+.nf-card--hovered {
+  transform: scale(1.5);
+  z-index: 500;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), z-index 0s 0s;
+}
+
+/* Cards at start of row scale right, end of row scale left */
+.movie-cards-track .nf-card:first-child.nf-card--hovered,
+.movie-cards-track .nf-card:nth-child(2).nf-card--hovered {
+  transform-origin: left center;
+  transform: scale(1.5);
+}
+
+.movie-cards-track .nf-card:last-child.nf-card--hovered,
+.movie-cards-track .nf-card:nth-last-child(2).nf-card--hovered {
+  transform-origin: right center;
+  transform: scale(1.5);
+}
+
+/* Poster */
+.nf-card-poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.nf-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 4px;
+}
+
+/* Broken poster fallback */
+.nf-card-poster--broken .nf-card-broken-label {
+  display: flex !important;
+}
+.nf-card-broken-label {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #555;
+  background: #111;
+  border-radius: 4px;
+}
+
+/* Badges on poster */
+.nf-card-premium {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(10,10,15,0.88);
+  border: 1px solid #ffc107;
+  color: #ffc107;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.nf-card-vj {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: linear-gradient(135deg, #e50914, #b80710);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Title + sub below poster */
+.nf-card-below {
+  padding: 5px 2px 0;
+}
+
+.nf-card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.nf-card-sub {
+  font-size: 0.65rem;
+  color: #888;
+  font-weight: 500;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Hover popup card ── */
+.nf-hover-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #181818;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08);
+  overflow: hidden;
+  pointer-events: auto;
+  animation: nfCardPop 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
+  transform-origin: center top;
+}
+
+@keyframes nfCardPop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Landscape thumbnail at top of hover card */
+.nf-hover-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.nf-hover-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nf-hover-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(24,24,24,0.9) 0%, transparent 50%);
+}
+
+.nf-hover-thumb-title {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  right: 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Body below thumbnail */
+.nf-hover-body {
+  padding: 10px 12px 12px;
+}
+
+/* Controls row */
+.nf-hover-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nf-hover-controls-left {
+  display: flex;
+  gap: 6px;
+}
+
+.nf-ctrl-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  background: rgba(30,30,30,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.nf-ctrl-btn:hover {
+  border-color: #fff;
+  background: rgba(60,60,60,0.9);
+  transform: scale(1.1);
+}
+
+.nf-ctrl-btn--play {
+  background: #fff;
+  border-color: #fff;
+}
+
+.nf-ctrl-btn--play:hover {
+  background: rgba(255,255,255,0.85);
+  transform: scale(1.1);
+}
+
+/* Meta row */
+.nf-hover-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.nf-hover-match {
+  color: #46d369;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.nf-hover-rating {
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.nf-hover-duration {
+  color: #ccc;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Genres */
+.nf-hover-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #aaa;
+}
+
+.nf-hover-genre-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nf-hover-dot {
+  color: #555;
+  font-size: 0.5rem;
+}
+
+/* Track needs overflow-y visible for hover cards to show */
+.movie-cards-track {
+  overflow-y: visible !important;
+  padding: 80px 0 20px !important;
+}
+
+.movie-row-container {
+  overflow: visible !important;
+}
+
+.slider-wrapper {
+  overflow: visible !important;
+}
+
+/* Mobile — no hover, 3 cards across */
+@media (max-width: 768px) {
+  .nf-card {
+    flex: 0 0 calc(33.333% - 8px);
+    min-width: 0;
+  }
+  .nf-card--hovered {
+    transform: none !important;
+    z-index: 1;
+  }
+  .nf-hover-card { display: none; }
+  .nf-card-title { font-size: 0.72rem; }
+  .nf-card-sub { font-size: 0.6rem; }
+  .movie-cards-track {
+    padding: 6px 12px 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .nf-card { flex: 0 0 calc(33.333% - 6px); }
+}
