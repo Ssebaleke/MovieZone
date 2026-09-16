@@ -222,6 +222,7 @@ export default function AdminDashboard() {
   };
 
   const filteredUsers = (Array.isArray(userSignups) ? userSignups : []).filter(u =>
+    u?.name?.toLowerCase().includes((userSearchQuery || '').toLowerCase()) ||
     u?.email?.toLowerCase().includes((userSearchQuery || '').toLowerCase()) ||
     (u?.plan || '').toLowerCase().includes((userSearchQuery || '').toLowerCase())
   );
@@ -334,10 +335,11 @@ export default function AdminDashboard() {
                 <div className="ad-card">
                   <div className="ad-card-header"><Users size={16} color="#e50914"/> Recent Signups</div>
                   <table className="ad-table">
-                    <thead><tr><th>Email</th><th>Package</th><th>Status</th><th>Joined</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Package</th><th>Status</th><th>Joined</th></tr></thead>
                     <tbody>
                       {userSignups.slice(0,6).map(u => (
                         <tr key={u.id}>
+                          <td style={{fontWeight:600}}>{u.name || '—'}</td>
                           <td>{u.email}</td>
                           <td><span className="ad-pkg-badge">{u.plan !== 'NONE' ? u.plan : '—'}</span></td>
                           <td><span className={`ad-status-badge ${u.subscriptionStatus === 'ACTIVE' ? 'ad-status-badge--active' : ''}`}>{u.subscriptionStatus}</span></td>
@@ -372,11 +374,12 @@ export default function AdminDashboard() {
               {usersLoading ? <div className="ad-loading">Loading users...</div> : (
                 <div className="ad-table-wrap">
                   <table className="ad-table">
-                    <thead><tr><th>Email</th><th>Role</th><th>Package</th><th>Status</th><th>Expires</th><th>Joined</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Package</th><th>Status</th><th>Expires</th><th>Joined</th><th>Actions</th></tr></thead>
                     <tbody>
                       {filteredUsers.map(user => (
                         <tr key={user.id}>
-                          <td style={{fontWeight:600}}>{user.email}</td>
+                          <td style={{fontWeight:600}}>{user.name || '—'}</td>
+                          <td>{user.email}</td>
                           <td><span className={`ad-role-badge ${user.role === 'ADMIN' ? 'ad-role-badge--admin' : ''}`}>{user.role}</span></td>
                           <td><span className="ad-pkg-badge">{user.plan && user.plan !== 'NONE' ? user.plan : '— None'}</span></td>
                           <td><span className={`ad-status-badge ${user.subscriptionStatus === 'ACTIVE' ? 'ad-status-badge--active' : ''}`}>{user.subscriptionStatus}</span></td>
@@ -412,7 +415,7 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       ))}
-                      {filteredUsers.length === 0 && <tr><td colSpan="7" className="ad-empty">No users found.</td></tr>}
+                      {filteredUsers.length === 0 && <tr><td colSpan="8" className="ad-empty">No users found.</td></tr>}
                     </tbody>
                   </table>
                 </div>
