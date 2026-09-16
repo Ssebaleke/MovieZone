@@ -8598,3 +8598,19 @@ a {
   .ps-grid { grid-template-columns: 1fr; gap: 12px; }
   .ps-overlay-sheet { padding: 28px 20px 32px; }
 }
+
+/* ── Payment waiting screen extras ── */
+.ps-ov-timer {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #e50914;
+  letter-spacing: 0.05em;
+  margin: 12px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.ps-ov-ref {
+  font-size: 0.72rem;
+  color: #444;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
