@@ -1,6 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Force Node.js outbound connections to prefer IPv4 (matching LivePay whitelisted IPv4 69.164.245.17)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 import authRoutes from './routes/auth.js';
 import profileRoutes from './routes/profiles.js';
 import billingRoutes from './routes/billing.js';
