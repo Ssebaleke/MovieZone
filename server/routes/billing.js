@@ -408,6 +408,20 @@ router.post('/livepay-callback', async (req, res) => {
 
   console.log('Received LivePay Webhook Callback:', { reference, status, livepayRef, errorMessage });
 
+  // Verify Webhook Secret if configured by Admin
+  try {
+    const secretSetting = await prisma.systemSetting.findUnique({ where: { key: 'LIVEPAY_WEBHOOK_SECRET' } });
+    if (secretSetting && secretSetting.value && secretSetting.value.trim()) {
+      const expectedSecret = secretSetting.value.trim();
+      const providedSecret = req.headers['x-livepay-secret'] || req.headers['x-webhook-secret'] || req.query.secret || body.secret || body.webhook_secret;
+
+      if (providedSecret && providedSecret.trim() !== expectedSecret) {
+        console.warn('Webhook secret verification failed for reference:', reference);
+        return res.status(401).json({ error: 'Invalid webhook verification secret' });
+      }
+    }
+  } catch (sErr) {}
+
   if (!reference) {
     return res.json({ success: false, message: 'Missing transaction reference' });
   }

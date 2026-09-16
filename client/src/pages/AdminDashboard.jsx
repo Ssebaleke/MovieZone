@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [topMovies, setTopMovies] = useState([]);
   const [livepayApiKey, setLivepayApiKey] = useState('');
   const [livepayAccountNumber, setLivepayAccountNumber] = useState('');
+  const [livepayWebhookSecret, setLivepayWebhookSecret] = useState('');
   const [livepayEnabled, setLivepayEnabled] = useState(true);
   const [livepaySaveStatus, setLivepaySaveStatus] = useState('');
   const [livepayTestResult, setLivepayTestResult] = useState(null);
@@ -132,6 +133,7 @@ export default function AdminDashboard() {
       if (s?.REELPLEXI_API_KEY) setApiKey(s.REELPLEXI_API_KEY);
       if (s?.settings?.LIVEPAY_API_KEY) setLivepayApiKey(s.settings.LIVEPAY_API_KEY);
       if (s?.settings?.LIVEPAY_ACCOUNT_NUMBER) setLivepayAccountNumber(s.settings.LIVEPAY_ACCOUNT_NUMBER);
+      if (s?.settings?.LIVEPAY_WEBHOOK_SECRET) setLivepayWebhookSecret(s.settings.LIVEPAY_WEBHOOK_SECRET);
       if (s?.settings?.LIVEPAY_ENABLED !== undefined) setLivepayEnabled(s.settings.LIVEPAY_ENABLED !== 'false');
     } catch {}
     try { const d = await api.get('/admin/reelplexi/stats'); setReelplexiStats(d); } catch {}
@@ -162,8 +164,8 @@ export default function AdminDashboard() {
   const handleSaveLivepaySettings = async (e) => {
     e.preventDefault(); setLivepaySaveStatus('');
     try {
-      await api.post('/admin/settings', { settings: { LIVEPAY_API_KEY: livepayApiKey.trim(), LIVEPAY_ACCOUNT_NUMBER: livepayAccountNumber.trim(), LIVEPAY_ENABLED: livepayEnabled ? 'true' : 'false' } });
-      setLivepaySaveStatus('LivePay settings saved!');
+      await api.post('/admin/settings', { settings: { LIVEPAY_API_KEY: livepayApiKey.trim(), LIVEPAY_ACCOUNT_NUMBER: livepayAccountNumber.trim(), LIVEPAY_WEBHOOK_SECRET: livepayWebhookSecret.trim(), LIVEPAY_ENABLED: livepayEnabled ? 'true' : 'false' } });
+      setLivepaySaveStatus('LivePay settings & Webhook Secret saved!');
     } catch (err) { setLivepaySaveStatus('Error: ' + err.message); }
   };
 
@@ -798,6 +800,17 @@ export default function AdminDashboard() {
                 <form onSubmit={handleSaveLivepaySettings} style={{display:'flex',flexDirection:'column',gap:'16px',marginTop:'8px'}}>
                   <div><label style={lbl}>LivePay API Key</label><input style={inp} type="text" placeholder="Bearer token..." value={livepayApiKey} onChange={e=>setLivepayApiKey(e.target.value)}/></div>
                   <div><label style={lbl}>Account Number</label><input style={inp} type="text" placeholder="e.g. LP2305443309" value={livepayAccountNumber} onChange={e=>setLivepayAccountNumber(e.target.value)}/></div>
+                  <div>
+                    <label style={lbl}>Webhook Callback URL (Paste in LivePay Portal)</label>
+                    <div style={{display:'flex',gap:'8px'}}>
+                      <input style={{...inp,fontFamily:'monospace',color:'#60a5fa',background:'#0b0c10'}} type="text" readOnly value={`${window.location.origin}/api/billing/livepay-callback`}/>
+                      <button type="button" className="ad-ghost-btn" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/api/billing/livepay-callback`); alert('Webhook Callback URL copied to clipboard!'); }}>Copy URL</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Webhook Verification Secret (Optional)</label>
+                    <input style={inp} type="text" placeholder="e.g. whsec_xxxxxxxxxxxx" value={livepayWebhookSecret} onChange={e=>setLivepayWebhookSecret(e.target.value)}/>
+                  </div>
                   <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
                     <button type="button" className="ad-ghost-btn" onClick={handleTestLivepayConnection} disabled={testingLivepay||!livepayApiKey}>
                       <RefreshCw size={13}/> {testingLivepay?'Testing...':'Test Connection'}
