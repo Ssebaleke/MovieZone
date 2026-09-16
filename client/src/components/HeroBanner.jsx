@@ -14,7 +14,7 @@ export default function HeroBanner({ movie, onPlay, onOpenModal, isSubscribed })
     // Set auto-play delay for featured banner (2 seconds)
     const timer = setTimeout(() => {
       setIsPlayingVideo(true);
-    }, 2000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [movie]);
@@ -28,14 +28,14 @@ export default function HeroBanner({ movie, onPlay, onOpenModal, isSubscribed })
       {/* Desktop / Landscape Hero Banner */}
       <div
         className="billboard-hero billboard-hero-desktop"
-        style={{ backgroundImage: !isPlayingVideo ? `url(${movie.backdropUrl})` : 'none' }}
+        style={{ backgroundImage: `url(${movie.backdropUrl})` }}
       >
         {isPlayingVideo && (
           <div className="billboard-video-container">
             {isHls ? (
               <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
             ) : (
-              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline />
+              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline poster={movie.backdropUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             )}
           </div>
         )}
@@ -87,17 +87,16 @@ export default function HeroBanner({ movie, onPlay, onOpenModal, isSubscribed })
       {/* Mobile Hero Banner — full bleed backdrop/video with overlay */}
       <div className="billboard-hero-mobile">
         {/* Background: video if playing, else backdrop image */}
-        {isPlayingVideo ? (
-          <div className="mobile-banner-video-bg">
+        <div className="mobile-banner-video-bg" style={{ backgroundImage: `url(${movie.backdropUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        {isPlayingVideo && (
+          <div className="mobile-banner-video-bg" style={{ position: 'absolute', inset: 0 }}>
             {isHls ? (
               <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
             ) : (
-              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline
+              <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline poster={movie.backdropUrl}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             )}
           </div>
-        ) : (
-          <div className="mobile-banner-video-bg" style={{ backgroundImage: `url(${movie.backdropUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         )}
 
         {/* Dark gradient overlay */}
