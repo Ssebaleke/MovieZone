@@ -7696,3 +7696,205 @@ a {
   .vjs-card { padding: 12px 8px; }
   .vjs-card-avatar { width: 50px; height: 50px; }
 }
+
+/* VJs search */
+.vjs-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1a1a22;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 0 14px;
+  margin-bottom: 22px;
+  transition: border-color 0.2s;
+}
+.vjs-search-wrap:focus-within { border-color: rgba(255,255,255,0.3); }
+.vjs-search-icon { flex-shrink: 0; }
+.vjs-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.92rem;
+  height: 44px;
+}
+.vjs-search-input::placeholder { color: #555; }
+.vjs-search-clear {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #aaa;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.vjs-no-results {
+  text-align: center;
+  color: #555;
+  font-size: 0.9rem;
+  padding: 40px 0;
+}
+
+/* ── VJ Movies Page ── */
+.vjm-page {
+  min-height: 100vh;
+  background: #0a0a0f;
+  color: #fff;
+  padding-bottom: 80px;
+}
+.vjm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 5%;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: sticky;
+  top: 0;
+  background: #0a0a0f;
+  z-index: 100;
+}
+.vjm-back-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.vjm-back-btn:hover { background: rgba(255,255,255,0.15); }
+.vjm-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vjm-title-wrap h1 { font-size: 1.1rem; font-weight: 800; margin: 0; }
+
+.vjm-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1a1a22;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0 14px;
+  margin: 16px 5% 0;
+  transition: border-color 0.2s;
+}
+.vjm-search-wrap:focus-within { border-color: rgba(255,255,255,0.25); }
+.vjm-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.9rem;
+  height: 42px;
+}
+.vjm-search-input::placeholder { color: #555; }
+.vjm-search-clear {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #aaa;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.vjm-count {
+  padding: 12px 5% 4px;
+  font-size: 0.78rem;
+  color: #666;
+}
+.vjm-loading, .vjm-empty {
+  text-align: center;
+  color: #555;
+  padding: 60px 5%;
+  font-size: 0.9rem;
+}
+.vjm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 16px 5%;
+}
+@media (min-width: 600px) {
+  .vjm-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 900px) {
+  .vjm-grid { grid-template-columns: repeat(5, 1fr); gap: 14px; padding: 20px 5%; }
+}
+.vjm-card { cursor: pointer; }
+.vjm-card-poster {
+  position: relative;
+  aspect-ratio: 2/3;
+  background: #1a1a22;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.vjm-card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+.vjm-card:hover .vjm-card-poster img { transform: scale(1.05); }
+.vjm-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.vjm-card:hover .vjm-card-overlay { opacity: 1; }
+.vjm-play-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #e50914;
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.vjm-list-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.vjm-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vjm-card-year { font-size: 0.7rem; color: #666; margin-top: 2px; }

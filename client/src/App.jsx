@@ -7,6 +7,7 @@ import ProfileSelector from './pages/ProfileSelector';
 import Browse from './pages/Browse';
 import WatchlistPage from './pages/WatchlistPage';
 import VJsPage from './pages/VJsPage';
+import VJMoviesPage from './pages/VJMoviesPage';
 import AccountSettings from './pages/AccountSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import { api } from './utils/api';
@@ -113,6 +114,15 @@ export default function App() {
           <ProtectedRoute>
             <ProfileGate>
               <VJsPage />
+            </ProfileGate>
+          </ProtectedRoute>
+        } />
+
+        {/* VJ Movies Page */}
+        <Route path="/vjs/:vjName" element={
+          <ProtectedRoute>
+            <ProfileGate>
+              <VJMoviesPage />
             </ProfileGate>
           </ProtectedRoute>
         } />
