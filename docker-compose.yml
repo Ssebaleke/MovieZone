@@ -7,18 +7,15 @@ services:
       dockerfile: Dockerfile
     container_name: moviezone_backend
     restart: always
-    ports:
-      - "5000:5000"
+    network_mode: "host"
     environment:
       - PORT=5000
-      - DATABASE_URL=file:/app/prisma/dev.db
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:Vicojohns%40100@db.avekvmjzdxanwxuwvbwq.supabase.co:5432/postgres}
       - JWT_SECRET=moviezone_jwt_secret_key_12345!
       - CLIENT_URL=https://vjpulse.site
       - REELPLEXI_API_KEY=${REELPLEXI_API_KEY:-}
     volumes:
       - db_data:/app/prisma
-    networks:
-      - moviezone_net
 
   frontend:
     build:
