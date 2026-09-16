@@ -6,6 +6,7 @@ import PlanSelector from './pages/PlanSelector';
 import ProfileSelector from './pages/ProfileSelector';
 import Browse from './pages/Browse';
 import WatchlistPage from './pages/WatchlistPage';
+import VJsPage from './pages/VJsPage';
 import AccountSettings from './pages/AccountSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import { api } from './utils/api';
@@ -103,6 +104,15 @@ export default function App() {
           <ProtectedRoute>
             <ProfileGate>
               <Browse />
+            </ProfileGate>
+          </ProtectedRoute>
+        } />
+
+        {/* VJs Page */}
+        <Route path="/vjs" element={
+          <ProtectedRoute>
+            <ProfileGate>
+              <VJsPage />
             </ProfileGate>
           </ProtectedRoute>
         } />

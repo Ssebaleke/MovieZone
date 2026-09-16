@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio, Share2, Download } from 'lucide-react';
+import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio, Share2, Download, Headphones } from 'lucide-react';
 
 export default function Navbar({
   onSearchChange,
@@ -333,13 +333,11 @@ export default function Navbar({
         </div>
 
         <div
-          className={`mobile-bottom-tab ${activeTab === 'categories' ? 'active' : ''}`}
-          onClick={() => {
-            setIsMobileMenuOpen(true);
-          }}
+          className={`mobile-bottom-tab`}
+          onClick={() => navigate('/vjs')}
         >
-          <LayoutGrid size={20} color={activeTab === 'categories' ? '#e50914' : '#aaaaaa'} />
-          <span>Categories</span>
+          <Headphones size={20} color={location.pathname === '/vjs' ? '#e50914' : '#aaaaaa'} />
+          <span>VJs</span>
         </div>
 
         <div
