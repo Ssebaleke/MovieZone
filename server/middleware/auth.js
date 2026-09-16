@@ -49,6 +49,18 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
+export const optionalAuth = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) { req.user = null; return next(); }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'netflix_clone_jwt_secret_key_12345!');
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    req.user = user || null;
+  } catch { req.user = null; }
+  next();
+};
+
 export const requireSubscription = (req, res, next) => {
   // Allow admins to browse freely
   if (req.user && req.user.role === 'ADMIN') {
