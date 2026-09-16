@@ -21,7 +21,7 @@ export default function MovieRow({ title, movies, onPlay, onOpenModal, watchlist
 
   return (
     <>
-    <div className="movie-row-container" style={{ overflow: 'visible' }}>
+    <div className="movie-row-container" style={{ overflow: 'visible' }} id={`row-${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}>
       <div className="movie-row-header-line">
         <h2 className="movie-row-title">{title}</h2>
         <span className="row-view-all-link" onClick={() => setShowAll(true)}>View all &rsaquo;</span>

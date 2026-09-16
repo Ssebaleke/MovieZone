@@ -162,6 +162,22 @@ export default function Browse() {
     return watchlist.some(m => m.id === movieId);
   };
 
+  // Scroll to a category row by matching name fragment
+  const scrollToRow = (nameFragment) => {
+    setTimeout(() => {
+      const rows = document.querySelectorAll('[id^="row-"]');
+      const fragment = nameFragment.toLowerCase();
+      for (const row of rows) {
+        if (row.id.includes(fragment)) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+      }
+      // fallback: scroll past hero to first row
+      document.querySelector('.movie-row-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   // Dynamic filter header text
   const getFilterHeader = () => {
     if (activeVJ) return `Showing titles translated by ${activeVJ}`;
@@ -241,22 +257,34 @@ export default function Browse() {
             onSelectPill={(genre) => {
               if (genre === 'All') {
                 setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               } else if (genre === 'K-Drama') {
-                setActiveRegion('kdrama'); setActiveVJ(''); setActiveGenre(''); setActiveTab('home');
+                scrollToRow('kdrama') || scrollToRow('k-drama') || scrollToRow('romance');
               } else if (genre === 'Anime') {
-                setActiveRegion('anime'); setActiveVJ(''); setActiveGenre(''); setActiveTab('home');
+                scrollToRow('anime') || scrollToRow('sci-fi');
+              } else if (genre === 'Action') {
+                scrollToRow('action');
+              } else if (genre === 'Comedy') {
+                scrollToRow('comedy');
+              } else if (genre === 'Drama') {
+                scrollToRow('drama');
+              } else if (genre === 'Horror') {
+                scrollToRow('thriller');
+              } else if (genre === 'Romance') {
+                scrollToRow('romance');
+              } else if (genre === 'Thriller') {
+                scrollToRow('thriller');
+              } else if (genre === 'Fantasy') {
+                scrollToRow('sci-fi');
               } else {
-                setActiveGenre(genre); setActiveTab('home'); setActiveVJ(''); setActiveRegion('');
+                scrollToRow(genre.toLowerCase());
               }
             }}
             onSelectTopic={(card) => {
-              if (card.regionKey) {
-                setActiveRegion(card.regionKey); setActiveVJ(''); setActiveGenre('');
-              } else if (card.vjKey) {
-                setActiveVJ(card.vjKey); setActiveRegion(''); setActiveGenre('');
-              } else if (card.genreKey) {
-                setActiveGenre(card.genreKey); setActiveVJ(''); setActiveRegion(''); setActiveTab('home');
-              }
+              if (card.regionKey === 'kdrama') scrollToRow('romance');
+              else if (card.regionKey) scrollToRow(card.regionKey);
+              else if (card.vjKey) scrollToRow('vj');
+              else if (card.genreKey) scrollToRow(card.genreKey.toLowerCase());
             }}
             activeGenre={activeGenre}
           />
