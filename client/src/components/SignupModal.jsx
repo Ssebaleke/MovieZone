@@ -9,19 +9,26 @@ export default function SignupModal({ isOpen, onClose }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const reset = () => { setName(''); setEmail(''); setPassword(''); setError(''); };
+  const reset = () => { setName(''); setEmail(''); setPassword(''); setConfirmPassword(''); setError(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
       if (mode === 'signup') {
+        if (password !== confirmPassword) {
+          setError('Passwords do not match.');
+          setLoading(false);
+          return;
+        }
         const data = await api.post('/auth/register', { name, email, password });
         localStorage.setItem('netflix_token', data.token);
         localStorage.setItem('netflix_user', JSON.stringify(data.user));
@@ -103,6 +110,22 @@ export default function SignupModal({ isOpen, onClose }) {
               {showPass ? <EyeOff size={15} color="#666" /> : <Eye size={15} color="#666" />}
             </button>
           </div>
+          {mode === 'signup' && (
+            <div className="su-field">
+              <Lock size={16} color="#666" />
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              <button type="button" className="su-eye" onClick={() => setShowConfirm(!showConfirm)}>
+                {showConfirm ? <EyeOff size={15} color="#666" /> : <Eye size={15} color="#666" />}
+              </button>
+            </div>
+          )}
 
           <button type="submit" className="su-submit" disabled={loading}>
             {loading ? 'Please wait...' : (
