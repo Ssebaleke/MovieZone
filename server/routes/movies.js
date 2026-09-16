@@ -274,24 +274,22 @@ router.get('/', async (req, res) => {
         { name: 'Sci-Fi, Superhero & Fantasy', match: (m) => m.type === 'MOVIE' && /sci-fi|fantasy|superhero|science/i.test(m.genres) },
         { name: 'Thrillers, Crime & Mystery', match: (m) => m.type === 'MOVIE' && /thriller|crime|mystery|horror/i.test(m.genres) },
         { name: 'Popular TV Series & Shows', match: (m) => m.type === 'SHOW' },
-        { name: 'Ugandan VJ Exclusives', match: () => true }
+        { name: 'New & Uncategorised', match: () => true }
       ];
 
       const catMap = new Map();
       genreCategories.forEach(c => catMap.set(c.name, []));
-      const seenMovieIdsPerCategory = new Map();
+      const placedIds = new Set();
 
-      movies.forEach(movie => {
-        for (const cat of genreCategories) {
-          const list = catMap.get(cat.name);
-          const seen = seenMovieIdsPerCategory.get(cat.name) || new Set();
-          if (cat.match(movie) && !seen.has(movie.id) && list.length < 30) {
-            list.push(movie);
-            seen.add(movie.id);
-            seenMovieIdsPerCategory.set(cat.name, seen);
+      // Each movie goes into the FIRST category it matches only
+      for (const cat of genreCategories) {
+        for (const movie of movies) {
+          if (!placedIds.has(movie.id) && cat.match(movie) && catMap.get(cat.name).length < 40) {
+            catMap.get(cat.name).push(movie);
+            placedIds.add(movie.id);
           }
         }
-      });
+      }
 
       sortedCategories = Array.from(catMap.entries())
         .map(([name, items]) => ({ name, movies: items }))
