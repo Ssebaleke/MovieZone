@@ -7260,3 +7260,233 @@ a {
   transition: color 0.2s, opacity 0.2s;
 }
 .row-view-all-link:hover { color: #ff3d2e !important; opacity: 0.85; }
+
+/* ── PlanSelector Page ── */
+.ps-page {
+  min-height: 100vh;
+  background: #0a0a0f;
+  color: #fff;
+  font-family: inherit;
+}
+.ps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 5%;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ps-logo { height: 32px; cursor: pointer; }
+.ps-signout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #aaa;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ps-body {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 5% 80px;
+}
+.ps-hero-text { text-align: center; margin-bottom: 36px; }
+.ps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(229,9,20,0.15);
+  border: 1px solid #e50914;
+  color: #ff4d4d;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.ps-hero-text h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; margin: 0 0 10px; }
+.ps-hero-text p { color: #aaa; font-size: 0.95rem; margin: 0; }
+.ps-loading { text-align: center; padding: 60px 0; color: #555; }
+.ps-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ps-alert--error { background: rgba(239,68,68,0.12); border: 1px solid #ef4444; color: #f87171; }
+.ps-alert--success { background: rgba(34,197,94,0.12); border: 1px solid #22c55e; color: #4ade80; font-weight: 600; }
+
+/* Plans grid */
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.ps-card {
+  background: #141418;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 22px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.ps-card:hover { border-color: rgba(229,9,20,0.4); transform: translateY(-2px); }
+.ps-card--active { border-color: #e50914; background: rgba(229,9,20,0.06); }
+.ps-card-badge {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e50914;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+.ps-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ps-card-top h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.ps-card-interval {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.ps-card-price { margin-bottom: 10px; }
+.ps-price-amount { font-size: 2rem; font-weight: 800; color: #fff; }
+.ps-card--active .ps-price-amount { color: #ff4d4d; }
+.ps-price-currency { font-size: 0.85rem; color: #888; margin-left: 4px; }
+.ps-card-desc { font-size: 0.8rem; color: #888; margin: 0 0 14px; line-height: 1.5; }
+.ps-card-specs { display: flex; flex-direction: column; gap: 6px; }
+.ps-spec { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: #ccc; }
+
+/* CTA */
+.ps-cta { text-align: center; }
+.ps-proceed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #e50914;
+  color: #fff;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(229,9,20,0.4);
+  transition: background 0.2s, transform 0.15s;
+  width: 100%;
+  max-width: 420px;
+  justify-content: center;
+}
+.ps-proceed-btn:hover:not(:disabled) { background: #c8000f; transform: translateY(-1px); }
+.ps-proceed-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ps-secure-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 12px;
+}
+
+/* Pay step */
+.ps-pay-body { max-width: 480px; }
+.ps-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 28px;
+  padding: 0;
+}
+.ps-back-btn:hover { color: #fff; }
+.ps-pay-card {
+  background: #141418;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 28px 24px;
+}
+.ps-order-summary { margin-bottom: 20px; }
+.ps-order-label { font-size: 0.75rem; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.ps-order-name { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+.ps-order-meta { display: flex; align-items: center; justify-content: space-between; color: #aaa; font-size: 0.85rem; }
+.ps-order-price { font-size: 1.1rem; font-weight: 700; color: #ff4d4d; }
+.ps-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 20px 0; }
+.ps-mm-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.ps-mm-title { font-size: 0.95rem; font-weight: 700; }
+.ps-mm-sub { font-size: 0.78rem; color: #888; margin-top: 2px; }
+.ps-label { display: block; font-size: 0.78rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.ps-phone-row {
+  display: flex;
+  align-items: center;
+  background: #1e1e26;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.ps-phone-prefix {
+  padding: 0 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #aaa;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+}
+.ps-phone-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0 14px;
+  height: 48px;
+  outline: none;
+  letter-spacing: 0.05em;
+}
+.ps-phone-hint { font-size: 0.75rem; color: #666; margin: 0 0 20px; line-height: 1.5; }
+.ps-pay-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #e50914;
+  color: #fff;
+  border: none;
+  padding: 15px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(229,9,20,0.35);
+  transition: background 0.2s;
+}
+.ps-pay-btn:hover:not(:disabled) { background: #c8000f; }
+.ps-pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .ps-grid { grid-template-columns: 1fr; }
+  .ps-pay-body { max-width: 100%; }
+}

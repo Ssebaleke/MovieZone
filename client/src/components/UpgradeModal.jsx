@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, ShieldCheck, Zap, Star, Lock, CreditCard, Smartphone } from 'lucide-react';
+import { X, Check, ShieldCheck, Zap, Star, Smartphone } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuccess }) {
   const [packages, setPackages] = useState([]);
   const [selectedPkgId, setSelectedPkgId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('mobile_money');
+  const [paymentMethod] = useState('mobile_money');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -214,38 +214,18 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
               })}
             </div>
 
-            {/* Payment Method Selector */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#ccc', marginBottom: '8px' }}>
-                Payment Method (Uganda / Global)
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('mobile_money')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '12px', borderRadius: '8px',
-                    border: paymentMethod === 'mobile_money' ? '2px solid #e50914' : '1px solid rgba(255,255,255,0.1)',
-                    background: paymentMethod === 'mobile_money' ? 'rgba(229,9,20,0.1)' : '#1a1c23',
-                    color: '#fff', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer'
-                  }}
-                >
-                  <Smartphone size={16} color="#ff4d4d" /> Mobile Money (MTN/Airtel)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '12px', borderRadius: '8px',
-                    border: paymentMethod === 'card' ? '2px solid #e50914' : '1px solid rgba(255,255,255,0.1)',
-                    background: paymentMethod === 'card' ? 'rgba(229,9,20,0.1)' : '#1a1c23',
-                    color: '#fff', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer'
-                  }}
-                >
-                  <CreditCard size={16} color="#ff4d4d" /> Credit / Debit Card
-                </button>
+            {/* Payment Method — Mobile Money only */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: 'rgba(229,9,20,0.08)', border: '2px solid #e50914',
+                borderRadius: '8px', padding: '12px 16px'
+              }}>
+                <Smartphone size={18} color="#ff4d4d" />
+                <div>
+                  <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>Mobile Money (MTN / Airtel)</div>
+                  <div style={{ fontSize: '0.75rem', color: '#aaa' }}>Uganda Mobile Money payment</div>
+                </div>
               </div>
             </div>
 
