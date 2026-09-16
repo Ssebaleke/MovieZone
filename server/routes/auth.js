@@ -37,14 +37,26 @@ router.post('/register', async (req, res) => {
     const plan = role === 'ADMIN' ? 'PREMIUM' : 'NONE';
     const subscriptionStatus = role === 'ADMIN' ? 'ACTIVE' : 'INACTIVE';
 
+    const defaultProfileName = name && name.trim() ? name.trim() : email.split('@')[0];
+
     const user = await prisma.user.create({
       data: {
-        name: name || null,
+        name: defaultProfileName,
         email,
         passwordHash,
         role,
         plan,
-        subscriptionStatus
+        subscriptionStatus,
+        profiles: {
+          create: {
+            name: defaultProfileName,
+            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&q=80',
+            maturityLimit: '13+'
+          }
+        }
+      },
+      include: {
+        profiles: true
       }
     });
 
@@ -63,7 +75,8 @@ router.post('/register', async (req, res) => {
         email: user.email,
         role: user.role,
         plan: user.plan,
-        subscriptionStatus: user.subscriptionStatus
+        subscriptionStatus: user.subscriptionStatus,
+        profiles: user.profiles
       }
     });
   } catch (error) {
