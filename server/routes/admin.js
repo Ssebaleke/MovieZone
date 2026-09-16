@@ -465,67 +465,10 @@ router.delete('/movies/:id', async (req, res) => {
 // ==========================================
 async function fetchAdminPackages() {
   if (prisma.package) {
-    let pkgs = await prisma.package.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (pkgs.length === 0) {
-      const defaults = [
-        {
-          name: 'Daily Pass',
-          slug: 'daily-pass',
-          price: 2000,
-          currency: 'UGX',
-          interval: 'DAILY',
-          description: 'Full 24-hour access to all VJ Luganda movies and series',
-          features: 'Unlimited Streaming, 1 Screen, HD Quality, Luganda Translations',
-          resolution: '1080p Full HD',
-          screens: 1,
-          isActive: true
-        },
-        {
-          name: 'Weekly Special',
-          slug: 'weekly-special',
-          price: 7000,
-          currency: 'UGX',
-          interval: 'WEEKLY',
-          description: '7 days unlimited streaming access across all devices',
-          features: 'Unlimited Streaming, 2 Screens, HD Quality, All VJ Downloads',
-          resolution: '1080p Full HD',
-          screens: 2,
-          isActive: true
-        },
-        {
-          name: 'Monthly VIP',
-          slug: 'monthly-vip',
-          price: 20000,
-          currency: 'UGX',
-          interval: 'MONTHLY',
-          description: '30 days VIP access with 4K Ultra HD & Multi-Screen',
-          features: 'Unlimited Streaming, 4 Screens, 4K Ultra HD, Priority VJ Releases',
-          resolution: '4K Ultra HD',
-          screens: 4,
-          isActive: true
-        }
-      ];
-
-      for (const item of defaults) {
-        const existing = await prisma.package.findFirst({ where: { slug: item.slug } });
-        if (!existing) {
-          await prisma.package.create({ data: item });
-        }
-      }
-
-      pkgs = await prisma.package.findMany({
-        orderBy: { createdAt: 'desc' }
-      });
-    }
-    return pkgs;
+    return prisma.package.findMany({ orderBy: { createdAt: 'desc' } });
   }
-
   try {
-    const rawPkgs = await prisma.$queryRawUnsafe(`SELECT * FROM "Package" ORDER BY "createdAt" DESC`);
-    return rawPkgs;
+    return await prisma.$queryRawUnsafe(`SELECT * FROM "Package" ORDER BY "createdAt" DESC`);
   } catch (err) {
     return [];
   }
