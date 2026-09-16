@@ -8060,3 +8060,126 @@ a {
   transition: background 0.15s, color 0.15s;
 }
 .nav-vj-dropdown-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+/* ── SignupModal bottom sheet ── */
+.su-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: su-fade-in 0.2s ease;
+}
+@keyframes su-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.su-sheet {
+  background: #141418;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 12px 24px 40px;
+  position: relative;
+  animation: su-slide-up 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes su-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.su-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.su-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.su-close:hover { background: rgba(255,255,255,0.15); }
+
+.su-top { text-align: center; margin-bottom: 24px; }
+.su-logo { height: 28px; margin-bottom: 14px; }
+.su-title { font-size: 1.2rem; font-weight: 800; margin: 0 0 6px; color: #fff; }
+.su-sub { font-size: 0.82rem; color: #888; margin: 0; line-height: 1.5; }
+
+.su-error {
+  background: rgba(239,68,68,0.12);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.su-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.su-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1e1e28;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0 14px;
+  transition: border-color 0.2s;
+}
+.su-field:focus-within { border-color: rgba(255,255,255,0.3); }
+.su-field input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.95rem;
+  height: 48px;
+}
+.su-field input::placeholder { color: #555; }
+.su-eye { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; }
+
+.su-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #e50914;
+  color: #fff;
+  border: none;
+  height: 50px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(229,9,20,0.35);
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+.su-submit:hover:not(:disabled) { background: #c8000f; }
+.su-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.su-switch {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+}
+.su-switch button {
+  background: none;
+  border: none;
+  color: #e50914;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+.su-switch button:hover { text-decoration: underline; }

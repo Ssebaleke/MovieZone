@@ -15,19 +15,24 @@ import { api } from './utils/api';
 // Route protector for Authenticated users
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('netflix_token');
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!token) return <Navigate to="/login" replace />;
   return children;
 }
 
 // Route protector for Active Profiles
 function ProfileGate({ children }) {
   const profile = localStorage.getItem('netflix_profile');
-  if (!profile) {
-    return <Navigate to="/profiles" replace />;
-  }
+  if (!profile) return <Navigate to="/profiles" replace />;
   return children;
+}
+
+// Smart root redirect
+function RootRedirect() {
+  const token = localStorage.getItem('netflix_token');
+  // Has token → profile selector (returning user)
+  if (token) return <Navigate to="/profiles" replace />;
+  // No token → public browse
+  return <Navigate to="/browse" replace />;
 }
 
 // Route protector for Admin Role
@@ -82,8 +87,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
+        {/* Root smart redirect */}
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* Payment Subscription flow */}
@@ -100,14 +105,8 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {/* Core client browse dashboard */}
-        <Route path="/browse" element={
-          <ProtectedRoute>
-            <ProfileGate>
-              <Browse />
-            </ProfileGate>
-          </ProtectedRoute>
-        } />
+        {/* Core client browse dashboard — public, no auth required */}
+        <Route path="/browse" element={<Browse />} />
 
         {/* VJs Page */}
         <Route path="/vjs" element={

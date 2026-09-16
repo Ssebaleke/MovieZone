@@ -8,6 +8,7 @@ import DetailModal from '../components/DetailModal';
 import VideoPlayer from '../components/VideoPlayer';
 import MovieCard from '../components/MovieCard';
 import UpgradeModal from '../components/UpgradeModal';
+import SignupModal from '../components/SignupModal';
 import { api } from '../utils/api';
 import { SkeletonHero, SkeletonRow } from '../components/SkeletonRow';
 
@@ -18,18 +19,15 @@ export default function Browse() {
   const [continueWatching, setContinueWatching] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Active navigation filter states
   const [activeTab, setActiveTab] = useState('home');
   const [activeVJ, setActiveVJ] = useState('');
   const [activeRegion, setActiveRegion] = useState('');
   const [activeGenre, setActiveGenre] = useState('');
-  
-  // Search state
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // User & Subscription state
   const [user, setUser] = useState(() => {
     const str = localStorage.getItem('netflix_user');
     return str ? JSON.parse(str) : null;
@@ -39,53 +37,40 @@ export default function Browse() {
   );
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMovieTarget, setUpgradeMovieTarget] = useState(null);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
-  // Interaction Modals
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [activePlayMovie, setActivePlayMovie] = useState(null);
 
   const navigate = useNavigate();
-  const currentProfile = JSON.parse(localStorage.getItem('netflix_profile'));
+  const isLoggedIn = !!localStorage.getItem('netflix_token');
+  const currentProfile = isLoggedIn ? JSON.parse(localStorage.getItem('netflix_profile') || 'null') : null;
 
-  // Play button handler with subscription paywall gate
   const handlePlay = (movie) => {
-    if (!isSubscribed) {
-      setUpgradeMovieTarget(movie);
-      setShowUpgradeModal(true);
-    } else {
-      setActivePlayMovie(movie);
-    }
+    if (!isLoggedIn) { setShowSignupModal(true); return; }
+    if (!isSubscribed) { setUpgradeMovieTarget(movie); setShowUpgradeModal(true); }
+    else setActivePlayMovie(movie);
   };
 
   useEffect(() => {
-    // Fetch latest user status to ensure fresh subscription state
-    api.get('/auth/me')
-      .then(res => {
-        if (res && res.user) {
-          setUser(res.user);
-          localStorage.setItem('netflix_user', JSON.stringify(res.user));
-        }
-      })
-      .catch(() => {});
+    if (isLoggedIn) {
+      api.get('/auth/me')
+        .then(res => {
+          if (res && res.user) {
+            setUser(res.user);
+            localStorage.setItem('netflix_user', JSON.stringify(res.user));
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem('netflix_token')) {
-      navigate('/login');
-      return;
-    }
-    if (!currentProfile) {
-      navigate('/profiles');
-      return;
-    }
-    
     fetchBrowseData();
-  }, [navigate, activeTab, activeVJ, activeRegion, activeGenre]);
+  }, [activeTab, activeVJ, activeRegion, activeGenre]);
 
   const fetchBrowseData = async () => {
     try {
-      if (!currentProfile) return;
-
       let queryParams = [];
       if (activeVJ) queryParams.push(`vj=${encodeURIComponent(activeVJ)}`);
       if (activeRegion) queryParams.push(`region=${encodeURIComponent(activeRegion)}`);
@@ -94,56 +79,41 @@ export default function Browse() {
       if (activeTab === 'latest') queryParams.push('latest=true');
       if (activeTab === 'trending') queryParams.push('trending=true');
       if (activeGenre) queryParams.push(`genre=${encodeURIComponent(activeGenre)}`);
-
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
 
-      // Fetch all 3 in parallel
-      const [catalog, list, history] = await Promise.all([
-        api.get(`/movies${queryString}`),
-        api.get(`/mylist/${currentProfile.id}`),
-        api.get(`/history/${currentProfile.id}`),
-      ]);
-
+      const reqs = [api.get(`/movies${queryString}`)];
+      if (isLoggedIn && currentProfile) {
+        reqs.push(api.get(`/mylist/${currentProfile.id}`));
+        reqs.push(api.get(`/history/${currentProfile.id}`));
+      }
+      const [catalog, list, history] = await Promise.all(reqs);
       setCategories(catalog.categories || []);
       setFeatured(catalog.featured);
-      setWatchlist(list);
-      setContinueWatching(history);
+      if (list) setWatchlist(list);
+      if (history) setContinueWatching(history);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      if (err.status === 403 && err.data?.subscriptionRequired) {
-        navigate('/signup/plans');
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Live search debounced trigger
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    const delayDebounce = setTimeout(async () => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const t = setTimeout(async () => {
       setSearchLoading(true);
       try {
         const results = await api.get(`/movies/search?q=${encodeURIComponent(searchQuery)}`);
         setSearchResults(results);
-      } catch (err) {
-        console.error('Error executing search query:', err);
-      } finally {
-        setSearchLoading(false);
-      }
+      } catch {}
+      finally { setSearchLoading(false); }
     }, 300);
-
-    return () => clearTimeout(delayDebounce);
+    return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Watchlist add/remove action
   const handleToggleWatchlist = async (movie) => {
+    if (!isLoggedIn) { setShowSignupModal(true); return; }
     if (!currentProfile) return;
-    
     const isInList = watchlist.some(m => m.id === movie.id);
     try {
       if (isInList) {
@@ -153,32 +123,22 @@ export default function Browse() {
         const added = await api.post('/mylist', { profileId: currentProfile.id, movieId: movie.id });
         setWatchlist(prev => [added, ...prev]);
       }
-    } catch (err) {
-      console.error('Error toggling watchlist:', err);
-    }
+    } catch (err) { console.error('Error toggling watchlist:', err); }
   };
 
-  const isMovieInWatchlist = (movieId) => {
-    return watchlist.some(m => m.id === movieId);
-  };
+  const isMovieInWatchlist = (movieId) => watchlist.some(m => m.id === movieId);
 
-  // Scroll to a category row by matching name fragment
   const scrollToRow = (nameFragment) => {
     setTimeout(() => {
       const rows = document.querySelectorAll('[id^="row-"]');
       const fragment = nameFragment.toLowerCase();
       for (const row of rows) {
-        if (row.id.includes(fragment)) {
-          row.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
+        if (row.id.includes(fragment)) { row.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       }
-      // fallback: scroll past hero to first row
       document.querySelector('.movie-row-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
-  // Dynamic filter header text
   const getFilterHeader = () => {
     if (activeVJ) return `Showing titles translated by ${activeVJ}`;
     if (activeRegion) return `Showing ${activeRegion.toUpperCase()} titles`;
@@ -203,7 +163,6 @@ export default function Browse() {
         setActiveRegion={setActiveRegion}
       />
 
-      {/* Skeleton loading state */}
       {loading && !searchQuery && (
         <div className="browse-skeleton">
           <SkeletonHero />
@@ -214,7 +173,6 @@ export default function Browse() {
       )}
 
       {!loading && searchQuery ? (
-        // Search Results layout grid
         <div style={{ padding: 'clamp(80px, 15vw, 120px) 4% 60px 4%' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '700', marginBottom: '24px' }}>
             Search Results for "{searchQuery}"
@@ -236,144 +194,88 @@ export default function Browse() {
               ))}
             </div>
           ) : (
-            <div style={{ color: '#aaa', padding: '40px 0' }}>No matching movies or shows found for your search query.</div>
+            <div style={{ color: '#aaa', padding: '40px 0' }}>No matching movies or shows found.</div>
           )}
         </div>
       ) : (
-        // Main Dashboard Browse Layout
         !loading && (
-        <>
-          {featured && (
-            <HeroBanner
-              movie={featured}
-              onPlay={handlePlay}
-              onOpenModal={setSelectedMovie}
-              isSubscribed={isSubscribed}
+          <>
+            {featured && (
+              <HeroBanner
+                movie={featured}
+                onPlay={handlePlay}
+                onOpenModal={setSelectedMovie}
+                isSubscribed={isSubscribed}
+              />
+            )}
+
+            <CategoryDiscovery
+              onSelectPill={(genre) => {
+                if (genre === 'All') {
+                  setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre('');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (genre === 'K-Drama') { scrollToRow('kdrama') || scrollToRow('romance'); }
+                else if (genre === 'Anime') { scrollToRow('anime') || scrollToRow('sci-fi'); }
+                else { scrollToRow(genre.toLowerCase()); }
+              }}
+              onSelectTopic={(card) => {
+                if (card.regionKey === 'kdrama') scrollToRow('romance');
+                else if (card.regionKey) scrollToRow(card.regionKey);
+                else if (card.vjKey) scrollToRow('vj');
+                else if (card.genreKey) scrollToRow(card.genreKey.toLowerCase());
+              }}
+              activeGenre={activeGenre}
             />
-          )}
 
-          {/* Interactive Category Discovery Section ("What are you interested in?") */}
-          <CategoryDiscovery
-            onSelectPill={(genre) => {
-              if (genre === 'All') {
-                setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre('');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              } else if (genre === 'K-Drama') {
-                scrollToRow('kdrama') || scrollToRow('k-drama') || scrollToRow('romance');
-              } else if (genre === 'Anime') {
-                scrollToRow('anime') || scrollToRow('sci-fi');
-              } else if (genre === 'Action') {
-                scrollToRow('action');
-              } else if (genre === 'Comedy') {
-                scrollToRow('comedy');
-              } else if (genre === 'Drama') {
-                scrollToRow('drama');
-              } else if (genre === 'Horror') {
-                scrollToRow('thriller');
-              } else if (genre === 'Romance') {
-                scrollToRow('romance');
-              } else if (genre === 'Thriller') {
-                scrollToRow('thriller');
-              } else if (genre === 'Fantasy') {
-                scrollToRow('sci-fi');
-              } else {
-                scrollToRow(genre.toLowerCase());
-              }
-            }}
-            onSelectTopic={(card) => {
-              if (card.regionKey === 'kdrama') scrollToRow('romance');
-              else if (card.regionKey) scrollToRow(card.regionKey);
-              else if (card.vjKey) scrollToRow('vj');
-              else if (card.genreKey) scrollToRow(card.genreKey.toLowerCase());
-            }}
-            activeGenre={activeGenre}
-          />
+            <div style={{ paddingBottom: '60px', position: 'relative', zIndex: '5', background: '#141414' }}>
+              {getFilterHeader() && (
+                <div style={{ padding: '20px 4% 0 4%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', borderLeft: '4px solid #e50914', paddingLeft: '12px' }}>
+                    {getFilterHeader()}
+                  </h2>
+                  <button
+                    style={{ background: '#333', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
+                    onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre(''); }}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
 
-          <div style={{ paddingBottom: '60px', position: 'relative', zIndex: '5', background: '#141414' }}>
-            
-            {/* Filter status banner */}
-            {getFilterHeader() && (
-              <div style={{ padding: '20px 4% 0 4%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff', borderLeft: '4px solid #e50914', paddingLeft: '12px' }}>
-                  {getFilterHeader()}
-                </h2>
-                <button
-                  style={{ background: '#333', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
-                  onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre(''); }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
+              {continueWatching.length > 0 && !activeVJ && !activeRegion && (
+                <MovieRow title="Continue Watching" movies={continueWatching.map(item => item.movie)}
+                  onPlay={handlePlay} onOpenModal={setSelectedMovie} watchlist={watchlist}
+                  onToggleWatchlist={handleToggleWatchlist} isSubscribed={isSubscribed} />
+              )}
 
-            {/* Continue Watching row */}
-            {continueWatching.length > 0 && !activeVJ && !activeRegion && (
-              <MovieRow
-                title="Continue Watching"
-                movies={continueWatching.map(item => item.movie)}
-                onPlay={handlePlay}
-                onOpenModal={setSelectedMovie}
-                watchlist={watchlist}
-                onToggleWatchlist={handleToggleWatchlist}
-                isSubscribed={isSubscribed}
-              />
-            )}
+              {watchlist.length > 0 && !activeVJ && !activeRegion && (
+                <MovieRow title="My List" movies={watchlist}
+                  onPlay={handlePlay} onOpenModal={setSelectedMovie} watchlist={watchlist}
+                  onToggleWatchlist={handleToggleWatchlist} isSubscribed={isSubscribed} />
+              )}
 
-            {/* My List row */}
-            {watchlist.length > 0 && !activeVJ && !activeRegion && (
-              <MovieRow
-                title="My List"
-                movies={watchlist}
-                onPlay={handlePlay}
-                onOpenModal={setSelectedMovie}
-                watchlist={watchlist}
-                onToggleWatchlist={handleToggleWatchlist}
-                isSubscribed={isSubscribed}
-              />
-            )}
-
-            {/* General row sliders */}
-            {categories.map((cat, idx) => (
-              <MovieRow
-                key={idx}
-                title={cat.name}
-                movies={cat.movies || cat.items}
-                onPlay={handlePlay}
-                onOpenModal={setSelectedMovie}
-                watchlist={watchlist}
-                onToggleWatchlist={handleToggleWatchlist}
-                isSubscribed={isSubscribed}
-              />
-            ))}
-          </div>
-        </>
+              {categories.map((cat, idx) => (
+                <MovieRow key={idx} title={cat.name} movies={cat.movies || cat.items}
+                  onPlay={handlePlay} onOpenModal={setSelectedMovie} watchlist={watchlist}
+                  onToggleWatchlist={handleToggleWatchlist} isSubscribed={isSubscribed} />
+              ))}
+            </div>
+          </>
         )
       )}
 
-      {/* Pop-up modal details */}
+      <SignupModal isOpen={showSignupModal} onClose={() => setShowSignupModal(false)} />
+
       {selectedMovie && (
-        <DetailModal
-          movie={selectedMovie}
-          onClose={() => setSelectedMovie(null)}
-          onPlay={handlePlay}
-          watchlist={watchlist}
-          onToggleWatchlist={handleToggleWatchlist}
-          isSubscribed={isSubscribed}
-        />
+        <DetailModal movie={selectedMovie} onClose={() => setSelectedMovie(null)}
+          onPlay={handlePlay} watchlist={watchlist} onToggleWatchlist={handleToggleWatchlist}
+          isSubscribed={isSubscribed} />
       )}
 
-      {/* Immersive full-screen media player */}
       {activePlayMovie && (
-        <VideoPlayer
-          movie={activePlayMovie}
-          onClose={() => {
-            setActivePlayMovie(null);
-            fetchBrowseData();
-          }}
-        />
+        <VideoPlayer movie={activePlayMovie} onClose={() => { setActivePlayMovie(null); fetchBrowseData(); }} />
       )}
 
-      {/* Upgrade Subscription Modal */}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
@@ -381,9 +283,7 @@ export default function Browse() {
         onSubscriptionSuccess={(updatedUser, movieToPlay) => {
           setUser(updatedUser);
           setShowUpgradeModal(false);
-          if (movieToPlay) {
-            setActivePlayMovie(movieToPlay);
-          }
+          if (movieToPlay) setActivePlayMovie(movieToPlay);
         }}
       />
     </div>
