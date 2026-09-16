@@ -627,6 +627,10 @@ router.delete('/packages/:id', async (req, res) => {
     res.json({ success: true, message: 'Package deleted successfully' });
   } catch (error) {
     console.error('Error deleting package:', error);
+    res.status(500).json({ error: 'Failed to delete package: ' + error.message });
+  }
+});
+
 // ==========================================
 // 7. Payment Transactions Management & Tracking
 // ==========================================
