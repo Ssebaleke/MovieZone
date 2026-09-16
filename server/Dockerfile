@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npx prisma generate && node index.js"]
+CMD ["sh", "-c", "npx prisma db push && npx prisma generate && node index.js"]
