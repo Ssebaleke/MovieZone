@@ -1,12 +1,12 @@
 import express from 'express';
 import prisma from '../db.js';
-import { authenticateToken, requireSubscription } from '../middleware/auth.js';
+import { optionalAuth, requireSubscription } from '../middleware/auth.js';
 import { reelplexiFetch, getApiKey } from '../services/reelplexi.js';
 
 const router = express.Router();
 
 // Apply auth middleware to client movie routes (allow unsubscribed browsing)
-router.use(authenticateToken);
+router.use(optionalAuth);
 
 // Official TMDB poster mapping for popular titles
 const TMDB_POSTER_MAP = [
