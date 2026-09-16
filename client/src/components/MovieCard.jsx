@@ -78,11 +78,15 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
           <div className="nf-hover-body">
             <div className="nf-hover-controls">
               <div className="nf-hover-controls-left">
-                <button className="nf-ctrl-btn nf-ctrl-btn--play" onClick={handlePlay} title="Play">
-                  {userIsSubscribed
-                    ? <Play size={18} fill="#000" color="#000" />
-                    : <span style={{ fontSize: '0.75rem', fontWeight: 900 }}>🔒</span>}
-                </button>
+                {userIsSubscribed ? (
+                  <button className="nf-ctrl-btn nf-ctrl-btn--play" onClick={handlePlay} title="Play">
+                    <Play size={18} fill="#000" color="#000" />
+                  </button>
+                ) : (
+                  <button className="nf-subscribe-btn" onClick={handlePlay} title="Subscribe to watch">
+                    Subscribe
+                  </button>
+                )}
                 <button className="nf-ctrl-btn" onClick={handleWatchlist} title={isInWatchlist ? 'Remove' : 'Add to list'}>
                   {isInWatchlist ? <Check size={16} color="#fff" /> : <Plus size={16} color="#fff" />}
                 </button>

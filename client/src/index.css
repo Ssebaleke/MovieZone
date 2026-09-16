@@ -6468,7 +6468,7 @@ a {
 
 /* When hovered — scale up and bring to front immediately */
 .nf-card--hovered {
-  transform: scale(1.5);
+  transform: scale(1.35);
   z-index: 500;
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), z-index 0s 0s;
 }
@@ -6477,13 +6477,13 @@ a {
 .movie-cards-track .nf-card:first-child.nf-card--hovered,
 .movie-cards-track .nf-card:nth-child(2).nf-card--hovered {
   transform-origin: left center;
-  transform: scale(1.5);
+  transform: scale(1.35);
 }
 
 .movie-cards-track .nf-card:last-child.nf-card--hovered,
 .movie-cards-track .nf-card:nth-last-child(2).nf-card--hovered {
   transform-origin: right center;
-  transform: scale(1.5);
+  transform: scale(1.35);
 }
 
 /* Poster */
@@ -6594,8 +6594,10 @@ a {
   box-shadow: 0 6px 20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08);
   overflow: hidden;
   pointer-events: auto;
+  transform: scale(calc(1 / 1.35));
+  transform-origin: top center;
   animation: nfCardPop 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
-  transform-origin: center top;
+
 }
 
 @keyframes nfCardPop {
@@ -8183,3 +8185,22 @@ a {
   margin-left: 4px;
 }
 .su-switch button:hover { text-decoration: underline; }
+
+/* Subscribe button on hover card for unsubscribed users */
+.nf-subscribe-btn {
+  background: #e50914;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.3px;
+}
+.nf-subscribe-btn:hover { background: #b80710; }
