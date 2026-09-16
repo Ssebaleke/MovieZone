@@ -104,6 +104,49 @@ router.get('/packages', async (req, res) => {
   }
 });
 
+// Safe Transaction DB Helpers to prevent undefined delegate issues
+async function safeCreateTransaction(data) {
+  if (prisma.transaction) {
+    return await prisma.transaction.create({ data });
+  }
+  const id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO "Transaction" ("id", "userId", "email", "phoneNumber", "packageId", "packageName", "amount", "currency", "paymentMethod", "reference", "status", "errorMessage", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    id, data.userId || null, data.email, data.phoneNumber || null, data.packageId || null, data.packageName,
+    data.amount, data.currency || 'UGX', data.paymentMethod || 'mobile_money', data.reference, data.status || 'PENDING', data.errorMessage || null
+  );
+  return { id, ...data };
+}
+
+async function safeUpdateTransaction(id, data) {
+  if (prisma.transaction) {
+    return await prisma.transaction.update({ where: { id }, data });
+  }
+  const setParts = [];
+  const params = [];
+  let idx = 1;
+
+  if (data.status !== undefined) { setParts.push(`"status" = $${idx++}`); params.push(data.status); }
+  if (data.livepayRef !== undefined) { setParts.push(`"livepayRef" = $${idx++}`); params.push(data.livepayRef); }
+  if (data.errorMessage !== undefined) { setParts.push(`"errorMessage" = $${idx++}`); params.push(data.errorMessage); }
+  setParts.push(`"updatedAt" = CURRENT_TIMESTAMP`);
+  params.push(id);
+
+  if (setParts.length > 1) {
+    await prisma.$executeRawUnsafe(`UPDATE "Transaction" SET ${setParts.join(', ')} WHERE "id" = $${idx}`, ...params);
+  }
+  return { id, ...data };
+}
+
+async function safeFindTransactionByRef(reference) {
+  if (prisma.transaction) {
+    return await prisma.transaction.findUnique({ where: { reference } });
+  }
+  const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Transaction" WHERE "reference" = $1 LIMIT 1`, reference);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
 // Process dynamic package payment checkout (Mobile Money via LivePay / Card)
 router.post('/subscribe-package', authenticateToken, async (req, res) => {
   const { packageId, paymentMethod, phoneNumber, network } = req.body;
@@ -127,19 +170,17 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
     const reference = `LP_${timestamp}_${randomNum}`;
 
     // Create PENDING transaction record
-    let transaction = await prisma.transaction.create({
-      data: {
-        userId: req.user.id,
-        email: req.user.email,
-        phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
-        packageId: pkg.id,
-        packageName: pkg.name,
-        amount: pkg.price,
-        currency: pkg.currency || 'UGX',
-        paymentMethod: paymentMethod || 'mobile_money',
-        reference: reference,
-        status: 'PENDING'
-      }
+    let transaction = await safeCreateTransaction({
+      userId: req.user.id,
+      email: req.user.email,
+      phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+      packageId: pkg.id,
+      packageName: pkg.name,
+      amount: pkg.price,
+      currency: pkg.currency || 'UGX',
+      paymentMethod: paymentMethod || 'mobile_money',
+      reference: reference,
+      status: 'PENDING'
     });
 
     // Fetch LivePay credentials from SystemSetting
@@ -165,10 +206,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
     // If payment method is mobile money (or default)
     if (paymentMethod === 'mobile_money' || (!paymentMethod && livepayApiKey)) {
       if (!phoneNumber) {
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: { status: 'FAILED', errorMessage: 'Mobile Money phone number is required' }
-        });
+        await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: 'Mobile Money phone number is required' });
         return res.status(400).json({ error: 'Mobile Money phone number is required' });
       }
 
@@ -204,11 +242,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
             const errorMsg = lpData.message || lpData.error || `LivePay transaction failed (${lpResponse.status})`;
             console.error('LivePay API Error:', lpData);
 
-            await prisma.transaction.update({
-              where: { id: transaction.id },
-              data: { status: 'FAILED', errorMessage: errorMsg }
-            });
-
+            await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: errorMsg });
             return res.status(400).json({ error: errorMsg, reference });
           }
 
@@ -229,10 +263,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
               }
             });
 
-            await prisma.transaction.update({
-              where: { id: transaction.id },
-              data: { status: 'SUCCESS', livepayRef }
-            });
+            await safeUpdateTransaction(transaction.id, { status: 'SUCCESS', livepayRef });
 
             return res.json({
               success: true,
@@ -249,10 +280,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
             });
           } else {
             // Mobile Money prompt sent to phone - awaiting PIN / Admin approval
-            await prisma.transaction.update({
-              where: { id: transaction.id },
-              data: { livepayRef }
-            });
+            await safeUpdateTransaction(transaction.id, { livepayRef });
 
             return res.json({
               success: true,
@@ -264,10 +292,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
           }
         } catch (lpErr) {
           console.error('Error connecting to LivePay API:', lpErr);
-          await prisma.transaction.update({
-            where: { id: transaction.id },
-            data: { status: 'FAILED', errorMessage: 'Failed to reach LivePay server: ' + lpErr.message }
-          });
+          await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: 'Failed to reach LivePay server: ' + lpErr.message });
           return res.status(502).json({ error: 'Failed to reach LivePay server: ' + lpErr.message });
         }
       } else {
@@ -316,10 +341,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
 
         if (!lpCardRes.ok || lpCardData.success === false) {
           const errorMsg = lpCardData.message || lpCardData.error || `LivePay Card Collection failed (${lpCardRes.status})`;
-          await prisma.transaction.update({
-            where: { id: transaction.id },
-            data: { status: 'FAILED', errorMessage: errorMsg }
-          });
+          await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: errorMsg });
           return res.status(400).json({ error: errorMsg });
         }
 
@@ -333,10 +355,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
           });
         }
       } catch (lpCardErr) {
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: { status: 'FAILED', errorMessage: lpCardErr.message }
-        });
+        await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: lpCardErr.message });
         return res.status(502).json({ error: 'Failed to reach LivePay Card service: ' + lpCardErr.message });
       }
     }
@@ -358,9 +377,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
 router.get('/transaction-status/:reference', authenticateToken, async (req, res) => {
   const { reference } = req.params;
   try {
-    const tx = await prisma.transaction.findUnique({
-      where: { reference }
-    });
+    const tx = await safeFindTransactionByRef(reference);
 
     if (!tx) {
       return res.status(404).json({ error: 'Transaction not found' });
@@ -383,35 +400,36 @@ router.get('/transaction-status/:reference', authenticateToken, async (req, res)
 
 // LivePay Webhook / Callback endpoint
 router.post('/livepay-callback', async (req, res) => {
-  const { reference, status, livepayRef, errorMessage } = req.body;
+  const body = req.body || {};
+  const reference = body.reference || body.tx_ref || body.reference_id || body.ref;
+  const status = body.status || body.payment_status || body.transaction_status;
+  const livepayRef = body.livepayRef || body.transactionId || body.transaction_id || body.tx_id;
+  const errorMessage = body.errorMessage || body.message || body.error || null;
+
+  console.log('Received LivePay Webhook Callback:', { reference, status, livepayRef, errorMessage });
 
   if (!reference) {
-    return res.status(400).json({ error: 'Missing transaction reference' });
+    return res.json({ success: false, message: 'Missing transaction reference' });
   }
 
   try {
-    const tx = await prisma.transaction.findUnique({
-      where: { reference }
-    });
+    const tx = await safeFindTransactionByRef(reference);
 
     if (!tx) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      console.warn('Webhook callback received for unknown reference:', reference);
+      return res.status(404).json({ error: 'Transaction not found for reference ' + reference });
     }
 
-    const isSuccess = String(status).toUpperCase() === 'SUCCESS' || String(status).toUpperCase() === 'COMPLETED';
+    const isSuccess = String(status).toUpperCase() === 'SUCCESS' || String(status).toUpperCase() === 'COMPLETED' || String(status).toUpperCase() === 'SUCCESSFUL';
     const isFailed = String(status).toUpperCase() === 'FAILED' || String(status).toUpperCase() === 'CANCELLED' || String(status).toUpperCase() === 'DECLINED';
 
     if (isSuccess) {
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data: { status: 'SUCCESS', livepayRef: livepayRef || tx.livepayRef }
-      });
+      await safeUpdateTransaction(tx.id, { status: 'SUCCESS', livepayRef: livepayRef || tx.livepayRef });
 
       if (tx.userId) {
-        // Determine package duration if pkg interval exists
         let pkg = null;
         if (tx.packageId) {
-          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } });
+          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } }).catch(() => null);
         }
         const expiration = calculateExpirationDate(pkg?.interval || '30_DAYS');
 
@@ -425,16 +443,18 @@ router.post('/livepay-callback', async (req, res) => {
         });
       }
     } else if (isFailed) {
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data: { status: 'FAILED', errorMessage: errorMessage || 'Payment declined or cancelled' }
-      });
+      await safeUpdateTransaction(tx.id, { status: 'FAILED', errorMessage: errorMessage || 'Payment declined or cancelled' });
     }
 
-    res.json({ success: true, message: 'Callback processed' });
+    res.json({
+      success: true,
+      message: 'Callback processed successfully',
+      reference,
+      status: isSuccess ? 'SUCCESS' : isFailed ? 'FAILED' : 'PENDING'
+    });
   } catch (error) {
     console.error('Error processing LivePay callback:', error);
-    res.status(500).json({ error: 'Failed to process callback' });
+    res.status(500).json({ error: 'Failed to process callback: ' + error.message });
   }
 });
 

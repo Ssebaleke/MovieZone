@@ -631,6 +631,64 @@ router.delete('/packages/:id', async (req, res) => {
   }
 });
 
+// Safe Transaction DB Helpers for Admin routes
+async function safeFindTransactions(statusFilter) {
+  if (prisma.transaction) {
+    const whereClause = statusFilter && statusFilter !== 'ALL' ? { status: String(statusFilter).toUpperCase() } : {};
+    return await prisma.transaction.findMany({
+      where: whereClause,
+      include: {
+        user: { select: { id: true, email: true, plan: true, subscriptionStatus: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+  try {
+    let sql = `SELECT * FROM "Transaction"`;
+    if (statusFilter && statusFilter !== 'ALL') sql += ` WHERE "status" = '${statusFilter.toUpperCase()}'`;
+    sql += ` ORDER BY "createdAt" DESC`;
+    return await prisma.$queryRawUnsafe(sql);
+  } catch (err) {
+    return [];
+  }
+}
+
+async function safeFindAllTxStats() {
+  if (prisma.transaction) {
+    return await prisma.transaction.findMany({ select: { amount: true, status: true } });
+  }
+  try {
+    return await prisma.$queryRawUnsafe(`SELECT "amount", "status" FROM "Transaction"`);
+  } catch {
+    return [];
+  }
+}
+
+async function safeFindTxById(id) {
+  if (prisma.transaction) {
+    return await prisma.transaction.findUnique({ where: { id } });
+  }
+  const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Transaction" WHERE "id" = $1 LIMIT 1`, id);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+async function safeUpdateTx(id, data) {
+  if (prisma.transaction) {
+    return await prisma.transaction.update({ where: { id }, data });
+  }
+  const setParts = [];
+  const params = [];
+  let idx = 1;
+  if (data.status !== undefined) { setParts.push(`"status" = $${idx++}`); params.push(data.status); }
+  if (data.errorMessage !== undefined) { setParts.push(`"errorMessage" = $${idx++}`); params.push(data.errorMessage); }
+  setParts.push(`"updatedAt" = CURRENT_TIMESTAMP`);
+  params.push(id);
+  if (setParts.length > 1) {
+    await prisma.$executeRawUnsafe(`UPDATE "Transaction" SET ${setParts.join(', ')} WHERE "id" = $${idx}`, ...params);
+  }
+  return { id, ...data };
+}
+
 // ==========================================
 // 7. Payment Transactions Management & Tracking
 // ==========================================
@@ -638,24 +696,8 @@ router.get('/transactions', async (req, res) => {
   const { status } = req.query;
 
   try {
-    const whereClause = {};
-    if (status && status !== 'ALL') {
-      whereClause.status = String(status).toUpperCase();
-    }
-
-    const transactions = await prisma.transaction.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: { id: true, email: true, plan: true, subscriptionStatus: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const allTx = await prisma.transaction.findMany({
-      select: { amount: true, status: true }
-    });
+    const transactions = await safeFindTransactions(status);
+    const allTx = await safeFindAllTxStats();
 
     let totalRevenue = 0;
     let successCount = 0;
@@ -692,43 +734,38 @@ router.get('/transactions', async (req, res) => {
 // Update payment transaction status (Approve payment / Mark failed)
 router.put('/transactions/:id/status', async (req, res) => {
   const { id } = req.params;
-  const { status, errorMessage } = req.body; // status: 'SUCCESS' | 'FAILED' | 'PENDING'
+  const { status, errorMessage } = req.body;
 
   if (!['SUCCESS', 'FAILED', 'PENDING'].includes(status)) {
     return res.status(400).json({ error: 'Invalid transaction status' });
   }
 
   try {
-    const tx = await prisma.transaction.findUnique({
-      where: { id }
-    });
+    const tx = await safeFindTxById(id);
 
     if (!tx) {
       return res.status(404).json({ error: 'Transaction record not found' });
     }
 
-    const updatedTx = await prisma.transaction.update({
-      where: { id },
-      data: {
-        status,
-        errorMessage: errorMessage !== undefined ? errorMessage : (status === 'FAILED' ? 'Rejected by Admin' : null)
-      }
+    const updatedTx = await safeUpdateTx(id, {
+      status,
+      errorMessage: errorMessage !== undefined ? errorMessage : (status === 'FAILED' ? 'Rejected by Admin' : null)
     });
 
     // If marked SUCCESS, activate user subscription automatically!
     if (status === 'SUCCESS') {
       let targetUser = null;
       if (tx.userId) {
-        targetUser = await prisma.user.findUnique({ where: { id: tx.userId } });
-      } else if (tx.email) {
-        targetUser = await prisma.user.findUnique({ where: { email: tx.email } });
+        targetUser = await prisma.user.findUnique({ where: { id: tx.userId } }).catch(() => null);
+      }
+      if (!targetUser && tx.email) {
+        targetUser = await prisma.user.findUnique({ where: { email: tx.email } }).catch(() => null);
       }
 
       if (targetUser) {
-        // Calculate expiry based on package if exists
         let pkg = null;
         if (tx.packageId) {
-          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } });
+          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } }).catch(() => null);
         }
 
         const now = new Date();
@@ -764,12 +801,15 @@ router.put('/transactions/:id/status', async (req, res) => {
         });
       }
     } else if (status === 'FAILED') {
-      // If payment was rejected/failed and user has no other active subscriptions, set INACTIVE
       if (tx.userId) {
-        const activeTx = await prisma.transaction.findFirst({
-          where: { userId: tx.userId, status: 'SUCCESS', id: { not: tx.id } }
-        });
-        if (!activeTx) {
+        let hasOtherActive = false;
+        if (prisma.transaction) {
+          const activeTx = await prisma.transaction.findFirst({
+            where: { userId: tx.userId, status: 'SUCCESS', id: { not: tx.id } }
+          }).catch(() => null);
+          if (activeTx) hasOtherActive = true;
+        }
+        if (!hasOtherActive) {
           await prisma.user.update({
             where: { id: tx.userId },
             data: { subscriptionStatus: 'INACTIVE', plan: 'NONE' }
