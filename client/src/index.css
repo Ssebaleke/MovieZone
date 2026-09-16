@@ -8204,3 +8204,26 @@ a {
   letter-spacing: 0.3px;
 }
 .nf-subscribe-btn:hover { background: #b80710; }
+
+/* ── Signup modal mobile keyboard fix ── */
+.su-sheet {
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+.su-overlay {
+  align-items: flex-end;
+  padding-bottom: 0;
+}
+@media (max-height: 700px) {
+  .su-sheet {
+    max-height: 98dvh;
+    padding: 8px 20px max(24px, env(safe-area-inset-bottom));
+  }
+  .su-handle { margin-bottom: 10px; }
+  .su-top { margin-bottom: 10px; }
+  .su-logo { height: 28px; }
+  .su-title { font-size: 1.1rem; }
+  .su-sub { display: none; }
+  .su-form { gap: 9px; margin-bottom: 10px; }
+}
