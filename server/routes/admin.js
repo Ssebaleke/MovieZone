@@ -179,7 +179,7 @@ router.get('/livepay/test-balance', async (req, res) => {
       return res.status(400).json({ error: 'LivePay API Key is not set in settings' });
     }
 
-    const lpRes = await fetch('https://livepay.me/api/check-balance', {
+    const lpRes = await fetch(`https://livepay.me/api/check-balance?accountNumber=${encodeURIComponent(accountNumber || '')}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -187,10 +187,14 @@ router.get('/livepay/test-balance', async (req, res) => {
       }
     });
 
-    const lpData = await lpRes.json();
+    let lpData = null;
+    try { lpData = await lpRes.json(); } catch {}
 
-    if (!lpRes.ok || lpData.success === false) {
-      const msg = lpData.message || lpData.error || `LivePay error (${lpRes.status})`;
+    if (!lpRes.ok || (lpData && lpData.success === false)) {
+      let msg = lpData?.message || lpData?.error || `LivePay response error (${lpRes.status})`;
+      if (msg.includes('not allowed') || msg.includes('IP')) {
+        msg = `${msg}. Add your server IP (69.164.245.17) to allowed IPs in LivePay Developer settings.`;
+      }
       return res.status(lpRes.status || 400).json({ error: msg, details: lpData });
     }
 
