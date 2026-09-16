@@ -166,19 +166,9 @@ export default function Navbar({
               </div>
               <ul className="nav-links desktop-only-links">
                 <li className={activeTab === 'home' && !searchQuery && !activeVJ ? 'active' : ''} onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Home</li>
+                <li className={activeTab === 'series' ? 'active' : ''} onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Series</li>
                 <li className={activeTab === 'movies' ? 'active' : ''} onClick={() => { setActiveTab('movies'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>Movies</li>
-                <li className={activeTab === 'series' ? 'active' : ''} onClick={() => { setActiveTab('series'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}>TV Shows</li>
                 <li className={location.pathname === '/mylist' ? 'active' : ''} onClick={() => navigate('/mylist')}>My List</li>
-                <li className="nav-item-dropdown">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                    {selectedLang} <ChevronDown size={14} color="#aaa" />
-                  </span>
-                  <div className="nav-dropdown-menu">
-                    <div className="dropdown-item selected" onClick={() => setSelectedLang('English')}>English</div>
-                    <div className="dropdown-item" onClick={() => setSelectedLang('Luganda')}>Luganda</div>
-                    <div className="dropdown-item" onClick={() => setSelectedLang('Swahili')}>Swahili</div>
-                  </div>
-                </li>
               </ul>
             </div>
             <div className="nav-right">
