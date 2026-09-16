@@ -300,6 +300,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Series episodes by season
+router.get('/series/:id/season/:season', async (req, res) => {
+  const { id, season } = req.params;
+  try {
+    const data = await reelplexiFetch(`/series/${id}/seasons/${season}/episodes`).catch(() => null)
+      || await reelplexiFetch(`/series/${id}/episodes`, { season }).catch(() => null);
+    if (data && (Array.isArray(data) || Array.isArray(data.data))) {
+      return res.json(Array.isArray(data) ? data : data.data);
+    }
+    res.json([]);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 // Universal Search via Reelplexi API
 router.get('/search', async (req, res) => {
   const { q } = req.query;
