@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, Plus, Check, Search, X, Headphones } from 'lucide-react';
 import { api } from '../utils/api';
+import Navbar from '../components/Navbar';
 import VideoPlayer from '../components/VideoPlayer';
 import DetailModal from '../components/DetailModal';
 import UpgradeModal from '../components/UpgradeModal';
@@ -75,6 +76,16 @@ export default function VJMoviesPage() {
 
   return (
     <div className="vjm-page">
+      <Navbar
+        searchQuery=""
+        onSearchChange={() => {}}
+        activeTab=""
+        setActiveTab={() => {}}
+        activeVJ=""
+        setActiveVJ={() => {}}
+        activeRegion=""
+        setActiveRegion={() => {}}
+      />
       {/* Header */}
       <div className="vjm-header">
         <button className="vjm-back-btn" onClick={() => navigate('/vjs')}>

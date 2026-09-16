@@ -7898,3 +7898,9 @@ a {
   text-overflow: ellipsis;
 }
 .vjm-card-year { font-size: 0.7rem; color: #666; margin-top: 2px; }
+
+/* push vjs/vjm sticky headers below navbar */
+.vjs-page-header { top: 60px; }
+.vjm-header { top: 60px; }
+.vjs-page { padding-top: 0; }
+.vjm-page { padding-top: 0; }

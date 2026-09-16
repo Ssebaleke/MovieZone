@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Headphones, Play, Search, X } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 const DEFAULT_VJS = [
   { name: 'VJ Junior', slug: 'VJ Junior', tagline: 'The Voice of Uganda',   specialty: 'Action • Drama • Nollywood', color: '#f59e0b' },
@@ -62,6 +63,16 @@ export default function VJsPage({ setActiveVJ, setActiveTab }) {
 
   return (
     <div className="vjs-page">
+      <Navbar
+        searchQuery=""
+        onSearchChange={() => {}}
+        activeTab=""
+        setActiveTab={() => {}}
+        activeVJ=""
+        setActiveVJ={() => {}}
+        activeRegion=""
+        setActiveRegion={() => {}}
+      />
       {/* Header */}
       <div className="vjs-page-header">
         <button className="vjs-back-btn" onClick={() => navigate('/browse')}>
