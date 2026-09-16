@@ -8227,3 +8227,109 @@ a {
   .su-sub { display: none; }
   .su-form { gap: 9px; margin-bottom: 10px; }
 }
+
+/* ── PlanSelector: package cards subscribe button ── */
+.ps-select-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 14px; padding: 10px;
+  background: #e50914; color: #fff; border: none; border-radius: 8px;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  transition: background 0.2s;
+}
+.ps-select-btn:hover { background: #f40612; }
+
+/* ── PlanSelector overlay (phone / processing / result) ── */
+.ps-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.ps-overlay-sheet {
+  background: rgba(18,19,26,0.97);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 480px;
+  padding: 32px 28px 48px;
+  position: relative;
+  animation: su-slide-up 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.ps-overlay-close {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(255,255,255,0.08); border: none; color: #fff;
+  border-radius: 50%; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.ps-ov-icon { text-align: center; margin-bottom: 12px; }
+.ps-ov-title { font-size: 1.2rem; font-weight: 800; color: #fff; text-align: center; margin: 0 0 6px; }
+.ps-ov-sub { font-size: 0.88rem; color: #aaa; text-align: center; margin: 0 0 18px; }
+.ps-ov-error { color: #f87171; font-size: 0.8rem; margin: 6px 0 0; }
+.ps-ov-hint { font-size: 0.78rem; color: #666; text-align: center; margin-top: 12px; }
+.ps-ov-form { display: flex; flex-direction: column; gap: 0; }
+.ps-ov-center { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+.ps-ov-spinner { margin-bottom: 20px; }
+.ps-ov-success-icon, .ps-ov-fail-icon { margin-bottom: 16px; }
+.ps-ghost-btn {
+  padding: 11px 20px; border-radius: 8px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+  color: #ccc; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+}
+
+/* spinner animation */
+.ps-spin { animation: ps-rotate 0.9s linear infinite; }
+@keyframes ps-rotate { to { transform: rotate(360deg); } }
+
+/* ── UpgradeModal sheet ── */
+.um-backdrop {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.82); backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.um-sheet {
+  background: rgba(16,17,24,0.98);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 500px;
+  padding: 28px 24px 48px;
+  position: relative;
+  max-height: 92dvh; overflow-y: auto;
+  animation: su-slide-up 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.um-close {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(255,255,255,0.08); border: none; color: #fff;
+  border-radius: 50%; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.um-header { text-align: center; margin-bottom: 20px; }
+.um-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(229,9,20,0.15); border: 1px solid #e50914;
+  color: #ff4d4d; padding: 5px 12px; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;
+}
+.um-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; color: #fff; }
+.um-sub { font-size: 0.85rem; color: #aaa; margin: 0; }
+.um-loading { text-align: center; padding: 30px 0; color: #666; font-size: 0.9rem; }
+.um-pkg-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.um-pkg-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px; padding: 14px 16px; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.um-pkg-row:hover { border-color: #e50914; background: rgba(229,9,20,0.07); }
+.um-pkg-name { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.um-pkg-meta { font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 4px; }
+.um-pkg-desc { font-size: 0.78rem; color: #666; margin-top: 4px; }
+.um-pkg-price { text-align: right; flex-shrink: 0; margin-left: 12px; }
+.um-price-val { font-size: 1.15rem; font-weight: 800; color: #fff; display: block; }
+.um-price-cur { font-size: 0.72rem; color: #888; }
+.um-secure { display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 0.75rem; color: #555; }
+.um-ov-icon { text-align: center; margin-bottom: 14px; }
+.um-ov-title { font-size: 1.15rem; font-weight: 800; color: #fff; text-align: center; margin: 0 0 6px; }
+.um-ov-sub { font-size: 0.86rem; color: #aaa; text-align: center; margin: 0 0 16px; }
+.um-ov-error { color: #f87171; font-size: 0.8rem; margin: 6px 0 0; text-align: center; }
+.um-ov-hint { font-size: 0.78rem; color: #555; text-align: center; margin-top: 10px; }
+.um-ov-form { display: flex; flex-direction: column; gap: 0; }
+.um-ov-center { display: flex; flex-direction: column; align-items: center; padding: 12px 0; }

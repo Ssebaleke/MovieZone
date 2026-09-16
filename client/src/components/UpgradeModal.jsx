@@ -1,280 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, ShieldCheck, Zap, Star, Smartphone } from 'lucide-react';
+import { X, Check, ShieldCheck, Zap, Star, Smartphone, Clock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuccess }) {
   const [packages, setPackages] = useState([]);
-  const [selectedPkgId, setSelectedPkgId] = useState(null);
-  const [paymentMethod] = useState('mobile_money');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+
+  // step: 'packages' | 'phone' | 'processing' | 'success' | 'failed'
+  const [step, setStep] = useState('packages');
+  const [selectedPkg, setSelectedPkg] = useState(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [failMsg, setFailMsg] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      fetchPackages();
-    }
-  }, [isOpen]);
-
-  const fetchPackages = async () => {
+    if (!isOpen) return;
+    setStep('packages');
+    setPhoneNumber('');
+    setPhoneError('');
     setFetching(true);
-    setError('');
-    try {
-      const data = await api.get('/billing/packages');
-      setPackages(data || []);
-      if (data && data.length > 0) {
-        setSelectedPkgId(data[0].id);
-      }
-    } catch (err) {
-      console.error('Error fetching subscription packages:', err);
-      setError('Could not load packages. Please try again.');
-    } finally {
-      setFetching(false);
-    }
-  };
+    api.get('/billing/packages')
+      .then(d => setPackages(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setFetching(false));
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const formatInterval = (str) => {
+    if (!str) return '';
+    const map = {
+      '12_HOURS': '12 Hours', '24_HOURS': '24 Hours', '1_DAYS': '1 Day', '3_DAYS': '3 Days',
+      '7_DAYS': '7 Days', '14_DAYS': '14 Days', '30_DAYS': '30 Days', '3_MONTHS': '3 Months',
+      '6_MONTHS': '6 Months', '1_YEARS': '1 Year', 'DAILY': '1 Day', 'WEEKLY': '7 Days',
+      'MONTHLY': '30 Days', 'YEARLY': '1 Year'
+    };
+    return map[str.toUpperCase()] || str.replace(/_/g, ' ');
+  };
+
+  const handleSelectPkg = (pkg) => {
+    setSelectedPkg(pkg);
+    setPhoneNumber('');
+    setPhoneError('');
+    setStep('phone');
+  };
+
   const handlePay = async (e) => {
     e.preventDefault();
-    if (!selectedPkgId) {
-      setError('Please select a subscription package');
-      return;
-    }
-
-    if (paymentMethod === 'mobile_money' && !phoneNumber.trim()) {
-      setError('Please enter your Mobile Money phone number (e.g. 077XXXXXXX or 075XXXXXXX)');
-      return;
-    }
-
-    setError('');
-    setLoading(true);
-    setSuccessMsg('');
-
+    const phone = phoneNumber.trim();
+    if (!phone) { setPhoneError('Enter your MTN or Airtel number'); return; }
+    setPhoneError('');
+    setStep('processing');
     try {
-      const response = await api.post('/billing/subscribe-package', {
-        packageId: selectedPkgId,
-        paymentMethod,
-        phoneNumber: phoneNumber.trim()
+      const res = await api.post('/billing/subscribe-package', {
+        packageId: selectedPkg.id,
+        paymentMethod: 'mobile_money',
+        phoneNumber: phone
       });
-
-      if (response.checkoutUrl) {
-        setSuccessMsg('Redirecting to LivePay Card Payment Gateway...');
-        setTimeout(() => {
-          window.location.href = response.checkoutUrl;
-        }, 800);
-        return;
-      }
-
-      if (response.success) {
-        if (response.status === 'SUCCESS' && response.user) {
-          const storedUser = JSON.parse(localStorage.getItem('netflix_user') || '{}');
-          const updatedUser = {
-            ...storedUser,
-            plan: response.user.plan,
-            subscriptionStatus: response.user.subscriptionStatus
-          };
-          localStorage.setItem('netflix_user', JSON.stringify(updatedUser));
-
-          setSuccessMsg(`Payment Successful! You are now subscribed to ${response.user.plan}.`);
-          
-          setTimeout(() => {
-            onSubscriptionSuccess(updatedUser, movie);
-            onClose();
-          }, 1200);
+      if (res.success) {
+        if (res.status === 'SUCCESS' && res.user) {
+          const stored = JSON.parse(localStorage.getItem('netflix_user') || '{}');
+          stored.plan = res.user.plan;
+          stored.subscriptionStatus = res.user.subscriptionStatus;
+          localStorage.setItem('netflix_user', JSON.stringify(stored));
+          setStep('success');
+          setTimeout(() => { onSubscriptionSuccess(stored, movie); onClose(); }, 2500);
         } else {
-          setSuccessMsg(response.message || 'Payment prompt sent to your phone! Please complete PIN entry on your phone. Access will be activated once payment is confirmed.');
+          setStep('success');
+          setTimeout(() => onClose(), 3500);
         }
+      } else {
+        setFailMsg(res.message || 'Payment failed. Please try again.');
+        setStep('failed');
       }
     } catch (err) {
-      console.error('Payment error:', err);
-      setError(err.message || 'Payment processing failed. Please check details and try again.');
-    } finally {
-      setLoading(false);
+      setFailMsg(err.message || 'Payment failed. Please try again.');
+      setStep('failed');
     }
   };
 
-  const selectedPkg = packages.find(p => p.id === selectedPkgId);
-
   return (
-    <div className="modal-backdrop" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: '20px'
-    }}>
-      <div className="upgrade-modal-content" style={{
-        background: '#121318', border: '1px solid rgba(255, 255, 255, 0.15)',
-        borderRadius: '16px', maxWidth: '640px', width: '100%',
-        maxHeight: '90vh', overflowY: 'auto', color: '#fff',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.8)', padding: '28px',
-        position: 'relative'
-      }}>
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute', top: '18px', right: '18px',
-            background: 'rgba(255,255,255,0.1)', border: 'none',
-            color: '#fff', borderRadius: '50%', width: '32px', height: '32px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', transition: 'all 0.2s ease'
-          }}
-        >
-          <X size={18} />
-        </button>
+    <div className="um-backdrop" onClick={step === 'packages' ? onClose : undefined}>
+      <div className="um-sheet" onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            background: 'rgba(229, 9, 20, 0.15)', border: '1px solid #e50914',
-            color: '#ff4d4d', padding: '6px 14px', borderRadius: '20px',
-            fontSize: '0.85rem', fontWeight: '700', marginBottom: '12px'
-          }}>
-            <Star size={14} fill="#ff4d4d" /> UNLOCK PREMIUM STREAMING
-          </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: '800', margin: '0 0 8px 0' }}>
-            Subscription Package Required
-          </h2>
-          <p style={{ color: '#aaa', fontSize: '0.9rem', margin: 0 }}>
-            {movie ? `To watch "${movie.title}", please select a payment package below:` : 'Subscribe now to stream unlimited Luganda translated movies & series.'}
-          </p>
-        </div>
-
-        {error && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444',
-            color: '#f87171', padding: '12px 16px', borderRadius: '8px',
-            fontSize: '0.85rem', marginBottom: '20px'
-          }}>
-            {error}
-          </div>
-        )}
-
-        {successMsg && (
-          <div style={{
-            background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e',
-            color: '#4ade80', padding: '12px 16px', borderRadius: '8px',
-            fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center'
-          }}>
-            <Check size={18} style={{ display: 'inline', marginRight: '6px' }} />
-            {successMsg}
-          </div>
-        )}
-
-        {fetching ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#888' }}>
-            Loading available packages...
-          </div>
-        ) : (
-          <form onSubmit={handlePay}>
-            {/* Packages Grid */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-              {packages.map((pkg) => {
-                const isSelected = selectedPkgId === pkg.id;
-                return (
-                  <div
-                    key={pkg.id}
-                    onClick={() => setSelectedPkgId(pkg.id)}
-                    style={{
-                      border: isSelected ? '2px solid #e50914' : '1px solid rgba(255,255,255,0.1)',
-                      background: isSelected ? 'rgba(229, 9, 20, 0.08)' : '#1a1c23',
-                      borderRadius: '12px', padding: '16px 20px', cursor: 'pointer',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#fff' }}>
-                          {pkg.name}
-                        </h4>
-                        <span style={{
-                          background: 'rgba(255,255,255,0.1)', color: '#ccc',
-                          padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600'
-                        }}>
-                          {pkg.interval}
-                        </span>
+        {/* PACKAGES LIST */}
+        {step === 'packages' && (
+          <>
+            <button className="um-close" onClick={onClose}><X size={18} /></button>
+            <div className="um-header">
+              <div className="um-badge"><Star size={13} fill="#e50914" /> UNLOCK PREMIUM</div>
+              <h2 className="um-title">Choose a Plan</h2>
+              <p className="um-sub">
+                {movie ? `Subscribe to watch "${movie.title}"` : 'Subscribe to stream unlimited content.'}
+              </p>
+            </div>
+            {fetching ? (
+              <div className="um-loading">Loading packages…</div>
+            ) : (
+              <div className="um-pkg-list">
+                {packages.map(pkg => (
+                  <div key={pkg.id} className="um-pkg-row" onClick={() => handleSelectPkg(pkg)}>
+                    <div className="um-pkg-info">
+                      <div className="um-pkg-name">{pkg.name}</div>
+                      <div className="um-pkg-meta">
+                        <Clock size={11} /> {formatInterval(pkg.interval)} &nbsp;·&nbsp; {pkg.resolution} &nbsp;·&nbsp; {pkg.screens} screen{pkg.screens !== 1 ? 's' : ''}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#aaa' }}>
-                        {pkg.description || pkg.features}
-                      </p>
+                      {pkg.description && <div className="um-pkg-desc">{pkg.description}</div>}
                     </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '800', color: isSelected ? '#ff4d4d' : '#fff' }}>
-                        {pkg.price.toLocaleString()} <span style={{ fontSize: '0.8rem', color: '#aaa' }}>{pkg.currency}</span>
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>
-                        {pkg.resolution} • {pkg.screens} {pkg.screens === 1 ? 'Screen' : 'Screens'}
-                      </div>
+                    <div className="um-pkg-price">
+                      <span className="um-price-val">{pkg.price.toLocaleString()}</span>
+                      <span className="um-price-cur">{pkg.currency}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Payment Method — Mobile Money only */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                background: 'rgba(229,9,20,0.08)', border: '2px solid #e50914',
-                borderRadius: '8px', padding: '12px 16px'
-              }}>
-                <Smartphone size={18} color="#ff4d4d" />
-                <div>
-                  <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>Mobile Money (MTN / Airtel)</div>
-                  <div style={{ fontSize: '0.75rem', color: '#aaa' }}>Uganda Mobile Money payment</div>
-                </div>
-              </div>
-            </div>
-
-            {paymentMethod === 'mobile_money' && (
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '6px' }}>
-                  Enter Phone Number (e.g. 077XXXXXXX or 075XXXXXXX)
-                </label>
-                <input
-                  type="text"
-                  placeholder="0771234567"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  style={{
-                    width: '100%', padding: '12px', borderRadius: '8px',
-                    background: '#1a1c23', border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#fff', fontSize: '0.9rem', outline: 'none'
-                  }}
-                />
+                ))}
               </div>
             )}
-
-            {/* Pay Button */}
-            <button
-              type="submit"
-              disabled={loading || !selectedPkgId}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '10px',
-                border: 'none', background: '#e50914', color: '#fff',
-                fontWeight: '700', fontSize: '1rem', cursor: loading ? 'wait' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: '0 4px 15px rgba(229, 9, 20, 0.4)'
-              }}
-            >
-              {loading ? 'Processing Payment...' : (
-                <>
-                  <Zap size={18} fill="#fff" /> Pay {selectedPkg ? `${selectedPkg.price.toLocaleString()} ${selectedPkg.currency}` : ''} & Start Watching
-                </>
-              )}
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '14px', color: '#888', fontSize: '0.75rem' }}>
-              <ShieldCheck size={14} color="#46d369" /> Instant activation • Cancel anytime • 256-bit encrypted
-            </div>
-          </form>
+            <div className="um-secure"><ShieldCheck size={13} color="#46d369" /> Secure payment via LivePay</div>
+          </>
         )}
+
+        {/* PHONE NUMBER */}
+        {step === 'phone' && (
+          <>
+            <button className="um-close" onClick={() => setStep('packages')}><X size={18} /></button>
+            <div className="um-ov-icon"><Smartphone size={32} color="#e50914" /></div>
+            <h3 className="um-ov-title">Enter Phone Number</h3>
+            <p className="um-ov-sub">
+              Pay <strong>{selectedPkg?.price.toLocaleString()} {selectedPkg?.currency}</strong> · <strong>{selectedPkg?.name}</strong>
+            </p>
+            <form onSubmit={handlePay} className="um-ov-form">
+              <div className="ps-phone-row">
+                <span className="ps-phone-prefix">+256</span>
+                <input
+                  className="ps-phone-input"
+                  type="tel"
+                  placeholder="77 123 4567"
+                  value={phoneNumber}
+                  onChange={e => setPhoneNumber(e.target.value)}
+                  maxLength={10}
+                  autoFocus
+                />
+              </div>
+              {phoneError && <p className="um-ov-error">{phoneError}</p>}
+              <p className="ps-phone-hint">A payment prompt will be sent to this number. Approve it with your PIN.</p>
+              <button type="submit" className="ps-pay-btn"><Zap size={16} fill="#fff" /> Pay Now</button>
+            </form>
+          </>
+        )}
+
+        {/* PROCESSING */}
+        {step === 'processing' && (
+          <div className="um-ov-center">
+            <div className="ps-ov-spinner"><Loader2 size={48} color="#e50914" className="ps-spin" /></div>
+            <h3 className="um-ov-title">Processing Payment</h3>
+            <p className="um-ov-sub">Check your phone and enter your PIN to confirm.</p>
+            <p className="um-ov-hint">Please wait, do not close this…</p>
+          </div>
+        )}
+
+        {/* SUCCESS */}
+        {step === 'success' && (
+          <div className="um-ov-center">
+            <CheckCircle2 size={56} color="#46d369" />
+            <h3 className="um-ov-title" style={{ color: '#46d369' }}>Payment Successful!</h3>
+            <p className="um-ov-sub"><strong>{selectedPkg?.name}</strong> subscription is now active.</p>
+            <p className="um-ov-hint">Starting your content…</p>
+          </div>
+        )}
+
+        {/* FAILED */}
+        {step === 'failed' && (
+          <div className="um-ov-center">
+            <XCircle size={56} color="#e50914" />
+            <h3 className="um-ov-title" style={{ color: '#e50914' }}>Payment Failed</h3>
+            <p className="um-ov-sub">{failMsg}</p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%' }}>
+              <button className="ps-ghost-btn" onClick={onClose}>Cancel</button>
+              <button className="ps-pay-btn" style={{ flex: 1 }} onClick={() => setStep('phone')}>Try Again</button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
