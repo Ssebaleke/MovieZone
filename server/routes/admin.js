@@ -1,7 +1,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { getAccountStats, getAccountUsage, getTopAnalytics, getAccountActivity, getApiKey } from '../services/reelplexi.js';
+import { getAccountStats, getAccountUsage, getTopAnalytics, getAccountActivity, getApiKey, reelplexiFetch } from '../services/reelplexi.js';
 
 const router = express.Router();
 
@@ -268,12 +268,21 @@ router.get('/movies', async (req, res) => {
       if (res && Array.isArray(res.data)) {
         res.data.forEach(item => {
           const isShow = item.type === 'series' || item.type === 'SHOW';
-          const poster = item.poster_path ? (item.poster_path.startsWith('http') ? item.poster_path : `https://app.reelplexi.com${item.poster_path}`) : '';
+          let rawPoster = item.poster_url || item.poster_path || item.poster || item.thumbnailUrl;
+          if (rawPoster && typeof rawPoster === 'string') {
+            if (rawPoster.startsWith('/storage/') || rawPoster.startsWith('/uploads/')) {
+              rawPoster = `https://app.reelplexi.com${rawPoster}`;
+            } else if (rawPoster.startsWith('/')) {
+              rawPoster = `https://image.tmdb.org/t/p/w500${rawPoster}`;
+            } else if (!rawPoster.startsWith('http://') && !rawPoster.startsWith('https://')) {
+              rawPoster = `https://app.reelplexi.com/${rawPoster}`;
+            }
+          }
           liveItems.push({
             id: `rp_${item.id}`,
             reelplexiId: item.id,
             title: item.title,
-            thumbnailUrl: poster || 'https://image.tmdb.org/t/p/w500/1pdfLPoLkh9DjhYStB2ERmLFwhC.jpg',
+            thumbnailUrl: rawPoster || 'https://image.tmdb.org/t/p/w500/1pdfLPoLkh9DjhYStB2ERmLFwhC.jpg',
             vj: item.vj || 'VJ Junior',
             region: item.origin_country || 'UG',
             category: item.category || (isShow ? 'TV Series & Shows' : 'Ugandan VJ Exclusives'),

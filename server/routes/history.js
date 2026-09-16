@@ -65,7 +65,7 @@ router.post('/progress', async (req, res) => {
       const description = movieDetails?.description || 'Luganda audio translation by Ugandan VJ';
       const thumbnailUrl = movieDetails?.thumbnailUrl || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80';
       const backdropUrl = movieDetails?.backdropUrl || thumbnailUrl;
-      const videoUrl = movieDetails?.videoUrl || 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8';
+      const videoUrl = movieDetails?.videoUrl || '';
 
       try {
         await prisma.movie.create({

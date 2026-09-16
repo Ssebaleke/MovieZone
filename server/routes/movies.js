@@ -1,7 +1,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken, requireSubscription } from '../middleware/auth.js';
-import { reelplexiFetch } from '../services/reelplexi.js';
+import { reelplexiFetch, getApiKey } from '../services/reelplexi.js';
 
 const router = express.Router();
 
@@ -105,8 +105,9 @@ function resolveMovieMedia(item) {
 }
 
 // Helper to map Reelplexi API items to frontend schema
-function mapReelplexiItem(item) {
-  const isShow = item.type === 'series' || item.type === 'SHOW';
+function mapReelplexiItem(item, defaultType = null) {
+  const isShow = defaultType === 'SHOW' || item.type === 'series' || item.type === 'SHOW' || item.type === 'tv' || (item.seasons && item.seasons > 0);
+  const prefix = isShow ? 'rp_series_' : 'rp_movie_';
   // Derive region from origin country
   const country = (item.origin_country || item.originCountry || 'UG').toUpperCase();
   const regionMap = { KR: 'kdrama', CN: 'kdrama', TW: 'kdrama', JP: 'anime', IN: 'bollywood', NG: 'nollywood', GH: 'nollywood', MX: 'latin', BR: 'latin', TR: 'turkish', PH: 'filipino', TH: 'thai', UG: 'east-african', KE: 'east-african', TZ: 'east-african' };
@@ -114,17 +115,19 @@ function mapReelplexiItem(item) {
 
   const media = resolveMovieMedia(item);
 
+  const seasonsCount = Array.isArray(item.seasons) ? item.seasons.length : (typeof item.seasons === 'number' ? item.seasons : (item.no_of_seasons || 1));
+
   return {
-    id: `rp_${item.id}`,
+    id: `${prefix}${item.id}`,
     reelplexiId: item.id,
     title: item.title,
     description: item.overview || item.description || '',
     thumbnailUrl: media.poster,
     backdropUrl: media.backdrop,
-    videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
+    videoUrl: item.remux_url || item.stream_url || item.video_url || item.videoUrl || '',
     embedUrl: item.embed_url || item.embedUrl || '',
     tmdbId: item.tmdb_id ? String(item.tmdb_id) : null,
-    duration: isShow ? (item.seasons ? `${item.seasons} Season${item.seasons > 1 ? 's' : ''}` : 'Series') : (item.runtime ? `${item.runtime}m` : '2h'),
+    duration: isShow ? `${seasonsCount} Season${seasonsCount > 1 ? 's' : ''}` : (item.runtime ? `${item.runtime}m` : '2h'),
     releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : (item.releaseYear || 2024),
     rating: item.rating || item.content_rating || 'PG-13',
     genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || ''),
@@ -151,30 +154,30 @@ router.get('/', async (req, res) => {
       ]);
 
       if (vjMoviesRes && Array.isArray(vjMoviesRes.data)) {
-        vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
+        vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'MOVIE')));
       }
       if (vjSeriesRes && Array.isArray(vjSeriesRes.data)) {
-        vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item)));
+        vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'SHOW')));
       }
     } else {
-      // Fetch extensive multi-page catalog from Reelplexi API (12 pages of movies + 6 pages of series)
+      // Fetch extensive multi-page catalog from Reelplexi API
       const pageNum = parseInt(page, 10) || 1;
-      const startMovie = (pageNum - 1) * 10 + 1;
-      const moviePages = Array.from({ length: 12 }, (_, i) => startMovie + i);
-      const startSeries = (pageNum - 1) * 5 + 1;
-      const seriesPages = Array.from({ length: 6 }, (_, i) => startSeries + i);
+      const startMovie = (pageNum - 1) * 3 + 1;
+      const moviePages = [startMovie, startMovie + 1, startMovie + 2];
+      const startSeries = (pageNum - 1) * 2 + 1;
+      const seriesPages = [startSeries, startSeries + 1];
 
       const fetchPromises = [
-        ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p }).catch(() => null)),
-        ...seriesPages.map(p => reelplexiFetch('/series', { per_page: 100, page: p }).catch(() => null)),
-        reelplexiFetch('/trending', { per_page: 100 }).catch(() => null),
-        reelplexiFetch('/latest', { per_page: 100 }).catch(() => null)
+        ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p }).then(res => ({ type: 'MOVIE', res }))),
+        ...seriesPages.map(p => reelplexiFetch('/series', { per_page: 100, page: p }).then(res => ({ type: 'SHOW', res }))),
+        reelplexiFetch('/trending', { per_page: 100 }).then(res => ({ type: null, res })),
+        reelplexiFetch('/latest', { per_page: 100 }).then(res => ({ type: null, res }))
       ];
 
-      const results = await Promise.all(fetchPromises);
-      results.forEach(res => {
-        if (res && Array.isArray(res.data)) {
-          res.data.forEach(item => movies.push(mapReelplexiItem(item)));
+      const results = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
+      results.forEach(entry => {
+        if (entry && entry.res && Array.isArray(entry.res.data)) {
+          entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
         }
       });
     }
@@ -195,15 +198,14 @@ router.get('/', async (req, res) => {
 
     movies = [...movies, ...mappedDbMovies];
 
-    // Deduplicate by reelplexiId (or id for DB items), then filter out items with no poster
+    // Deduplicate by item id and title+type
     const seenIds = new Set();
     const seenTitles = new Set();
     movies = movies.filter(m => {
-      if (!m.thumbnailUrl) return false; // drop items with no poster image
-      const uid = m.reelplexiId || m.id;
+      if (!m.thumbnailUrl) return false;
+      const uid = m.id;
       if (seenIds.has(uid)) return false;
       seenIds.add(uid);
-      // Also deduplicate by title+type to avoid same movie from movies+trending endpoints
       const titleKey = `${m.title}__${m.type}`;
       if (seenTitles.has(titleKey)) return false;
       seenTitles.add(titleKey);
@@ -226,11 +228,10 @@ router.get('/', async (req, res) => {
       movies = movies.filter(item => item.type === type.toUpperCase());
     }
 
-    // Group movies into rich Genre Categories (Comedy, Romance, Action, Sci-Fi, Thrillers, Series)
+    // Group movies into rich Genre Categories
     let sortedCategories = [];
 
     if (vj) {
-      // When a specific VJ is selected, group by Action, Comedy, Drama, Series for that VJ
       const vjCategories = [
         { name: `Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
         { name: `Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
@@ -254,7 +255,6 @@ router.get('/', async (req, res) => {
         .map(([name, items]) => ({ name, movies: items }))
         .filter(c => c.movies.length > 0);
     } else {
-      // Main Screen: Group by Genres (Action, Comedy, Romance, Sci-Fi, Thrillers, Series, Trending)
       const genreCategories = [
         { name: 'Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && /action|trending|blockbuster/i.test(m.genres)) },
         { name: 'Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
@@ -287,7 +287,6 @@ router.get('/', async (req, res) => {
         .filter(c => c.movies.length > 0);
     }
 
-    // Ensure we have a featured movie for Hero Banner
     const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
 
     res.json({
@@ -332,38 +331,58 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Get single movie details with direct ReelPlexi video stream URL
+// Get single movie or series details with exact ReelPlexi stream URL
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
+    const isExplicitSeries = id.startsWith('rp_series_');
+    const isExplicitMovie = id.startsWith('rp_movie_');
+
     if (id.startsWith('rp_') || !isNaN(id)) {
       const cleanId = id.replace('rp_movie_', '').replace('rp_series_', '').replace('rp_', '');
 
-      // Try movie first, then series
-      let detailRes = await reelplexiFetch(`/movies/${cleanId}`).catch(() => null);
+      let detailRes = null;
       let isSeries = false;
-      if (!detailRes || (!detailRes.id && !detailRes.data)) {
+
+      if (isExplicitSeries) {
         detailRes = await reelplexiFetch(`/series/${cleanId}`).catch(() => null);
         isSeries = true;
+      } else if (isExplicitMovie) {
+        detailRes = await reelplexiFetch(`/movies/${cleanId}`).catch(() => null);
+        isSeries = false;
+      } else {
+        // Smart lookup for legacy rp_ IDs: check series first, then movies
+        detailRes = await reelplexiFetch(`/series/${cleanId}`).catch(() => null);
+        const rawSeries = detailRes?.data || detailRes;
+        if (rawSeries && rawSeries.id) {
+          isSeries = true;
+        } else {
+          detailRes = await reelplexiFetch(`/movies/${cleanId}`).catch(() => null);
+          isSeries = false;
+        }
       }
-
-      const streamRes = await reelplexiFetch(`/${isSeries ? 'series' : 'movies'}/${cleanId}/stream`).catch(() => null)
-        || await reelplexiFetch(`/stream/${isSeries ? 'tv' : 'movie'}/${cleanId}`).catch(() => null);
 
       const rawDetail = detailRes?.data || detailRes;
       if (rawDetail && rawDetail.id) {
-        const movie = mapReelplexiItem(rawDetail);
-        if (streamRes) {
-          movie.videoUrl = streamRes.stream_url || streamRes.video_url || streamRes.remux_url || movie.videoUrl;
-          movie.embedUrl = streamRes.embed_url || movie.embedUrl;
+        let streamRes = null;
+        if (isSeries) {
+          streamRes = await reelplexiFetch(`/series/${cleanId}/seasons/1/episodes/1/stream`).catch(() => null)
+            || await reelplexiFetch(`/series/${cleanId}/stream`).catch(() => null);
+        } else {
+          streamRes = await reelplexiFetch(`/movies/${cleanId}/stream`).catch(() => null);
         }
-        const available_vj_versions = [
-          { id: `${movie.id}_vj1`, vj: movie.vj || 'VJ Junior' },
-          { id: `${movie.id}_vj2`, vj: 'VJ Emmy' },
-          { id: `${movie.id}_vj3`, vj: 'VJ Ice P' }
-        ];
-        return res.json({ movie: { ...movie, available_vj_versions }, recommendations: [] });
+
+        const movie = mapReelplexiItem(rawDetail, isSeries ? 'SHOW' : 'MOVIE');
+        if (streamRes) {
+          // Prioritize stream_url over remux_url (which returns 404 on ReelPlexi API)
+          movie.videoUrl = streamRes.stream_url || streamRes.video_url || streamRes.remux_url || movie.videoUrl;
+          const apiKey = process.env.REELPLEXI_API_KEY || (await prisma.systemSetting.findUnique({ where: { key: 'REELPLEXI_API_KEY' } }))?.value;
+          movie.embedUrl = isSeries 
+            ? `https://api.reelplexi.com/v1/embed/tv/${cleanId}/1/1?api_key=${apiKey || ''}`
+            : `https://api.reelplexi.com/v1/embed/movie/${cleanId}?api_key=${apiKey || ''}`;
+        }
+        return res.json({ movie, recommendations: [] });
       }
     }
 
@@ -372,13 +391,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Movie or show not found' });
     }
 
-    const available_vj_versions = [
-      { id: `${movie.id}_vj1`, vj: movie.vj || 'VJ Junior', title: `${movie.title} (Voiced by ${movie.vj || 'VJ Junior'})` },
-      { id: `${movie.id}_vj2`, vj: 'VJ Emmy', title: `${movie.title} (Voiced by VJ Emmy)` },
-      { id: `${movie.id}_vj3`, vj: 'VJ Ice P', title: `${movie.title} (Voiced by VJ Ice P)` }
-    ];
-
-    res.json({ movie: { ...movie, available_vj_versions }, recommendations: [] });
+    res.json({ movie, recommendations: [] });
   } catch (error) {
     console.error('Error fetching movie details:', error);
     res.status(500).json({ error: 'Server error fetching details' });

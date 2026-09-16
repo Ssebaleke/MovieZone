@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
+import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize2, Minimize2, ArrowLeft, Loader2 } from 'lucide-react';
 import { api } from '../utils/api';
 
 export default function VideoPlayer({ movie, onClose }) {
-  // Common states
+  const [currentMovie, setCurrentMovie] = useState(movie);
+  const [loadingStream, setLoadingStream] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef(null);
   const currentProfile = JSON.parse(localStorage.getItem('netflix_profile') || '{}');
 
-  // Iframe Embed States (for vidsrc.sbs)
-  const [season, setSeason] = useState(1);
-  const [episode, setEpisode] = useState(1);
-
-  // Local/Custom Video Player States (Fallback)
+  // Video player controls state
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -21,44 +18,63 @@ export default function VideoPlayer({ movie, onClose }) {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const [useEmbedFallback, setUseEmbedFallback] = useState(false);
+
   const videoRef = useRef(null);
   const playerRef = useRef(null);
 
-  // Parse total seasons from duration string
-  const getSeasonsCount = () => {
-    if (!movie.duration) return 1;
-    const match = movie.duration.match(/(\d+)\s*Season/i);
-    if (match) {
-      return parseInt(match[1], 10);
+  // Fetch direct video stream URL for the exact movie selected
+  useEffect(() => {
+    setCurrentMovie(movie);
+    if (!movie?.id) {
+      setLoadingStream(false);
+      return;
     }
-    // Fallback based on typical count
-    return 6;
-  };
 
-  const getEpisodesCount = () => {
-    return 24; // Allow selecting up to 24 episodes per season
-  };
+    let isMounted = true;
+    setLoadingStream(true);
 
-  // Helper to save watch progress to server
+    api.get(`/movies/${movie.id}`)
+      .then(data => {
+        if (isMounted && data && data.movie) {
+          setCurrentMovie(prev => ({
+            ...prev,
+            ...data.movie
+          }));
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching stream for movie:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingStream(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [movie.id]);
+
+  // Helper to save watch progress bookmark to database
   const saveProgress = async (seconds) => {
+    const targetMovie = currentMovie || movie;
+    if (!currentProfile.id || !targetMovie.id) return;
     try {
       await api.post('/history/progress', {
         profileId: currentProfile.id,
-        movieId: movie.id,
+        movieId: targetMovie.id,
         progressSeconds: Math.floor(seconds),
         movieDetails: {
-          title: movie.title,
-          description: movie.description,
-          thumbnailUrl: movie.thumbnailUrl,
-          backdropUrl: movie.backdropUrl,
-          videoUrl: movie.videoUrl,
-          duration: movie.duration,
-          releaseYear: movie.releaseYear,
-          rating: movie.rating,
-          genres: movie.genres,
-          type: movie.type,
-          vj: movie.vj,
-          region: movie.region
+          title: targetMovie.title,
+          description: targetMovie.description,
+          thumbnailUrl: targetMovie.thumbnailUrl,
+          backdropUrl: targetMovie.backdropUrl,
+          videoUrl: targetMovie.videoUrl,
+          duration: targetMovie.duration,
+          releaseYear: targetMovie.releaseYear,
+          rating: targetMovie.rating,
+          genres: targetMovie.genres,
+          type: targetMovie.type,
+          vj: targetMovie.vj,
+          region: targetMovie.region
         }
       });
     } catch (err) {
@@ -66,47 +82,34 @@ export default function VideoPlayer({ movie, onClose }) {
     }
   };
 
-  // Register watch history on mount or when season/episode changes
+  // Register initial watch progress
   useEffect(() => {
-    if (movie.tmdbId && currentProfile.id) {
-      saveProgress(1); // Set progress to 1 to register in "Continue Watching"
+    if (currentMovie.id && currentProfile.id) {
+      saveProgress(1);
     }
-  }, [movie.id, season, episode]);
+  }, [currentMovie.id]);
 
-  // Handle controls auto-hide on mouse idle
+  // Controls auto-hide timer
   const handleMouseMove = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
-    }, 3500); // Hide controls after 3.5 seconds of inactivity
+    }, 3500);
   };
 
+  const activeVideoUrl = currentMovie.videoUrl || movie.videoUrl || '';
+  const activeEmbedUrl = currentMovie.embedUrl || movie.embedUrl || '';
+
+  const handleVideoError = (e) => {
+    console.warn("Native video tag playback error, switching to ReelPlexi official player:", e);
+    if (activeEmbedUrl) {
+      setUseEmbedFallback(true);
+    }
+  };
+
+  // Setup video source & restore progress bookmark
   useEffect(() => {
-    handleMouseMove();
-    return () => {
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    };
-  }, []);
-
-  // Use movie URLs directly — no re-fetch that could overwrite with wrong data
-  const activeVideoUrl = movie.videoUrl || '';
-  const directEmbedUrl = movie.embedUrl || '';
-  const isReelplexiStream = Boolean(activeVideoUrl && (
-    activeVideoUrl.includes('reelplexi.com') ||
-    activeVideoUrl.includes('mlegacytv.com') ||
-    activeVideoUrl.includes('stream/proxy') ||
-    activeVideoUrl.endsWith('.mp4') ||
-    activeVideoUrl.endsWith('.mkv') ||
-    activeVideoUrl.endsWith('.m3u8')
-  ));
-
-  // ----------------------------------------------------
-  // Local Player Effects & Handlers
-  // ----------------------------------------------------
-  useEffect(() => {
-    if (!isReelplexiStream && movie.tmdbId) return; // Skip custom video setup if falling back to external iframe
-
     const video = videoRef.current;
     if (!video || !activeVideoUrl) return;
 
@@ -134,7 +137,6 @@ export default function VideoPlayer({ movie, onClose }) {
         const history = await api.get(`/history/${currentProfile.id}`);
         const savedRecord = history.find(item => item.movie.id === movie.id);
         if (savedRecord && savedRecord.progressSeconds > 0) {
-          console.log(`Resuming custom playback at ${savedRecord.progressSeconds}s`);
           video.currentTime = savedRecord.progressSeconds;
         }
       } catch (err) {
@@ -142,19 +144,23 @@ export default function VideoPlayer({ movie, onClose }) {
       }
     };
 
-    video.addEventListener('loadedmetadata', () => {
+    const handleLoadedMetadata = () => {
       setDuration(video.duration);
       restoreBookmark();
-    });
+      video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
 
     return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       if (hls) {
         hls.destroy();
       }
     };
-  }, [activeVideoUrl, isReelplexiStream, movie.id, movie.tmdbId]);
+  }, [activeVideoUrl, movie.id]);
 
-  // Periodic watch progress check-in (every 5.5 seconds)
+  // Periodic watch progress check-in
   useEffect(() => {
     const interval = setInterval(() => {
       const video = videoRef.current;
@@ -248,7 +254,6 @@ export default function VideoPlayer({ movie, onClose }) {
     const hours = Math.floor(timeInSeconds / 3600);
     const minutes = Math.floor((timeInSeconds % 3600) / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-
     const paddedSeconds = seconds < 10 ? `0${seconds}` : seconds;
 
     if (hours > 0) {
@@ -258,139 +263,80 @@ export default function VideoPlayer({ movie, onClose }) {
     return `${minutes}:${paddedSeconds}`;
   };
 
-  // Server Selection States for fallback
-  const [activeServer, setActiveServer] = useState('pro-multi');
+  const targetMovie = currentMovie || movie;
 
-  const SERVERS = [
-    { id: 'pro-multi', name: 'Server 1 (Pro Multi)' },
-    { id: 'vidsrc-me', name: 'Server 2 (VidSrc Fast)' },
-    { id: 'embed-su', name: 'Server 3 (Ultra HD)' },
-    { id: '2embed', name: 'Server 4 (Multi-Lang)' }
-  ];
-
-  const getEmbedUrl = () => {
-    const isShow = movie.type === 'SHOW';
-    if (activeServer === 'vidsrc-me') {
-      return isShow
-        ? `https://vidsrc.me/embed/tv?tmdb=${movie.tmdbId}&season=${season}&episode=${episode}`
-        : `https://vidsrc.me/embed/movie?tmdb=${movie.tmdbId}`;
-    }
-    if (activeServer === 'embed-su') {
-      return isShow
-        ? `https://embed.su/embed/tv/${movie.tmdbId}/${season}/${episode}`
-        : `https://embed.su/embed/movie/${movie.tmdbId}`;
-    }
-    if (activeServer === '2embed') {
-      return isShow
-        ? `https://www.2embed.cc/embedtv/${movie.tmdbId}&s=${season}&e=${episode}`
-        : `https://www.2embed.cc/embed/${movie.tmdbId}`;
-    }
-    return isShow
-      ? `https://vidsrc.sbs/embed/tv/${movie.tmdbId}/${season}/${episode}`
-      : `https://vidsrc.sbs/embed/movie/${movie.tmdbId}`;
-  };
-
-  // ----------------------------------------------------
-  // Render Method
-  // ----------------------------------------------------
-  if (!isReelplexiStream && movie.tmdbId) {
-    const isMobileView = window.innerWidth <= 768;
-    // Return Fallback Iframe Player ONLY if ReelPlexi direct stream is unavailable
-    return (
-      <div
-        ref={playerRef}
-        className="custom-player-wrapper"
-        onMouseMove={handleMouseMove}
-        style={{ background: '#000' }}
-      >
-        <iframe
-          key={`${activeServer}-${season}-${episode}`}
-          src={getEmbedUrl()}
-          allowFullScreen
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', zIndex: 1 }}
-          title={movie.title}
-        />
-
-        {/* Controls overlay */}
-        <div className={`vp-controls-bar ${showControls ? 'vp-controls-bar--visible' : ''}`}>
-          <div className="vp-top-bar">
-            <button className="vp-back-btn" onClick={onClose}>
-              <ArrowLeft size={22} color="#fff" />
-            </button>
-            <div className="vp-title">
-              {movie.title}
-              {movie.vj && <span className="vp-vj-badge">{movie.vj}</span>}
-            </div>
-          </div>
-
-          {/* Server + Season/Episode selectors */}
-          <div className="vp-selectors-row">
-            <div className="vp-selector-group">
-              <label className="vp-selector-label">Server</label>
-              <select className="vp-select" value={activeServer} onChange={(e) => setActiveServer(e.target.value)}>
-                {SERVERS.map((srv) => (
-                  <option key={srv.id} value={srv.id}>{srv.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {movie.type === 'SHOW' && (
-              <>
-                <div className="vp-selector-group">
-                  <label className="vp-selector-label">Season</label>
-                  <select className="vp-select" value={season} onChange={(e) => { setSeason(parseInt(e.target.value, 10)); setEpisode(1); }}>
-                    {Array.from({ length: getSeasonsCount() }, (_, i) => i + 1).map((s) => (
-                      <option key={s} value={s}>S{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="vp-selector-group">
-                  <label className="vp-selector-label">Episode</label>
-                  <select className="vp-select" value={episode} onChange={(e) => setEpisode(parseInt(e.target.value, 10))}>
-                    {Array.from({ length: getEpisodesCount() }, (_, i) => i + 1).map((ep) => (
-                      <option key={ep} value={ep}>E{ep}</option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback to Native HTML5/HLS Player for custom uploaded videos
   return (
     <div
       ref={playerRef}
       className="custom-player-wrapper"
       onMouseMove={handleMouseMove}
+      style={{ background: '#000' }}
     >
-      <video
-        ref={videoRef}
-        className="custom-player-video"
-        onTimeUpdate={handleTimeUpdate}
-        onClick={togglePlay}
-        autoPlay
-        playsInline
-      />
+      {/* Loading Indicator */}
+      {loadingStream && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(0,0,0,0.85)',
+          zIndex: 10,
+          color: '#fff',
+          gap: '12px'
+        }}>
+          <Loader2 className="animate-spin" size={48} color="#E50914" />
+          <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Loading {targetMovie.title}...
+          </div>
+          {targetMovie.vj && (
+            <div style={{ fontSize: '0.85rem', color: '#aaa' }}>
+              Voiced by {targetMovie.vj}
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* Native Video Element or ReelPlexi Official Embed Player */}
+      {useEmbedFallback && activeEmbedUrl ? (
+        <iframe
+          src={activeEmbedUrl}
+          title={targetMovie.title}
+          style={{ width: '100%', height: '100%', border: 'none', background: '#000' }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          className="custom-player-video"
+          onTimeUpdate={handleTimeUpdate}
+          onError={handleVideoError}
+          onClick={togglePlay}
+          autoPlay
+          playsInline
+        />
+      )}
+
+      {/* Custom Video Player Controls Overlay */}
       <div className={`player-controls-overlay ${showControls ? 'active' : ''}`}>
         
-        {/* Top Row: Back button & Title */}
+        {/* Top Header Row: Back button & Title */}
         <div className="player-top-row">
-          <button className="player-back-btn" onClick={onClose}>
+          <button className="player-back-btn" onClick={onClose} title="Back">
             <ArrowLeft size={30} color="#fff" />
           </button>
-          <div className="player-title">{movie.title}</div>
+          <div className="player-title">
+            {targetMovie.title}
+            {targetMovie.vj && <span style={{ marginLeft: '10px', fontSize: '0.85rem', background: '#E50914', color: '#fff', padding: '2px 8px', borderRadius: '4px' }}>{targetMovie.vj}</span>}
+          </div>
         </div>
 
-        {/* Bottom Row: Slider timeline & Buttons */}
+        {/* Bottom Controls Area */}
         <div className="player-bottom-controls">
           
-          {/* Timeline slider seek bar */}
+          {/* Timeline Seek Bar */}
           <div className="player-timeline-container">
             <span className="player-time-display">{formatTime(currentTime)}</span>
             <input
@@ -405,11 +351,11 @@ export default function VideoPlayer({ movie, onClose }) {
             <span className="player-time-display">{formatTime(duration - currentTime)}</span>
           </div>
 
-          {/* Control Buttons Row */}
+          {/* Controls Button Bar */}
           <div className="player-buttons-row">
             <div className="player-buttons-left">
               
-              {/* Play / Pause */}
+              {/* Play / Pause Toggle */}
               <button className="player-control-icon-btn" onClick={togglePlay}>
                 {isPlaying ? <Pause size={28} fill="#fff" /> : <Play size={28} fill="#fff" />}
               </button>
@@ -424,7 +370,7 @@ export default function VideoPlayer({ movie, onClose }) {
                 <span style={{ fontSize: '0.65rem', position: 'absolute', fontWeight: 'bold' }}>10</span>
               </button>
 
-              {/* Volume Controls */}
+              {/* Volume & Mute */}
               <div className="volume-slider-group">
                 <button className="player-control-icon-btn" onClick={toggleMute}>
                   {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
@@ -444,7 +390,7 @@ export default function VideoPlayer({ movie, onClose }) {
 
             <div className="player-buttons-right">
               
-              {/* Speed Multiplier dropdown */}
+              {/* Playback Speed Selector */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.85rem', color: '#888' }}>Speed</span>
                 <select

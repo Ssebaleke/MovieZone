@@ -19,3 +19,8 @@ server/dev.db-journal
 Thumbs.db
 .vscode/
 .idea/
+
+# Scratch and tar archives
+scratch/
+*.tar.gz
+
