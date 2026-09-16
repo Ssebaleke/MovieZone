@@ -1,5 +1,6 @@
 import express from 'express';
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -107,44 +108,92 @@ router.get('/packages', async (req, res) => {
 // Safe Transaction DB Helpers to prevent undefined delegate issues
 async function safeCreateTransaction(data) {
   if (prisma.transaction) {
-    return await prisma.transaction.create({ data });
+    try {
+      return await prisma.transaction.create({ data });
+    } catch (e) {
+      console.warn('prisma.transaction.create failed, fallback to raw sql:', e.message);
+    }
   }
   const id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(7);
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO "Transaction" ("id", "userId", "email", "phoneNumber", "packageId", "packageName", "amount", "currency", "paymentMethod", "reference", "status", "errorMessage", "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-    id, data.userId || null, data.email, data.phoneNumber || null, data.packageId || null, data.packageName,
-    data.amount, data.currency || 'UGX', data.paymentMethod || 'mobile_money', data.reference, data.status || 'PENDING', data.errorMessage || null
-  );
-  return { id, ...data };
+  try {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Transaction" ("id", "userId", "email", "phoneNumber", "packageId", "packageName", "amount", "currency", "paymentMethod", "reference", "status", "errorMessage", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      id, data.userId || null, data.email, data.phoneNumber || null, data.packageId || null, data.packageName,
+      data.amount, data.currency || 'UGX', data.paymentMethod || 'mobile_money', data.reference, data.status || 'PENDING', data.errorMessage || null
+    );
+    return { id, ...data };
+  } catch (e) {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO transaction (id, "userId", email, "phoneNumber", "packageId", "packageName", amount, currency, "paymentMethod", reference, status, "errorMessage", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      id, data.userId || null, data.email, data.phoneNumber || null, data.packageId || null, data.packageName,
+      data.amount, data.currency || 'UGX', data.paymentMethod || 'mobile_money', data.reference, data.status || 'PENDING', data.errorMessage || null
+    );
+    return { id, ...data };
+  }
 }
 
 async function safeUpdateTransaction(id, data) {
   if (prisma.transaction) {
-    return await prisma.transaction.update({ where: { id }, data });
+    try {
+      return await prisma.transaction.update({ where: { id }, data });
+    } catch (e) {}
   }
-  const setParts = [];
+  const setPartsQuoted = [];
+  const setPartsUnquoted = [];
   const params = [];
   let idx = 1;
 
-  if (data.status !== undefined) { setParts.push(`"status" = $${idx++}`); params.push(data.status); }
-  if (data.livepayRef !== undefined) { setParts.push(`"livepayRef" = $${idx++}`); params.push(data.livepayRef); }
-  if (data.errorMessage !== undefined) { setParts.push(`"errorMessage" = $${idx++}`); params.push(data.errorMessage); }
-  setParts.push(`"updatedAt" = CURRENT_TIMESTAMP`);
+  if (data.status !== undefined) { 
+    setPartsQuoted.push(`"status" = $${idx}`); 
+    setPartsUnquoted.push(`status = $${idx}`); 
+    params.push(data.status); 
+    idx++; 
+  }
+  if (data.livepayRef !== undefined) { 
+    setPartsQuoted.push(`"livepayRef" = $${idx}`); 
+    setPartsUnquoted.push(`livepayref = $${idx}`); 
+    params.push(data.livepayRef); 
+    idx++; 
+  }
+  if (data.errorMessage !== undefined) { 
+    setPartsQuoted.push(`"errorMessage" = $${idx}`); 
+    setPartsUnquoted.push(`errormessage = $${idx}`); 
+    params.push(data.errorMessage); 
+    idx++; 
+  }
+  setPartsQuoted.push(`"updatedAt" = CURRENT_TIMESTAMP`);
+  setPartsUnquoted.push(`updatedat = CURRENT_TIMESTAMP`);
   params.push(id);
 
-  if (setParts.length > 1) {
-    await prisma.$executeRawUnsafe(`UPDATE "Transaction" SET ${setParts.join(', ')} WHERE "id" = $${idx}`, ...params);
+  if (setPartsQuoted.length > 1) {
+    try {
+      await prisma.$executeRawUnsafe(`UPDATE "Transaction" SET ${setPartsQuoted.join(', ')} WHERE "id" = $${idx}`, ...params);
+    } catch (e) {
+      await prisma.$executeRawUnsafe(`UPDATE transaction SET ${setPartsUnquoted.join(', ')} WHERE id = $${idx}`, ...params);
+    }
   }
   return { id, ...data };
 }
 
 async function safeFindTransactionByRef(reference) {
+  if (!reference) return null;
   if (prisma.transaction) {
-    return await prisma.transaction.findUnique({ where: { reference } });
+    try {
+      const tx = await prisma.transaction.findUnique({ where: { reference } });
+      if (tx) return tx;
+    } catch (e) {}
   }
-  const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Transaction" WHERE "reference" = $1 LIMIT 1`, reference);
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  try {
+    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Transaction" WHERE "reference" = $1 LIMIT 1`, reference);
+    if (Array.isArray(rows) && rows.length > 0) return rows[0];
+  } catch (e) {}
+  try {
+    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM transaction WHERE reference = $1 LIMIT 1`, reference);
+    if (Array.isArray(rows) && rows.length > 0) return rows[0];
+  } catch (e) {}
+  return null;
 }
 
 // Process dynamic package payment checkout (Mobile Money via LivePay / Card)
@@ -156,11 +205,25 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
   }
 
   try {
-    const pkg = await prisma.package.findUnique({
-      where: { id: packageId }
-    });
+    let pkg = null;
+    if (prisma.package) {
+      pkg = await prisma.package.findFirst({
+        where: {
+          OR: [
+            { id: String(packageId) },
+            { slug: String(packageId) }
+          ]
+        }
+      }).catch(() => null);
+    }
+    if (!pkg) {
+      const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Package" WHERE "id" = $1 OR "slug" = $1 LIMIT 1`, String(packageId)).catch(() => []);
+      if (Array.isArray(rows) && rows.length > 0) {
+        pkg = rows[0];
+      }
+    }
 
-    if (!pkg || !pkg.isActive) {
+    if (!pkg || (pkg.isActive === false || pkg.isActive === 0)) {
       return res.status(404).json({ error: 'Selected subscription package is invalid or inactive' });
     }
 
@@ -189,16 +252,27 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
     let livepayEnabled = true;
 
     try {
-      const allSettings = await prisma.systemSetting.findMany({
-        where: {
-          key: { in: ['LIVEPAY_API_KEY', 'LIVEPAY_ACCOUNT_NUMBER', 'LIVEPAY_ENABLED'] }
+      if (prisma.systemSetting) {
+        const allSettings = await prisma.systemSetting.findMany({
+          where: {
+            key: { in: ['LIVEPAY_API_KEY', 'LIVEPAY_ACCOUNT_NUMBER', 'LIVEPAY_ENABLED'] }
+          }
+        });
+        allSettings.forEach(s => {
+          if (s.key === 'LIVEPAY_API_KEY') livepayApiKey = s.value ? s.value.trim() : '';
+          if (s.key === 'LIVEPAY_ACCOUNT_NUMBER') livepayAccountNumber = s.value ? s.value.trim() : '';
+          if (s.key === 'LIVEPAY_ENABLED') livepayEnabled = s.value !== 'false';
+        });
+      } else {
+        const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "SystemSetting" WHERE "key" IN ('LIVEPAY_API_KEY', 'LIVEPAY_ACCOUNT_NUMBER', 'LIVEPAY_ENABLED')`).catch(() => []);
+        if (Array.isArray(rows)) {
+          rows.forEach(s => {
+            if (s.key === 'LIVEPAY_API_KEY') livepayApiKey = s.value ? s.value.trim() : '';
+            if (s.key === 'LIVEPAY_ACCOUNT_NUMBER') livepayAccountNumber = s.value ? s.value.trim() : '';
+            if (s.key === 'LIVEPAY_ENABLED') livepayEnabled = s.value !== 'false';
+          });
         }
-      });
-      allSettings.forEach(s => {
-        if (s.key === 'LIVEPAY_API_KEY') livepayApiKey = s.value ? s.value.trim() : '';
-        if (s.key === 'LIVEPAY_ACCOUNT_NUMBER') livepayAccountNumber = s.value ? s.value.trim() : '';
-        if (s.key === 'LIVEPAY_ENABLED') livepayEnabled = s.value !== 'false';
-      });
+      }
     } catch (sErr) {
       console.warn('SystemSetting lookup error:', sErr.message);
     }
@@ -368,8 +442,8 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
       user: req.user
     });
   } catch (error) {
-    console.error('Subscribe package error:', error);
-    res.status(500).json({ error: 'Failed to process package subscription' });
+    console.error('Subscribe package error details:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to process package subscription: ' + error.message });
   }
 });
 
@@ -398,44 +472,102 @@ router.get('/transaction-status/:reference', authenticateToken, async (req, res)
   }
 });
 
-// LivePay Webhook / Callback endpoint
-router.post('/livepay-callback', async (req, res) => {
-  const body = req.body || {};
-  const reference = body.reference || body.tx_ref || body.reference_id || body.ref;
-  const status = body.status || body.payment_status || body.transaction_status;
-  const livepayRef = body.livepayRef || body.transactionId || body.transaction_id || body.tx_id;
-  const errorMessage = body.errorMessage || body.message || body.error || null;
-
-  console.log('Received LivePay Webhook Callback:', { reference, status, livepayRef, errorMessage });
-
-  // Verify Webhook Secret if configured by Admin
+// Helper function for official LivePay Webhook Signature Verification
+function verifyLivePayWebhookSignature(payload, signatureHeader, webhookUrl, secret) {
+  if (!signatureHeader || !secret) return true;
   try {
-    const secretSetting = await prisma.systemSetting.findUnique({ where: { key: 'LIVEPAY_WEBHOOK_SECRET' } });
-    if (secretSetting && secretSetting.value && secretSetting.value.trim()) {
-      const expectedSecret = secretSetting.value.trim();
-      const providedSecret = req.headers['x-livepay-secret'] || req.headers['x-webhook-secret'] || req.query.secret || body.secret || body.webhook_secret;
+    const parts = signatureHeader.split(',');
+    let timestamp = '';
+    let receivedSignature = '';
+    for (const part of parts) {
+      const p = part.trim();
+      if (p.startsWith('t=')) timestamp = p.split('=')[1];
+      if (p.startsWith('v=')) receivedSignature = p.split('=')[1];
+    }
 
-      if (providedSecret && providedSecret.trim() !== expectedSecret) {
-        console.warn('Webhook secret verification failed for reference:', reference);
-        return res.status(401).json({ error: 'Invalid webhook verification secret' });
+    const params = {
+      status: payload.status,
+      customer_reference: payload.customer_reference,
+      internal_reference: payload.internal_reference
+    };
+
+    const sortedKeys = Object.keys(params).sort();
+    let stringToSign = webhookUrl + timestamp;
+    for (const key of sortedKeys) {
+      stringToSign += key + (params[key] !== undefined && params[key] !== null ? params[key] : '');
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(stringToSign)
+      .digest('hex');
+
+    return receivedSignature === expectedSignature;
+  } catch (err) {
+    console.error('Error verifying LivePay signature:', err);
+    return false;
+  }
+}
+
+// LivePay Webhook / Callback endpoint (supports POST, GET, etc.)
+router.all('/livepay-callback', async (req, res) => {
+  const body = req.body || {};
+  const query = req.query || {};
+
+  // Extract reference according to official LivePay Webhook spec
+  const reference = body.customer_reference || body.reference || body.tx_ref || body.reference_id || body.ref || body.internal_reference || query.customer_reference || query.reference || query.ref;
+  const rawStatus = body.status || body.payment_status || body.transaction_status || body.code || query.status || query.payment_status;
+  const livepayRef = body.provider_transaction_id || body.internal_reference || body.livepayRef || body.transactionId || body.tx_id || query.provider_transaction_id || query.livepayRef;
+  const errorMessage = body.message || body.errorMessage || body.error || query.message || null;
+
+  console.log('Received LivePay Official Webhook Callback:', {
+    reference,
+    rawStatus,
+    livepayRef,
+    customer_reference: body.customer_reference,
+    internal_reference: body.internal_reference,
+    provider_transaction_id: body.provider_transaction_id,
+    msisdn: body.msisdn,
+    amount: body.amount
+  });
+
+  // Signature Verification using X-Webhook-Signature header
+  try {
+    let webhookSecret = '';
+    const secretSetting = await prisma.systemSetting.findFirst({ where: { key: 'LIVEPAY_WEBHOOK_SECRET' } }).catch(() => null);
+    if (secretSetting && secretSetting.value && secretSetting.value.trim()) {
+      webhookSecret = secretSetting.value.trim();
+    }
+
+    const sigHeader = req.headers['x-webhook-signature'] || req.headers['x-livepay-signature'] || req.headers['x-webhook-secret'];
+    if (webhookSecret && sigHeader) {
+      const fullWebhookUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+      const isValidSig = verifyLivePayWebhookSignature(body, sigHeader, fullWebhookUrl, webhookSecret);
+      if (!isValidSig) {
+        console.warn('LivePay HMAC Signature Verification Failed for ref:', reference);
+        return res.status(401).json({ error: 'Invalid LivePay webhook signature' });
       }
     }
-  } catch (sErr) {}
+  } catch (sErr) {
+    console.warn('Webhook signature check exception:', sErr.message);
+  }
 
   if (!reference) {
-    return res.json({ success: false, message: 'Missing transaction reference' });
+    return res.json({ success: false, message: 'Missing customer reference' });
   }
 
   try {
     const tx = await safeFindTransactionByRef(reference);
 
     if (!tx) {
-      console.warn('Webhook callback received for unknown reference:', reference);
-      return res.status(404).json({ error: 'Transaction not found for reference ' + reference });
+      console.warn('Webhook callback received for reference not found in DB:', reference);
+      // Return 200 OK as required by LivePay docs so LivePay does not keep retrying unknown test refs
+      return res.status(200).json({ success: false, message: 'Transaction not found for reference ' + reference });
     }
 
-    const isSuccess = String(status).toUpperCase() === 'SUCCESS' || String(status).toUpperCase() === 'COMPLETED' || String(status).toUpperCase() === 'SUCCESSFUL';
-    const isFailed = String(status).toUpperCase() === 'FAILED' || String(status).toUpperCase() === 'CANCELLED' || String(status).toUpperCase() === 'DECLINED';
+    const statusStr = String(rawStatus || '').toUpperCase().trim();
+    const isSuccess = ['SUCCESS', 'COMPLETED', 'SUCCESSFUL', 'PAID', '00', '200', 'TRUE', '1', 'APPROVED'].includes(statusStr);
+    const isFailed = ['FAILED', 'CANCELLED', 'DECLINED', 'REJECTED', 'EXPIRED', 'ERROR'].includes(statusStr);
 
     if (isSuccess) {
       await safeUpdateTransaction(tx.id, { status: 'SUCCESS', livepayRef: livepayRef || tx.livepayRef });
@@ -443,7 +575,9 @@ router.post('/livepay-callback', async (req, res) => {
       if (tx.userId) {
         let pkg = null;
         if (tx.packageId) {
-          pkg = await prisma.package.findUnique({ where: { id: tx.packageId } }).catch(() => null);
+          pkg = await prisma.package.findFirst({
+            where: { OR: [{ id: String(tx.packageId) }, { slug: String(tx.packageId) }] }
+          }).catch(() => null);
         }
         const expiration = calculateExpirationDate(pkg?.interval || '30_DAYS');
 
@@ -455,12 +589,14 @@ router.post('/livepay-callback', async (req, res) => {
             subscriptionEnd: expiration
           }
         });
+        console.log(`[AUTOMATIC ACTIVATION SUCCESS] Granted ACTIVE premium access to user ${tx.userId} for plan ${tx.packageName}!`);
       }
     } else if (isFailed) {
       await safeUpdateTransaction(tx.id, { status: 'FAILED', errorMessage: errorMessage || 'Payment declined or cancelled' });
     }
 
-    res.json({
+    // Must return 200 OK within 10 seconds as required by LivePay official documentation
+    res.status(200).json({
       success: true,
       message: 'Callback processed successfully',
       reference,
