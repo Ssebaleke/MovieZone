@@ -1763,8 +1763,9 @@ a {
   display: flex;
   gap: 14px;
   overflow-x: scroll;
+  overflow-y: visible;
   scroll-behavior: smooth;
-  padding: 16px 0;
+  padding: 60px 0 20px;
 }
 
 .movie-cards-track::-webkit-scrollbar {
@@ -1820,15 +1821,21 @@ a {
 /* Expand scale on hover card */
 .hover-card-expanded {
   position: absolute;
-  top: -80px;
-  left: -20px;
-  width: 320px;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
   background: var(--card-bg);
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
-  z-index: 100;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.08);
+  z-index: 200;
   overflow: hidden;
-  transition: var(--transition-smooth);
+  animation: hoverCardIn 0.18s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes hoverCardIn {
+  from { opacity: 0; transform: translateX(-50%) scale(0.94); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 .hover-card-video-container {
