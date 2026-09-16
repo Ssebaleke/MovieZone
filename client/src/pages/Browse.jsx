@@ -22,6 +22,7 @@ export default function Browse() {
   const [activeTab, setActiveTab] = useState('home');
   const [activeVJ, setActiveVJ] = useState('');
   const [activeRegion, setActiveRegion] = useState('');
+  const [activeGenre, setActiveGenre] = useState('');
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +80,7 @@ export default function Browse() {
     }
     
     fetchBrowseData();
-  }, [navigate, activeTab, activeVJ, activeRegion]);
+  }, [navigate, activeTab, activeVJ, activeRegion, activeGenre]);
 
   const fetchBrowseData = async () => {
     try {
@@ -92,6 +93,7 @@ export default function Browse() {
       if (activeTab === 'movies') queryParams.push('type=MOVIE');
       if (activeTab === 'latest') queryParams.push('latest=true');
       if (activeTab === 'trending') queryParams.push('trending=true');
+      if (activeGenre) queryParams.push(`genre=${encodeURIComponent(activeGenre)}`);
 
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
 
@@ -164,6 +166,7 @@ export default function Browse() {
   const getFilterHeader = () => {
     if (activeVJ) return `Showing titles translated by ${activeVJ}`;
     if (activeRegion) return `Showing ${activeRegion.toUpperCase()} titles`;
+    if (activeGenre) return `${activeGenre} Movies & Shows`;
     if (activeTab === 'series') return `TV Series & Shows Catalog`;
     if (activeTab === 'movies') return `Feature Movies Catalog`;
     if (activeTab === 'latest') return `Latest Additions & Releases`;
@@ -237,32 +240,25 @@ export default function Browse() {
           <CategoryDiscovery
             onSelectPill={(genre) => {
               if (genre === 'All') {
-                setActiveTab('home');
-                setActiveVJ('');
-                setActiveRegion('');
+                setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre('');
               } else if (genre === 'K-Drama') {
-                setActiveRegion('kdrama');
-                setActiveVJ('');
+                setActiveRegion('kdrama'); setActiveVJ(''); setActiveGenre(''); setActiveTab('home');
               } else if (genre === 'Anime') {
-                setActiveRegion('anime');
-                setActiveVJ('');
-              } else if (genre === 'Action' || genre === 'Comedy' || genre === 'Drama' || genre === 'Horror' || genre === 'Romance' || genre === 'Thriller' || genre === 'Fantasy') {
-                setActiveTab('movies');
+                setActiveRegion('anime'); setActiveVJ(''); setActiveGenre(''); setActiveTab('home');
+              } else {
+                setActiveGenre(genre); setActiveTab('home'); setActiveVJ(''); setActiveRegion('');
               }
             }}
             onSelectTopic={(card) => {
               if (card.regionKey) {
-                setActiveRegion(card.regionKey);
-                setActiveVJ('');
+                setActiveRegion(card.regionKey); setActiveVJ(''); setActiveGenre('');
               } else if (card.vjKey) {
-                setActiveVJ(card.vjKey);
-                setActiveRegion('');
+                setActiveVJ(card.vjKey); setActiveRegion(''); setActiveGenre('');
               } else if (card.genreKey) {
-                setActiveTab('movies');
-                setActiveVJ('');
-                setActiveRegion('');
+                setActiveGenre(card.genreKey); setActiveVJ(''); setActiveRegion(''); setActiveTab('home');
               }
             }}
+            activeGenre={activeGenre}
           />
 
           <div style={{ paddingBottom: '60px', position: 'relative', zIndex: '5', background: '#141414' }}>
@@ -275,7 +271,7 @@ export default function Browse() {
                 </h2>
                 <button
                   style={{ background: '#333', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}
-                  onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); }}
+                  onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); setActiveGenre(''); }}
                 >
                   Clear Filters
                 </button>

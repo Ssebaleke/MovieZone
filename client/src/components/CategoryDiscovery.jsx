@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 const GENRE_PILLS = [
   'All',
@@ -51,21 +51,23 @@ const TOPIC_CARDS = [
   }
 ];
 
-export default function CategoryDiscovery({ onSelectPill, onSelectTopic, activePill = 'All' }) {
-  const [selectedPill, setSelectedPill] = useState(activePill);
+export default function CategoryDiscovery({ onSelectPill, onSelectTopic, activeGenre = '' }) {
+  const getActivePill = () => {
+    if (!activeGenre) return 'All';
+    if (activeGenre === 'kdrama') return 'K-Drama';
+    if (activeGenre === 'anime') return 'Anime';
+    return activeGenre;
+  };
 
   const handlePillClick = (genre) => {
-    setSelectedPill(genre);
-    if (onSelectPill) {
-      onSelectPill(genre);
-    }
+    if (onSelectPill) onSelectPill(genre);
   };
 
   const handleCardClick = (card) => {
-    if (onSelectTopic) {
-      onSelectTopic(card);
-    }
+    if (onSelectTopic) onSelectTopic(card);
   };
+
+  const activePill = getActivePill();
 
   return (
     <section className="category-discovery-section">
@@ -73,11 +75,10 @@ export default function CategoryDiscovery({ onSelectPill, onSelectTopic, activeP
       <div className="genre-pills-scroll-container">
         <div className="genre-pills-wrapper">
           {GENRE_PILLS.map((genre) => {
-            const isActive = selectedPill.toLowerCase() === genre.toLowerCase();
             return (
               <button
                 key={genre}
-                className={`genre-pill ${isActive ? 'active' : ''}`}
+                className={`genre-pill ${activePill.toLowerCase() === genre.toLowerCase() ? 'active' : ''}`}
                 onClick={() => handlePillClick(genre)}
               >
                 {genre}

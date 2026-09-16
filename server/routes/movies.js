@@ -228,6 +228,11 @@ router.get('/', async (req, res) => {
       movies = movies.filter(item => item.type === type.toUpperCase());
     }
 
+    if (req.query.genre) {
+      const g = req.query.genre.toLowerCase();
+      movies = movies.filter(item => item.genres && item.genres.toLowerCase().includes(g));
+    }
+
     // Group movies into rich Genre Categories
     let sortedCategories = [];
 
