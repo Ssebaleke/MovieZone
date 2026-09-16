@@ -147,12 +147,18 @@ router.get('/', async (req, res) => {
     let movies = [];
 
     if (vj) {
-      const [vjMoviesRes, vjSeriesRes] = await Promise.all([
-        reelplexiFetch('/movies', { vj, per_page: 100, page }),
-        reelplexiFetch('/series', { vj, per_page: 100, page })
-      ]);
-      if (vjMoviesRes && Array.isArray(vjMoviesRes.data)) vjMoviesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'MOVIE')));
-      if (vjSeriesRes && Array.isArray(vjSeriesRes.data)) vjSeriesRes.data.forEach(item => movies.push(mapReelplexiItem(item, 'SHOW')));
+      const moviePages = [1, 2, 3, 4, 5];
+      const seriesPages = [1, 2, 3, 4];
+      const fetchPromises = [
+        ...moviePages.map(p => reelplexiFetch('/movies', { vj, per_page: 100, page: p }).then(res => ({ type: 'MOVIE', res }))),
+        ...seriesPages.map(p => reelplexiFetch('/series', { vj, per_page: 100, page: p }).then(res => ({ type: 'SHOW', res })))
+      ];
+      const results = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
+      results.forEach(entry => {
+        if (entry && entry.res && Array.isArray(entry.res.data)) {
+          entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
+        }
+      });
     } else if (genre) {
       // Pass genre directly to Reelplexi so it filters server-side
       const genreParam = { genre, per_page: 100, page };
@@ -244,11 +250,11 @@ router.get('/', async (req, res) => {
 
     if (vj) {
       const vjCategories = [
+        { name: `All ${vj} Catalog (${movies.length} titles)`, match: () => true },
         { name: `Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
         { name: `Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
         { name: `Romance & Thrillers (${vj})`, match: (m) => m.type === 'MOVIE' && /romance|thriller|crime/i.test(m.genres) },
-        { name: `TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' },
-        { name: `All Movies by ${vj}`, match: () => true }
+        { name: `TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' }
       ];
 
       const vjCatMap = new Map();
@@ -324,7 +330,7 @@ router.get('/series/:id/season/:season', async (req, res) => {
   }
 });
 
-// Universal Search via Reelplexi API
+// Universal Search via Reelplexi API + Local DB
 router.get('/search', async (req, res) => {
   const { q } = req.query;
 
@@ -333,22 +339,53 @@ router.get('/search', async (req, res) => {
   }
 
   try {
-    const reelplexiSearch = await reelplexiFetch('/search', { q, per_page: 50 });
+    const results = [];
+    const [reelplexiSearch, vjMovies, vjSeries, matchedDb] = await Promise.all([
+      reelplexiFetch('/search', { q, per_page: 100 }).catch(() => null),
+      reelplexiFetch('/movies', { vj: q, per_page: 100 }).catch(() => null),
+      reelplexiFetch('/series', { vj: q, per_page: 100 }).catch(() => null),
+      prisma.movie.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { genres: { contains: q, mode: 'insensitive' } },
+            { vj: { contains: q, mode: 'insensitive' } }
+          ]
+        }
+      }).catch(() => [])
+    ]);
+
     if (reelplexiSearch && Array.isArray(reelplexiSearch.data)) {
-      return res.json(reelplexiSearch.data.map(mapReelplexiItem));
+      reelplexiSearch.data.forEach(item => results.push(mapReelplexiItem(item)));
+    }
+    if (vjMovies && Array.isArray(vjMovies.data)) {
+      vjMovies.data.forEach(item => results.push(mapReelplexiItem(item, 'MOVIE')));
+    }
+    if (vjSeries && Array.isArray(vjSeries.data)) {
+      vjSeries.data.forEach(item => results.push(mapReelplexiItem(item, 'SHOW')));
+    }
+    if (Array.isArray(matchedDb)) {
+      matchedDb.forEach(m => {
+        const media = resolveMovieMedia(m);
+        results.push({ ...m, thumbnailUrl: media.poster, backdropUrl: media.backdrop });
+      });
     }
 
-    const matched = await prisma.movie.findMany({
-      where: {
-        OR: [
-          { title: { contains: q } },
-          { description: { contains: q } },
-          { genres: { contains: q } },
-          { vj: { contains: q } }
-        ]
-      }
+    // Deduplicate search results
+    const seenIds = new Set();
+    const seenTitles = new Set();
+    const deduplicated = results.filter(m => {
+      if (!m.id) return false;
+      if (seenIds.has(m.id)) return false;
+      seenIds.add(m.id);
+      const titleKey = `${m.title}__${m.type}`;
+      if (seenTitles.has(titleKey)) return false;
+      seenTitles.add(titleKey);
+      return true;
     });
-    res.json(matched);
+
+    res.json(deduplicated);
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({ error: 'Server error during search' });

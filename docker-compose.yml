@@ -23,12 +23,7 @@ services:
       dockerfile: Dockerfile
     container_name: moviezone_frontend
     restart: always
-    ports:
-      - "8090:80"
-    depends_on:
-      - backend
-    networks:
-      - moviezone_net
+    network_mode: "host"
 
 volumes:
   db_data:

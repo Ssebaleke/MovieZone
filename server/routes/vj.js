@@ -46,58 +46,41 @@ router.get('/', async (req, res) => {
 router.get('/:name/movies', async (req, res) => {
   const { name } = req.params;
   try {
-    const [moviesRes, seriesRes] = await Promise.all([
-      reelplexiFetch('/movies', { vj: name, per_page: 100 }),
-      reelplexiFetch('/series', { vj: name, per_page: 100 })
-    ]);
+    const moviePages = [1, 2, 3, 4, 5];
+    const seriesPages = [1, 2, 3, 4];
+    const fetchPromises = [
+      ...moviePages.map(p => reelplexiFetch('/movies', { vj: name, per_page: 100, page: p }).then(res => ({ type: 'MOVIE', res }))),
+      ...seriesPages.map(p => reelplexiFetch('/series', { vj: name, per_page: 100, page: p }).then(res => ({ type: 'SHOW', res })))
+    ];
 
+    const responses = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
     const results = [];
 
-    if (moviesRes && Array.isArray(moviesRes.data)) {
-      moviesRes.data.forEach(item => {
-        results.push({
-          id: `rp_${item.id}`,
-          reelplexiId: item.id,
-          title: item.title,
-          description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
-          thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
-          backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
-          videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
-          duration: '2h 10m',
-          releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
-          rating: 'PG-13',
-          genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Action'),
-          type: 'MOVIE',
-          category: 'Ugandan VJ Exclusives',
-          vj: item.vj || name,
-          originCountry: item.origin_country || 'UG',
-          region: 'east-african'
+    responses.forEach(entry => {
+      if (entry && entry.res && Array.isArray(entry.res.data)) {
+        entry.res.data.forEach(item => {
+          const isShow = entry.type === 'SHOW';
+          results.push({
+            id: isShow ? `rp_series_${item.id}` : `rp_${item.id}`,
+            reelplexiId: item.id,
+            title: item.title,
+            description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
+            thumbnailUrl: item.poster_url || item.poster_path || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
+            backdropUrl: item.backdrop_url || item.backdrop_path || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
+            videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
+            duration: isShow ? 'Series' : '2h 10m',
+            releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
+            rating: 'PG-13',
+            genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || (isShow ? 'Drama' : 'Action')),
+            type: isShow ? 'SHOW' : 'MOVIE',
+            category: isShow ? 'Reelplexi Series Feed' : 'Ugandan VJ Exclusives',
+            vj: item.vj || name,
+            originCountry: item.origin_country || 'UG',
+            region: isShow ? 'kdrama' : 'east-african'
+          });
         });
-      });
-    }
-
-    if (seriesRes && Array.isArray(seriesRes.data)) {
-      seriesRes.data.forEach(item => {
-        results.push({
-          id: `rp_series_${item.id}`,
-          reelplexiId: item.id,
-          title: item.title,
-          description: item.overview || `Voiced in Luganda by ${item.vj || name}`,
-          thumbnailUrl: item.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&h=300&fit=crop&q=80',
-          backdropUrl: item.backdrop_url || item.poster_url || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&h=600&fit=crop&q=80',
-          videoUrl: item.stream_url || item.video_url || item.videoUrl || '',
-          duration: 'Series',
-          releaseYear: item.release_date ? parseInt(item.release_date.split('-')[0], 10) : 2024,
-          rating: 'PG-13',
-          genres: Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || 'Drama'),
-          type: 'SHOW',
-          category: 'Reelplexi Series Feed',
-          vj: item.vj || name,
-          originCountry: item.origin_country || 'UG',
-          region: 'kdrama'
-        });
-      });
-    }
+      }
+    });
 
     if (results.length > 0) {
       return res.json({ data: results, total: results.length });
