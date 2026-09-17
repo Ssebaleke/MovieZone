@@ -151,92 +151,60 @@ export default function VideoPlayer({ movie, onClose }) {
     const video = videoRef.current;
     if (!video || !activeVideoUrl) return;
     let hls = null;
-    let playTimer = null;
-    let hasAttempted = false;
+    let played = false;
 
     setNeedsUserGesture(false);
     setShowUnmuteHint(false);
 
     const attemptPlay = () => {
-      if (hasAttempted || !video) return;
-      hasAttempted = true;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-            setNeedsUserGesture(false);
-          })
-          .catch((err) => {
-            console.warn('Autoplay prevented on iOS WebKit:', err);
-            // Fallback 1: Try muted autoplay (iOS permits muted video playback programmatically)
-            video.muted = true;
-            setIsMuted(true);
-            video.play()
-              .then(() => {
-                setIsPlaying(true);
-                setNeedsUserGesture(false);
-                setShowUnmuteHint(true);
-              })
-              .catch(() => {
-                // Fallback 2: Requires explicit user touch gesture
-                setIsPlaying(false);
-                setNeedsUserGesture(true);
-              });
-          });
-      }
+      if (played || !video) return;
+      played = true;
+      video.play()
+        .then(() => { setIsPlaying(true); setNeedsUserGesture(false); })
+        .catch(() => {
+          // iOS blocks unmuted autoplay — try muted first
+          video.muted = true;
+          setIsMuted(true);
+          video.play()
+            .then(() => { setIsPlaying(true); setNeedsUserGesture(false); setShowUnmuteHint(true); })
+            .catch(() => { setIsPlaying(false); setNeedsUserGesture(true); });
+        });
     };
 
-    // Explicitly set DOM attributes for iOS Safari & Chrome WebKit
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
-    video.setAttribute('x5-playsinline', 'true');
 
-    if (activeVideoUrl.includes('.m3u8') || activeVideoUrl.includes('m3u8')) {
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native Apple HLS (iOS Safari & Chrome on iPhone)
-        video.src = activeVideoUrl;
-        video.load();
-      } else {
-        // Desktop / Android via hls.js
-        import('hls.js').then(({ default: Hls }) => {
-          if (Hls.isSupported()) {
-            hls = new Hls({ enableWorker: true, lowLatencyMode: true });
-            hls.loadSource(activeVideoUrl);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => attemptPlay());
-          } else {
-            video.src = activeVideoUrl;
-            video.load();
-          }
-        });
-      }
+    const onMeta = () => { setDuration(video.duration || 0); attemptPlay(); };
+    const onCanPlay = () => { if (!played) attemptPlay(); };
+
+    video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('canplay', onCanPlay);
+
+    const isHLS = activeVideoUrl.includes('.m3u8') || activeVideoUrl.includes('m3u8');
+
+    if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // iOS Safari — native HLS, no hls.js needed
+      video.src = activeVideoUrl;
+      video.load();
+    } else if (isHLS) {
+      // Desktop / Android — use hls.js
+      import('hls.js').then(({ default: Hls }) => {
+        if (Hls.isSupported()) {
+          hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+          hls.loadSource(activeVideoUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => { if (!played) attemptPlay(); });
+        } else {
+          video.src = activeVideoUrl;
+          video.load();
+        }
+      });
     } else {
       video.src = activeVideoUrl;
       video.load();
     }
 
-    const onMeta = () => {
-      setDuration(video.duration || 0);
-      attemptPlay();
-    };
-
-    const onCanPlay = () => {
-      attemptPlay();
-    };
-
-    video.addEventListener('loadedmetadata', onMeta);
-    video.addEventListener('canplay', onCanPlay);
-
-    // iOS Safety Timeout: If video has not played or prompted after 2.5s, trigger attemptPlay
-    playTimer = setTimeout(() => {
-      if (video && video.paused && !hasAttempted) {
-        attemptPlay();
-      }
-    }, 2500);
-
     return () => {
-      clearTimeout(playTimer);
       video.removeEventListener('loadedmetadata', onMeta);
       video.removeEventListener('canplay', onCanPlay);
       if (hls) hls.destroy();
