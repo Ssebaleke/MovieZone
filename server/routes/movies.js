@@ -148,36 +148,39 @@ router.get('/', async (req, res) => {
 
     if (vj) {
       const moviePages = [1, 2, 3, 4, 5];
-      const seriesPages = [1, 2, 3, 4];
+      const seriesPages = [1, 2, 3, 4, 5];
       const fetchPromises = [
         ...moviePages.map(p => reelplexiFetch('/movies', { vj, per_page: 100, page: p }).then(res => ({ type: 'MOVIE', res }))),
         ...seriesPages.map(p => reelplexiFetch('/series', { vj, per_page: 100, page: p }).then(res => ({ type: 'SHOW', res })))
       ];
       const results = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
       results.forEach(entry => {
-        if (entry && entry.res && Array.isArray(entry.res.data)) {
+        if (entry?.res && Array.isArray(entry.res.data)) {
           entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
         }
       });
     } else if (genre) {
-      // Pass genre directly to Reelplexi so it filters server-side
-      const genreParam = { genre, per_page: 100, page };
+      const moviePages = [1, 2, 3, 4, 5];
+      const seriesPages = [1, 2, 3, 4, 5];
       const onlyShows = type === 'SHOW';
       const onlyMovies = type === 'MOVIE';
-      const fetchList = [];
-      if (!onlyShows) fetchList.push(reelplexiFetch('/movies', genreParam).then(r => ({ type: 'MOVIE', res: r })));
-      if (!onlyMovies) fetchList.push(reelplexiFetch('/series', genreParam).then(r => ({ type: 'SHOW', res: r })));
-      const results = await Promise.all(fetchList.map(p => p.catch(() => null)));
+      const fetchPromises = [];
+      if (!onlyShows) {
+        moviePages.forEach(p => fetchPromises.push(reelplexiFetch('/movies', { genre, per_page: 100, page: p }).then(r => ({ type: 'MOVIE', res: r }))));
+      }
+      if (!onlyMovies) {
+        seriesPages.forEach(p => fetchPromises.push(reelplexiFetch('/series', { genre, per_page: 100, page: p }).then(r => ({ type: 'SHOW', res: r }))));
+      }
+      const results = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
       results.forEach(entry => {
-        if (entry?.res && Array.isArray(entry.res.data)) entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
+        if (entry?.res && Array.isArray(entry.res.data)) {
+          entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
+        }
       });
     } else {
-      // Fetch extensive multi-page catalog from Reelplexi API
-      const pageNum = parseInt(page, 10) || 1;
-      const startMovie = (pageNum - 1) * 3 + 1;
-      const moviePages = [startMovie, startMovie + 1, startMovie + 2];
-      const startSeries = (pageNum - 1) * 2 + 1;
-      const seriesPages = [startSeries, startSeries + 1];
+      // Fetch extensive multi-page catalog from Reelplexi API (pages 1 to 5 for both movies and series)
+      const moviePages = [1, 2, 3, 4, 5];
+      const seriesPages = [1, 2, 3, 4, 5];
 
       const fetchPromises = [
         ...moviePages.map(p => reelplexiFetch('/movies', { per_page: 100, page: p }).then(res => ({ type: 'MOVIE', res }))),
@@ -188,7 +191,7 @@ router.get('/', async (req, res) => {
 
       const results = await Promise.all(fetchPromises.map(p => p.catch(() => null)));
       results.forEach(entry => {
-        if (entry && entry.res && Array.isArray(entry.res.data)) {
+        if (entry?.res && Array.isArray(entry.res.data)) {
           entry.res.data.forEach(item => movies.push(mapReelplexiItem(item, entry.type)));
         }
       });
