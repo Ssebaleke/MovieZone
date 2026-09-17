@@ -227,6 +227,9 @@ router.get('/', async (req, res) => {
       return true;
     });
 
+    // CRITICAL: Sort all catalog items strictly by Release Year descending (Newest first)
+    movies.sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
+
     // Apply client-side filters if specified
     if (vj) {
       movies = movies.filter(item => 
@@ -248,16 +251,19 @@ router.get('/', async (req, res) => {
       movies = movies.filter(item => item.genres && item.genres.toLowerCase().includes(g));
     }
 
-    // Group movies into rich Genre Categories
+    // Group movies into rich Categories with Release Year Grouping on top
     let sortedCategories = [];
 
     if (vj) {
       const vjCategories = [
         { name: `All ${vj} Catalog (${movies.length} titles)`, match: () => true },
+        { name: `2026 - 2025 New Releases (${vj})`, match: (m) => (m.releaseYear || 0) >= 2025 },
+        { name: `2024 Hits (${vj})`, match: (m) => m.releaseYear === 2024 },
         { name: `Action & Suspense (${vj})`, match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
         { name: `Comedy & Drama (${vj})`, match: (m) => m.type === 'MOVIE' && /comedy|humor|drama|family/i.test(m.genres) },
         { name: `Romance & Thrillers (${vj})`, match: (m) => m.type === 'MOVIE' && /romance|thriller|crime/i.test(m.genres) },
-        { name: `TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' }
+        { name: `TV Series Translated by ${vj}`, match: (m) => m.type === 'SHOW' },
+        { name: `Classics & Archives (${vj})`, match: (m) => (m.releaseYear || 0) <= 2023 }
       ];
 
       const vjCatMap = new Map();
@@ -272,10 +278,17 @@ router.get('/', async (req, res) => {
       });
 
       sortedCategories = Array.from(vjCatMap.entries())
-        .map(([name, items]) => ({ name, movies: items }))
+        .map(([name, items]) => {
+          items.sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
+          return { name, movies: items };
+        })
         .filter(c => c.movies.length > 0);
     } else {
+      const currentYear = new Date().getFullYear();
       const genreCategories = [
+        { name: '2026 New Releases', match: (m) => (m.releaseYear || 0) >= 2026 },
+        { name: '2025 Hits & Blockbusters', match: (m) => m.releaseYear === 2025 },
+        { name: '2024 Popular Cinema', match: (m) => m.releaseYear === 2024 },
         { name: 'Trending Blockbusters', match: (m) => m.category === 'Trending VJ Movies' || (m.genres && /action|trending|blockbuster/i.test(m.genres)) },
         { name: 'Action & Suspense', match: (m) => m.type === 'MOVIE' && /action|adventure|war/i.test(m.genres) },
         { name: 'Comedy & Entertainment', match: (m) => m.type === 'MOVIE' && /comedy|humor|family|animation/i.test(m.genres) },
@@ -283,7 +296,8 @@ router.get('/', async (req, res) => {
         { name: 'Sci-Fi, Superhero & Fantasy', match: (m) => m.type === 'MOVIE' && /sci-fi|fantasy|superhero|science/i.test(m.genres) },
         { name: 'Thrillers, Crime & Mystery', match: (m) => m.type === 'MOVIE' && /thriller|crime|mystery|horror/i.test(m.genres) },
         { name: 'Popular TV Series & Shows', match: (m) => m.type === 'SHOW' },
-        { name: 'New & Uncategorised', match: () => true }
+        { name: 'Classic VJ Favorites (2023 & Older)', match: (m) => (m.releaseYear || 0) <= 2023 },
+        { name: 'Catalog Archives', match: () => true }
       ];
 
       const catMap = new Map();
@@ -293,7 +307,7 @@ router.get('/', async (req, res) => {
       for (const cat of genreCategories) {
         const catList = catMap.get(cat.name);
         for (const movie of movies) {
-          if (cat.name === 'New & Uncategorised') {
+          if (cat.name === 'Catalog Archives') {
             if (!placedIds.has(movie.id)) {
               catList.push(movie);
             }
@@ -305,11 +319,17 @@ router.get('/', async (req, res) => {
       }
 
       sortedCategories = Array.from(catMap.entries())
-        .map(([name, items]) => ({ name, movies: items }))
+        .map(([name, items]) => {
+          items.sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
+          return { name, movies: items };
+        })
         .filter(c => c.movies.length > 0);
     }
 
-    const featured = movies.length > 0 ? movies[Math.floor(Math.random() * movies.length)] : null;
+    // Pick top billboard hero item from recent high-rated releases
+    const recentMovies = movies.filter(m => (m.releaseYear || 0) >= 2024);
+    const featuredPool = recentMovies.length > 0 ? recentMovies : movies;
+    const featured = featuredPool.length > 0 ? featuredPool[Math.floor(Math.random() * featuredPool.length)] : null;
 
     res.json({
       featured,
