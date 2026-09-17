@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Play, Plus, Check, ThumbsUp, ChevronLeft, Volume2, VolumeX, Mic, ChevronDown } from 'lucide-react';
 import { api } from '../utils/api';
 import Navbar from '../components/Navbar';
@@ -13,13 +13,14 @@ const PREVIEW_DELAY    = 1200;  // start after 1.2s
 export default function MovieDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [movie, setMovie]                   = useState(null);
+  const [movie, setMovie]                   = useState(() => location.state?.movie || null);
   const [seasons, setSeasons]               = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [activeSeason, setActiveSeason]     = useState(0);
-  const [loading, setLoading]               = useState(true);
-  const [activeVJ, setActiveVJ]             = useState('');
+  const [loading, setLoading]               = useState(() => !(location.state?.movie && location.state.movie.id === id));
+  const [activeVJ, setActiveVJ]             = useState(() => location.state?.movie?.vj || 'VJ Junior');
   const [isMuted, setIsMuted]               = useState(true);
   const [previewPhase, setPreviewPhase]     = useState('banner'); // banner|video|fading|done
   const [watchlist, setWatchlist]           = useState([]);
@@ -69,7 +70,16 @@ export default function MovieDetailPage() {
   };
 
   useEffect(() => {
-    setLoading(true);
+    const passedMovie = location.state?.movie;
+    if (passedMovie && passedMovie.id === id) {
+      setMovie(passedMovie);
+      setActiveVJ(passedMovie.vj || 'VJ Junior');
+      setLoading(false);
+      if (passedMovie.videoUrl) startPreview();
+    } else {
+      setLoading(true);
+    }
+
     setPreviewPhase('banner');
     setSeasons([]);
     setActiveSeason(0);

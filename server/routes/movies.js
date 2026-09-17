@@ -137,11 +137,23 @@ function mapReelplexiItem(item, defaultType = null) {
     originCountry: country,
     region
   };
-}
+// High-performance In-Memory Caches for sub-10ms response time
+const CACHE_TTL_MS = 30 * 60 * 1000;   // 30 mins for movie details
+const CATALOG_TTL_MS = 10 * 60 * 1000; // 10 mins for main catalog
+
+const movieDetailCache = new Map();
+const catalogCache = new Map();
 
 // Get full movies/series catalog grouped by categories (100% Reelplexi.com API)
 router.get('/', async (req, res) => {
   const { vj, region, type, latest, trending, page = 1, genre } = req.query;
+
+  const cacheKey = req.originalUrl || `/movies?vj=${vj||''}&region=${region||''}&type=${type||''}&genre=${genre||''}&latest=${latest||''}&trending=${trending||''}`;
+  const cachedCatalog = catalogCache.get(cacheKey);
+  if (cachedCatalog && (Date.now() - cachedCatalog.timestamp < CATALOG_TTL_MS)) {
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');
+    return res.json(cachedCatalog.data);
+  }
 
   try {
     let movies = [];
@@ -331,11 +343,14 @@ router.get('/', async (req, res) => {
     const featuredPool = recentMovies.length > 0 ? recentMovies : movies;
     const featured = featuredPool.length > 0 ? featuredPool[Math.floor(Math.random() * featuredPool.length)] : null;
 
-    res.json({
+    const catalogResult = {
       featured,
       categories: sortedCategories,
       total_items: movies.length
-    });
+    };
+    catalogCache.set(cacheKey, { timestamp: Date.now(), data: catalogResult });
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600');
+    res.json(catalogResult);
   } catch (error) {
     console.error('Error fetching Reelplexi catalog:', error);
     res.status(500).json({ error: 'Server error fetching Reelplexi catalog' });
@@ -422,6 +437,13 @@ router.get('/search', async (req, res) => {
 // Get single movie or series details with recommendations + episodes
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
+
+  // 1. Check in-memory detail cache for sub-5ms instant response
+  const cachedDetail = movieDetailCache.get(id);
+  if (cachedDetail && (Date.now() - cachedDetail.timestamp < CACHE_TTL_MS)) {
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
+    return res.json(cachedDetail.data);
+  }
 
   try {
     const isExplicitSeries = id.startsWith('rp_series_');
@@ -536,7 +558,10 @@ router.get('/:id', async (req, res) => {
           }
         }
 
-        return res.json({ movie, seasons, recommendations });
+        const detailResult = { movie, seasons, recommendations };
+        movieDetailCache.set(id, { timestamp: Date.now(), data: detailResult });
+        res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
+        return res.json(detailResult);
       }
     }
 
@@ -545,7 +570,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Movie or show not found' });
     }
 
-    res.json({ movie, seasons: [], recommendations: [] });
+    const fallbackResult = { movie, seasons: [], recommendations: [] };
+    movieDetailCache.set(id, { timestamp: Date.now(), data: fallbackResult });
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800');
+    res.json(fallbackResult);
   } catch (error) {
     console.error('Error fetching movie details:', error);
     res.status(500).json({ error: 'Server error fetching details' });

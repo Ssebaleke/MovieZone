@@ -38,7 +38,13 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
       className={`nf-card${hovered ? ' nf-card--hovered' : ''}`}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      onClick={() => { if (window.innerWidth <= 768) navigate(`/movie/${movie.id}`); }}
+      onClick={() => {
+        if (window.innerWidth <= 768) {
+          navigate(`/movie/${movie.id}`, { state: { movie } });
+        } else {
+          onOpenModal(movie);
+        }
+      }}
     >
       {/* Base poster — always visible */}
       <div className="nf-card-poster">
