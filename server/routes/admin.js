@@ -210,6 +210,126 @@ router.get('/livepay/test-balance', async (req, res) => {
   }
 });
 
+// ==========================================
+// Revenue & Subscriber Analytics
+// ==========================================
+router.get('/analytics', async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Period boundaries
+    const startOfToday    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek     = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth    = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear     = new Date(now.getFullYear(), 0, 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+    const allTx = await prisma.transaction.findMany({
+      where: { status: 'SUCCESS' },
+      select: { amount: true, createdAt: true, packageName: true, userId: true },
+      orderBy: { createdAt: 'asc' }
+    }).catch(() => []);
+
+    const allUsers = await prisma.user.findMany({
+      select: { createdAt: true, subscriptionStatus: true },
+      orderBy: { createdAt: 'asc' }
+    }).catch(() => []);
+
+    const sum = (txs) => txs.reduce((a, t) => a + Number(t.amount || 0), 0);
+    const inRange = (txs, from, to) => txs.filter(t => new Date(t.createdAt) >= from && new Date(t.createdAt) <= (to || now));
+
+    // ── Summary cards ──
+    const todayTx    = inRange(allTx, startOfToday);
+    const weekTx     = inRange(allTx, startOfWeek);
+    const monthTx    = inRange(allTx, startOfMonth);
+    const yearTx     = inRange(allTx, startOfYear);
+    const lastMonthTx = inRange(allTx, startOfLastMonth, endOfLastMonth);
+
+    const todayUsers  = allUsers.filter(u => new Date(u.createdAt) >= startOfToday).length;
+    const weekUsers   = allUsers.filter(u => new Date(u.createdAt) >= startOfWeek).length;
+    const monthUsers  = allUsers.filter(u => new Date(u.createdAt) >= startOfMonth).length;
+    const yearUsers   = allUsers.filter(u => new Date(u.createdAt) >= startOfYear).length;
+    const activeUsers = allUsers.filter(u => u.subscriptionStatus === 'ACTIVE').length;
+
+    const thisMonthRev = sum(monthTx);
+    const lastMonthRev = sum(lastMonthTx);
+    const revenueGrowth = lastMonthRev > 0 ? Math.round(((thisMonthRev - lastMonthRev) / lastMonthRev) * 100) : null;
+
+    // ── Daily earnings for last 30 days ──
+    const daily = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(startOfToday); d.setDate(d.getDate() - i);
+      const next = new Date(d); next.setDate(next.getDate() + 1);
+      const dayTx = inRange(allTx, d, next);
+      const dayUsers = allUsers.filter(u => { const c = new Date(u.createdAt); return c >= d && c < next; }).length;
+      daily.push({
+        date: d.toISOString().slice(0, 10),
+        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        revenue: sum(dayTx),
+        subscribers: dayUsers
+      });
+    }
+
+    // ── Weekly earnings for last 12 weeks ──
+    const weekly = [];
+    for (let i = 11; i >= 0; i--) {
+      const wStart = new Date(startOfWeek); wStart.setDate(wStart.getDate() - i * 7);
+      const wEnd   = new Date(wStart); wEnd.setDate(wEnd.getDate() + 7);
+      const wTx = inRange(allTx, wStart, wEnd);
+      const wUsers = allUsers.filter(u => { const c = new Date(u.createdAt); return c >= wStart && c < wEnd; }).length;
+      weekly.push({
+        label: `W${wStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+        revenue: sum(wTx),
+        subscribers: wUsers
+      });
+    }
+
+    // ── Monthly earnings for last 12 months ──
+    const monthly = [];
+    for (let i = 11; i >= 0; i--) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const mTx = inRange(allTx, mStart, mEnd);
+      const mUsers = allUsers.filter(u => { const c = new Date(u.createdAt); return c >= mStart && c <= mEnd; }).length;
+      monthly.push({
+        label: mStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        revenue: sum(mTx),
+        subscribers: mUsers
+      });
+    }
+
+    // ── Package breakdown ──
+    const pkgMap = {};
+    allTx.forEach(t => {
+      const name = t.packageName || 'Unknown';
+      if (!pkgMap[name]) pkgMap[name] = { name, revenue: 0, count: 0 };
+      pkgMap[name].revenue += Number(t.amount || 0);
+      pkgMap[name].count++;
+    });
+    const packageBreakdown = Object.values(pkgMap).sort((a, b) => b.revenue - a.revenue);
+
+    res.json({
+      summary: {
+        today:     { revenue: sum(todayTx),  subscribers: todayUsers },
+        week:      { revenue: sum(weekTx),   subscribers: weekUsers },
+        month:     { revenue: sum(monthTx),  subscribers: monthUsers },
+        year:      { revenue: sum(yearTx),   subscribers: yearUsers },
+        allTime:   { revenue: sum(allTx),    subscribers: allUsers.length },
+        activeSubscribers: activeUsers,
+        revenueGrowth
+      },
+      daily,
+      weekly,
+      monthly,
+      packageBreakdown
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics: ' + error.message });
+  }
+});
+
 // Reelplexi API Live Stats & Analytics for Admin
 router.get('/reelplexi/stats', async (req, res) => {
   try {

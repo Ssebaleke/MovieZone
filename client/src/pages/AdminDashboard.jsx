@@ -43,6 +43,10 @@ export default function AdminDashboard() {
   const [testingLivepay, setTestingLivepay] = useState(false);
   const [catalogStats, setCatalogStats] = useState(null);
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsView, setAnalyticsView] = useState('monthly');
+  const [analyticsMetric, setAnalyticsMetric] = useState('revenue');
   const [transactions, setTransactions] = useState([]);
   const [txStats, setTxStats] = useState({ totalRevenue: 0, successCount: 0, pendingCount: 0, failedCount: 0, totalCount: 0 });
   const [txFilterStatus, setTxFilterStatus] = useState('ALL');
@@ -127,6 +131,13 @@ export default function AdminDashboard() {
       alert(err.message || 'Failed to update transaction status');
     }
   };
+  const fetchAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try { const d = await api.get('/admin/analytics'); setAnalyticsData(d); }
+    catch { setAnalyticsData(null); }
+    finally { setAnalyticsLoading(false); }
+  };
+
   const fetchSettingsAndStats = async () => {
     try {
       const s = await api.get('/admin/settings');
@@ -174,6 +185,14 @@ export default function AdminDashboard() {
     try { const d = await api.get('/admin/livepay/test-balance'); setLivepayTestResult({ success: true, message: d.message, data: d.balanceData }); }
     catch (err) { setLivepayTestResult({ success: false, error: err.message }); }
     finally { setTestingLivepay(false); }
+  };
+
+  const handleCancelSubscription = async (user) => {
+    if (!window.confirm(`Cancel subscription for ${user.email}?\nPlan: ${user.plan}\nExpires: ${user.subscriptionEnd ? new Date(user.subscriptionEnd).toLocaleString() : 'N/A'}\n\nThis will immediately revoke their access.`)) return;
+    try {
+      await api.put(`/admin/users/${user.id}/subscription`, { action: 'remove' });
+      fetchUserSignups();
+    } catch (err) { alert(err.message || 'Failed to cancel subscription'); }
   };
 
   const handleDeleteUser = async (userId) => {
@@ -316,7 +335,8 @@ export default function AdminDashboard() {
                   if (item.id === 'payments') fetchTransactions();
                   if (item.id === 'packages') fetchPackages();
                   if (item.id === 'catalog') fetchMovies();
-                  if (['apikeys','livepay','analytics'].includes(item.id)) fetchSettingsAndStats();
+                  if (item.id === 'analytics') fetchAnalytics();
+                  if (['apikeys','livepay'].includes(item.id)) fetchSettingsAndStats();
                 }}
               >
                 <span className="ad-nav-icon">{item.icon}</span>
@@ -376,7 +396,7 @@ export default function AdminDashboard() {
                 <div className="ad-card">
                   <div className="ad-card-header"><Users size={16} color="#e50914"/> Recent Signups</div>
                   <table className="ad-table">
-                    <thead><tr><th>Name</th><th>Email</th><th>Package</th><th>Status</th><th>Joined</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Package</th><th>Status</th><th>Joined</th><th></th></tr></thead>
                     <tbody>
                       {userSignups.slice(0,6).map(u => (
                         <tr key={u.id}>
@@ -385,6 +405,11 @@ export default function AdminDashboard() {
                           <td><span className="ad-pkg-badge">{u.plan !== 'NONE' ? u.plan : '—'}</span></td>
                           <td><span className={`ad-status-badge ${u.subscriptionStatus === 'ACTIVE' ? 'ad-status-badge--active' : ''}`}>{u.subscriptionStatus}</span></td>
                           <td className="ad-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td>
+                            {u.subscriptionStatus === 'ACTIVE' && (
+                              <button className="ad-btn-cancel-sub" onClick={() => handleCancelSubscription(u)}>Cancel Sub</button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -445,11 +470,7 @@ export default function AdminDashboard() {
                                 {packagesList.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                               {user.subscriptionStatus === 'ACTIVE' && (
-                                <button className="ad-btn-warn" onClick={async()=>{
-                                  if(!window.confirm(`Remove subscription from ${user.email}?`)) return;
-                                  try{ await api.put(`/admin/users/${user.id}/subscription`,{action:'remove'}); fetchUserSignups(); }
-                                  catch(err){ alert(err.message||'Failed'); }
-                                }}>Remove</button>
+                                <button className="ad-btn-cancel-sub" onClick={() => handleCancelSubscription(user)}>Cancel Sub</button>
                               )}
                               <button className="ad-btn-danger-icon" onClick={()=>handleDeleteUser(user.id)}><Trash2 size={13}/></button>
                             </div>
@@ -849,23 +870,127 @@ export default function AdminDashboard() {
           {/* ── ANALYTICS ── */}
           {activeNav === 'analytics' && (
             <div className="ad-section">
-              <div className="ad-card">
-                <div className="ad-card-header"><Activity size={16} color="#e50914"/> Top VJ Titles</div>
-                <table className="ad-table" style={{marginTop:'8px'}}>
-                  <thead><tr><th>Title</th><th>VJ</th><th>Views</th><th>Genres</th></tr></thead>
-                  <tbody>
-                    {topMovies.map((item,idx)=>(
-                      <tr key={idx}>
-                        <td style={{fontWeight:600}}>{item.title}</td>
-                        <td><span className="ad-vj-badge">{item.vj||'VJ Junior'}</span></td>
-                        <td style={{color:'#46d369',fontWeight:700}}>{item.view_count||0} views</td>
-                        <td className="ad-muted">{Array.isArray(item.genres)?item.genres.join(', '):item.genres}</td>
-                      </tr>
-                    ))}
-                    {topMovies.length===0 && <tr><td colSpan="4" className="ad-empty">No analytics data yet.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+              {analyticsLoading && <div className="ad-loading">Loading analytics...</div>}
+              {!analyticsLoading && !analyticsData && (
+                <div className="ad-empty" style={{padding:'40px',textAlign:'center'}}>
+                  No transaction data yet. <button className="ad-ghost-btn" style={{marginLeft:'10px'}} onClick={fetchAnalytics}><RefreshCw size={13}/> Retry</button>
+                </div>
+              )}
+              {!analyticsLoading && analyticsData && (() => {
+                const s = analyticsData.summary;
+                const chartData = analyticsView === 'daily' ? analyticsData.daily
+                  : analyticsView === 'weekly' ? analyticsData.weekly
+                  : analyticsData.monthly;
+                const maxVal = Math.max(...chartData.map(d => d[analyticsMetric] || 0), 1);
+                const fmt = (n) => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : n.toLocaleString();
+                const growth = s.revenueGrowth;
+
+                return (
+                  <>
+                    {/* Summary cards */}
+                    <div className="an-cards">
+                      {[
+                        { label: 'Today', rev: s.today.revenue, subs: s.today.subscribers, color: '#60a5fa' },
+                        { label: 'This Week', rev: s.week.revenue, subs: s.week.subscribers, color: '#a78bfa' },
+                        { label: 'This Month', rev: s.month.revenue, subs: s.month.subscribers, color: '#34d399', extra: growth !== null ? (growth >= 0 ? `▲ ${growth}% vs last month` : `▼ ${Math.abs(growth)}% vs last month`) : null, extraColor: growth >= 0 ? '#46d369' : '#e50914' },
+                        { label: 'This Year', rev: s.year.revenue, subs: s.year.subscribers, color: '#fbbf24' },
+                        { label: 'All Time', rev: s.allTime.revenue, subs: s.allTime.subscribers, color: '#e50914' },
+                        { label: 'Active Subs', rev: null, subs: s.activeSubscribers, color: '#46d369', single: true },
+                      ].map((c, i) => (
+                        <div key={i} className="an-card">
+                          <div className="an-card-label">{c.label}</div>
+                          {c.single ? (
+                            <div className="an-card-val" style={{color: c.color}}>{c.subs.toLocaleString()}<span className="an-card-unit"> users</span></div>
+                          ) : (
+                            <>
+                              <div className="an-card-val" style={{color: c.color}}>UGX {fmt(c.rev)}</div>
+                              <div className="an-card-sub">{c.subs} new subscriber{c.subs !== 1 ? 's' : ''}</div>
+                            </>
+                          )}
+                          {c.extra && <div className="an-card-growth" style={{color: c.extraColor}}>{c.extra}</div>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart controls */}
+                    <div className="an-chart-card">
+                      <div className="an-chart-header">
+                        <div className="an-chart-title">
+                          {analyticsMetric === 'revenue' ? '💰 Revenue' : '👥 New Subscribers'}
+                          <span className="an-chart-period"> — {analyticsView === 'daily' ? 'Last 30 Days' : analyticsView === 'weekly' ? 'Last 12 Weeks' : 'Last 12 Months'}</span>
+                        </div>
+                        <div className="an-controls">
+                          <div className="an-toggle">
+                            {['revenue','subscribers'].map(m => (
+                              <button key={m} className={`an-toggle-btn${analyticsMetric===m?' active':''}`} onClick={()=>setAnalyticsMetric(m)}>
+                                {m === 'revenue' ? '💰 Revenue' : '👥 Subscribers'}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="an-toggle">
+                            {['daily','weekly','monthly'].map(v => (
+                              <button key={v} className={`an-toggle-btn${analyticsView===v?' active':''}`} onClick={()=>setAnalyticsView(v)}>
+                                {v.charAt(0).toUpperCase()+v.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bar chart */}
+                      <div className="an-chart">
+                        <div className="an-chart-bars">
+                          {chartData.map((d, i) => {
+                            const val = d[analyticsMetric] || 0;
+                            const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
+                            const isLast = i === chartData.length - 1;
+                            return (
+                              <div key={i} className="an-bar-col" title={`${d.label}\n${analyticsMetric === 'revenue' ? 'UGX ' + val.toLocaleString() : val + ' subscribers'}`}>
+                                <div className="an-bar-val">{val > 0 ? fmt(val) : ''}</div>
+                                <div className="an-bar-wrap">
+                                  <div
+                                    className={`an-bar${isLast ? ' an-bar--highlight' : ''}`}
+                                    style={{ height: `${Math.max(pct, val > 0 ? 3 : 0)}%` }}
+                                  />
+                                </div>
+                                <div className="an-bar-label">{d.label}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Package breakdown */}
+                    {analyticsData.packageBreakdown.length > 0 && (
+                      <div className="an-chart-card" style={{marginTop:'20px'}}>
+                        <div className="an-chart-header">
+                          <div className="an-chart-title">📦 Revenue by Package</div>
+                        </div>
+                        <div className="an-pkg-breakdown">
+                          {analyticsData.packageBreakdown.map((p, i) => {
+                            const maxRev = analyticsData.packageBreakdown[0].revenue || 1;
+                            const pct = (p.revenue / maxRev) * 100;
+                            const colors = ['#e50914','#60a5fa','#34d399','#fbbf24','#a78bfa'];
+                            return (
+                              <div key={i} className="an-pkg-row">
+                                <div className="an-pkg-name">{p.name}</div>
+                                <div className="an-pkg-bar-wrap">
+                                  <div className="an-pkg-bar" style={{width:`${pct}%`, background: colors[i % colors.length]}} />
+                                </div>
+                                <div className="an-pkg-stats">
+                                  <span style={{color:'#fff',fontWeight:700}}>UGX {fmt(p.revenue)}</span>
+                                  <span className="an-pkg-count">{p.count} payment{p.count !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
