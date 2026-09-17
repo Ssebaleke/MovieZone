@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, Zap, Star, Smartphone, Clock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { api } from '../utils/api';
 import { usePaymentPoller } from '../utils/usePaymentPoller';
 
 export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuccess }) {
-  const [packages, setPackages] = useState([]);
-  const [fetching, setFetching] = useState(true);
-
-  // step: 'packages' | 'phone' | 'waiting' | 'success' | 'failed'
-  const [step, setStep]             = useState('packages');
+  const [packages, setPackages]       = useState([]);
+  const [fetching, setFetching]       = useState(true);
+  const [step, setStep]               = useState('packages'); // 'packages'|'phone'|'waiting'|'success'|'failed'
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError]   = useState('');
   const [failMsg, setFailMsg]         = useState('');
   const [reference, setReference]     = useState('');
-  const [elapsedSecs, setElapsedSecs] = useState(0);
-  const timerRef = useRef(null);
 
   const { startPolling, stopPolling } = usePaymentPoller();
 
@@ -27,18 +23,8 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
       .then(d => setPackages(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setFetching(false));
-    return () => { stopPolling(); clearInterval(timerRef.current); };
+    return () => stopPolling();
   }, [isOpen]);
-
-  useEffect(() => {
-    if (step === 'waiting') {
-      setElapsedSecs(0);
-      timerRef.current = setInterval(() => setElapsedSecs(s => s + 1), 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [step]);
 
   if (!isOpen) return null;
 
@@ -69,14 +55,11 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
         paymentMethod: 'mobile_money',
         phoneNumber: phone
       });
-
       if (!res.success) {
         setFailMsg(res.message || 'Payment request failed. Please try again.');
         setStep('failed');
         return;
       }
-
-      // Instant SUCCESS
       if (res.status === 'SUCCESS' && res.user) {
         const stored = JSON.parse(localStorage.getItem('netflix_user') || '{}');
         stored.plan = res.user.plan;
@@ -86,20 +69,11 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
         setTimeout(() => { onSubscriptionSuccess(stored, movie); onClose(); }, 2500);
         return;
       }
-
-      // PENDING — poll for webhook result
       const ref = res.reference;
       setReference(ref);
-      startPolling(
-        ref,
-        (user) => {
-          setStep('success');
-          setTimeout(() => { onSubscriptionSuccess(user, movie); onClose(); }, 2500);
-        },
-        (msg) => {
-          setFailMsg(msg);
-          setStep('failed');
-        }
+      startPolling(ref,
+        (user) => { setStep('success'); setTimeout(() => { onSubscriptionSuccess(user, movie); onClose(); }, 2500); },
+        (msg)  => { setFailMsg(msg); setStep('failed'); }
       );
     } catch (err) {
       setFailMsg(err.message || 'Payment failed. Please try again.');
@@ -108,13 +82,11 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
   };
 
   const handleCancel = () => { stopPolling(); setStep('packages'); setReference(''); };
-  const formatElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <div className="um-backdrop" onClick={step === 'packages' ? onClose : undefined}>
       <div className="um-sheet" onClick={e => e.stopPropagation()}>
 
-        {/* PACKAGES */}
         {step === 'packages' && (
           <>
             <button className="um-close" onClick={onClose}><X size={18} /></button>
@@ -148,7 +120,6 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
           </>
         )}
 
-        {/* PHONE */}
         {step === 'phone' && (
           <>
             <button className="um-close" onClick={() => setStep('packages')}><X size={18} /></button>
@@ -168,32 +139,38 @@ export default function UpgradeModal({ isOpen, onClose, movie, onSubscriptionSuc
           </>
         )}
 
-        {/* WAITING FOR PIN */}
         {step === 'waiting' && (
           <div className="um-ov-center">
-            <div className="ps-ov-spinner"><Loader2 size={52} color="#e50914" className="ps-spin" /></div>
+            <div className="ps-ov-pulse-wrap">
+              <div className="ps-ov-pulse-ring" />
+              <Loader2 size={32} color="#e50914" className="ps-spin ps-ov-pulse-icon" />
+            </div>
             <h3 className="um-ov-title">Waiting for Payment</h3>
-            <p className="um-ov-sub">A prompt has been sent to <strong>{phoneNumber}</strong>.<br />Enter your PIN on your phone to confirm.</p>
-            <div className="ps-ov-timer">{formatElapsed(elapsedSecs)}</div>
+            <p className="um-ov-sub">
+              A prompt has been sent to <strong>{phoneNumber}</strong>.<br />
+              Enter your PIN on your phone to confirm.
+            </p>
             {reference && <p className="ps-ov-ref">Ref: {reference}</p>}
-            <button className="ps-ghost-btn" style={{ marginTop: '20px' }} onClick={handleCancel}>Cancel</button>
+            <button className="ps-ghost-btn" style={{ marginTop: '24px' }} onClick={handleCancel}>Cancel</button>
           </div>
         )}
 
-        {/* SUCCESS */}
         {step === 'success' && (
           <div className="um-ov-center">
-            <CheckCircle2 size={60} color="#46d369" style={{ marginBottom: '16px' }} />
+            <div className="ps-ov-result-icon ps-ov-result-icon--success">
+              <CheckCircle2 size={40} color="#46d369" />
+            </div>
             <h3 className="um-ov-title" style={{ color: '#46d369' }}>Payment Confirmed!</h3>
             <p className="um-ov-sub"><strong>{selectedPkg?.name}</strong> subscription is now active.</p>
             <p className="um-ov-hint">Starting your content…</p>
           </div>
         )}
 
-        {/* FAILED */}
         {step === 'failed' && (
           <div className="um-ov-center">
-            <XCircle size={60} color="#e50914" style={{ marginBottom: '16px' }} />
+            <div className="ps-ov-result-icon ps-ov-result-icon--failed">
+              <XCircle size={40} color="#e50914" />
+            </div>
             <h3 className="um-ov-title" style={{ color: '#e50914' }}>Payment Failed</h3>
             <p className="um-ov-sub">{failMsg}</p>
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px', width: '100%' }}>

@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Zap, ShieldCheck, Star, Clock, X, Smartphone, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { api } from '../utils/api';
 import { usePaymentPoller } from '../utils/usePaymentPoller';
 
 export default function PlanSelector() {
-  const [packages, setPackages]     = useState([]);
-  const [fetching, setFetching]     = useState(true);
-  const [fetchError, setFetchError] = useState('');
-
-  // overlay: null | 'phone' | 'waiting' | 'success' | 'failed'
-  const [overlay, setOverlay]       = useState(null);
+  const [packages, setPackages]       = useState([]);
+  const [fetching, setFetching]       = useState(true);
+  const [fetchError, setFetchError]   = useState('');
+  const [overlay, setOverlay]         = useState(null); // null | 'phone' | 'waiting' | 'success' | 'failed'
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError]   = useState('');
   const [failMsg, setFailMsg]         = useState('');
   const [reference, setReference]     = useState('');
-  const [elapsedSecs, setElapsedSecs] = useState(0);
-  const timerRef = useRef(null);
 
   const navigate = useNavigate();
   const { startPolling, stopPolling } = usePaymentPoller();
@@ -29,17 +25,6 @@ export default function PlanSelector() {
       .finally(() => setFetching(false));
     return () => stopPolling();
   }, []);
-
-  // Elapsed seconds counter while waiting
-  useEffect(() => {
-    if (overlay === 'waiting') {
-      setElapsedSecs(0);
-      timerRef.current = setInterval(() => setElapsedSecs(s => s + 1), 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [overlay]);
 
   const formatInterval = (str) => {
     if (!str) return '';
@@ -68,39 +53,25 @@ export default function PlanSelector() {
         paymentMethod: 'mobile_money',
         phoneNumber: phone
       });
-
       if (!res.success) {
         setFailMsg(res.message || 'Payment request failed. Please try again.');
         setOverlay('failed');
         return;
       }
-
-      // Instant SUCCESS (rare — LivePay returned SUCCESS immediately)
       if (res.status === 'SUCCESS' && res.user) {
         const stored = JSON.parse(localStorage.getItem('netflix_user') || '{}');
         stored.plan = res.user.plan;
         stored.subscriptionStatus = res.user.subscriptionStatus;
         localStorage.setItem('netflix_user', JSON.stringify(stored));
         setOverlay('success');
-        setTimeout(() => navigate('/browse'), 3000);
+        setTimeout(() => navigate('/browse'), 2500);
         return;
       }
-
-      // PENDING — USSD sent, now poll until webhook resolves it
       const ref = res.reference;
       setReference(ref);
-      startPolling(
-        ref,
-        (user) => {
-          // Webhook confirmed SUCCESS
-          setOverlay('success');
-          setTimeout(() => navigate('/browse'), 3000);
-        },
-        (msg) => {
-          // Webhook confirmed FAILED or timeout
-          setFailMsg(msg);
-          setOverlay('failed');
-        }
+      startPolling(ref,
+        () => { setOverlay('success'); setTimeout(() => navigate('/browse'), 2500); },
+        (msg) => { setFailMsg(msg); setOverlay('failed'); }
       );
     } catch (err) {
       setFailMsg(err.message || 'Payment failed. Please try again.');
@@ -108,13 +79,7 @@ export default function PlanSelector() {
     }
   };
 
-  const handleCancel = () => {
-    stopPolling();
-    setOverlay(null);
-    setReference('');
-  };
-
-  const formatElapsed = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const handleCancel = () => { stopPolling(); setOverlay(null); setReference(''); };
 
   return (
     <div className="ps-page">
@@ -167,12 +132,10 @@ export default function PlanSelector() {
         </div>
       </div>
 
-      {/* ── OVERLAYS ── */}
       {overlay && (
         <div className="ps-overlay" onClick={() => { if (overlay === 'phone' || overlay === 'failed') handleCancel(); }}>
           <div className="ps-overlay-sheet" onClick={e => e.stopPropagation()}>
 
-            {/* PHONE */}
             {overlay === 'phone' && (
               <>
                 <button className="ps-overlay-close" onClick={handleCancel}><X size={18} /></button>
@@ -194,32 +157,38 @@ export default function PlanSelector() {
               </>
             )}
 
-            {/* WAITING FOR PIN */}
             {overlay === 'waiting' && (
               <div className="ps-ov-center">
-                <div className="ps-ov-spinner"><Loader2 size={52} color="#e50914" className="ps-spin" /></div>
+                <div className="ps-ov-pulse-wrap">
+                  <div className="ps-ov-pulse-ring" />
+                  <Loader2 size={32} color="#e50914" className="ps-spin ps-ov-pulse-icon" />
+                </div>
                 <h3 className="ps-ov-title">Waiting for Payment</h3>
-                <p className="ps-ov-sub">A prompt has been sent to <strong>{phoneNumber}</strong>.<br />Enter your PIN on your phone to confirm.</p>
-                <div className="ps-ov-timer">{formatElapsed(elapsedSecs)}</div>
+                <p className="ps-ov-sub">
+                  A prompt has been sent to <strong>{phoneNumber}</strong>.<br />
+                  Enter your PIN on your phone to confirm.
+                </p>
                 {reference && <p className="ps-ov-ref">Ref: {reference}</p>}
-                <button className="ps-ghost-btn" style={{ marginTop: '20px' }} onClick={handleCancel}>Cancel</button>
+                <button className="ps-ghost-btn" style={{ marginTop: '24px' }} onClick={handleCancel}>Cancel</button>
               </div>
             )}
 
-            {/* SUCCESS */}
             {overlay === 'success' && (
               <div className="ps-ov-center">
-                <div className="ps-ov-success-icon"><CheckCircle2 size={60} color="#46d369" /></div>
+                <div className="ps-ov-result-icon ps-ov-result-icon--success">
+                  <CheckCircle2 size={40} color="#46d369" />
+                </div>
                 <h3 className="ps-ov-title" style={{ color: '#46d369' }}>Payment Confirmed!</h3>
                 <p className="ps-ov-sub">Your <strong>{selectedPkg?.name}</strong> subscription is now active.</p>
                 <p className="ps-ov-hint">Redirecting you to browse…</p>
               </div>
             )}
 
-            {/* FAILED */}
             {overlay === 'failed' && (
               <div className="ps-ov-center">
-                <div className="ps-ov-fail-icon"><XCircle size={60} color="#e50914" /></div>
+                <div className="ps-ov-result-icon ps-ov-result-icon--failed">
+                  <XCircle size={40} color="#e50914" />
+                </div>
                 <h3 className="ps-ov-title" style={{ color: '#e50914' }}>Payment Failed</h3>
                 <p className="ps-ov-sub">{failMsg}</p>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '24px', width: '100%' }}>

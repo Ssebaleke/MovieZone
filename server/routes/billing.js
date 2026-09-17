@@ -181,16 +181,18 @@ async function safeFindTransactionByRef(reference) {
   if (!reference) return null;
   if (prisma.transaction) {
     try {
+      // Try exact reference match first
       const tx = await prisma.transaction.findUnique({ where: { reference } });
       if (tx) return tx;
+      // Also try livepayRef (internal_reference from LivePay)
+      const tx2 = await prisma.transaction.findFirst({ where: { livepayRef: reference } });
+      if (tx2) return tx2;
     } catch (e) {}
   }
   try {
-    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM "Transaction" WHERE "reference" = $1 LIMIT 1`, reference);
-    if (Array.isArray(rows) && rows.length > 0) return rows[0];
-  } catch (e) {}
-  try {
-    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM transaction WHERE reference = $1 LIMIT 1`, reference);
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT * FROM "Transaction" WHERE "reference" = $1 OR "livepayRef" = $1 LIMIT 1`, reference
+    );
     if (Array.isArray(rows) && rows.length > 0) return rows[0];
   } catch (e) {}
   return null;
@@ -285,18 +287,22 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
       }
 
       if (livepayApiKey && livepayAccountNumber && livepayEnabled) {
+        const serverUrl = process.env.SERVER_URL || 'https://vjpulse.site';
         const collectPayload = {
           accountNumber: livepayAccountNumber,
           phoneNumber: phoneNumber.trim(),
           amount: pkg.price,
           currency: pkg.currency || 'UGX',
           reference: reference,
-          description: `MovieZone ${pkg.name}`
+          description: `MovieZone ${pkg.name}`,
+          callback_url: `${serverUrl}/api/billing/livepay-callback`
         };
 
         if (pkg.currency && pkg.currency.toUpperCase() !== 'UGX') {
           collectPayload.network = network || 'GLOBAL';
         }
+
+        console.log(`Webhook callback URL set to: ${collectPayload.callback_url}`);
 
         console.log(`Initiating LivePay Collection request to https://livepay.me/api/collect-money for ${pkg.name} (${pkg.price} ${pkg.currency})...`);
 
