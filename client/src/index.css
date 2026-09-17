@@ -9088,3 +9088,41 @@ a {
   .mdp-ep-thumb { width: 100px; min-width: 100px; }
   .mdp-ep-num { padding-top: 14px; }
 }
+
+/* ── HERO PREVIEW PHASE TRANSITIONS ── */
+.mdp-hero-banner,
+.mdp-video-wrap {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s ease;
+}
+.mdp-layer-visible { opacity: 1; }
+.mdp-layer-hidden  { opacity: 0; }
+
+.mdp-video-wrap video,
+.mdp-video-wrap { width: 100%; height: 100%; object-fit: cover; }
+
+/* Replay preview button */
+.mdp-replay-btn {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+.mdp-replay-btn:hover { background: rgba(0,0,0,0.85); border-color: #fff; }
+
+@media (min-width: 900px) {
+  .mdp-replay-btn { bottom: 100px; right: 4%; }
+}

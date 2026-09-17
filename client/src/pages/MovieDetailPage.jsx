@@ -18,13 +18,15 @@ export default function MovieDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeVJ, setActiveVJ] = useState('');
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [previewPhase, setPreviewPhase] = useState('banner'); // 'banner' | 'video' | 'fading' | 'done'
   const [watchlist, setWatchlist] = useState([]);
   const [activePlayMovie, setActivePlayMovie] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const videoRef = useRef(null);
   const timerRef = useRef(null);
+  const fadeTimer = useRef(null);
+  const doneTimer = useRef(null);
 
   const cachedUser = localStorage.getItem('netflix_user');
   const user = cachedUser ? JSON.parse(cachedUser) : null;
@@ -43,10 +45,12 @@ export default function MovieDetailPage() {
 
   useEffect(() => {
     setLoading(true);
-    setIsPlayingVideo(false);
+    setPreviewPhase('banner');
     setSeasons([]);
     setActiveSeason(0);
     clearTimeout(timerRef.current);
+    clearTimeout(fadeTimer.current);
+    clearTimeout(doneTimer.current);
 
     api.get(`/movies/${id}`)
       .then(data => {
@@ -55,12 +59,25 @@ export default function MovieDetailPage() {
         setActiveVJ(m.vj || 'VJ Junior');
         setSeasons(data.seasons || []);
         setRecommendations(data.recommendations || []);
-        timerRef.current = setTimeout(() => setIsPlayingVideo(true), 1800);
+        // Start video preview after 1s delay, play for 10s, then fade back to banner
+        if (m.videoUrl) {
+          timerRef.current = setTimeout(() => {
+            setPreviewPhase('video');
+            fadeTimer.current = setTimeout(() => {
+              setPreviewPhase('fading');
+              doneTimer.current = setTimeout(() => setPreviewPhase('done'), 800);
+            }, 10000);
+          }, 1000);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      clearTimeout(timerRef.current);
+      clearTimeout(fadeTimer.current);
+      clearTimeout(doneTimer.current);
+    };
   }, [id]);
 
   const handlePlay = (episodeOverride = null) => {
@@ -85,6 +102,17 @@ export default function MovieDetailPage() {
         setWatchlist(prev => [added, ...prev]);
       }
     } catch {}
+  };
+
+  const replayPreview = () => {
+    if (!movie?.videoUrl) return;
+    clearTimeout(fadeTimer.current);
+    clearTimeout(doneTimer.current);
+    setPreviewPhase('video');
+    fadeTimer.current = setTimeout(() => {
+      setPreviewPhase('fading');
+      doneTimer.current = setTimeout(() => setPreviewPhase('done'), 800);
+    }, 10000);
   };
 
   const availableVJs = [
@@ -121,22 +149,50 @@ export default function MovieDetailPage() {
 
       {/* Hero */}
       <div className="mdp-hero">
-        {isPlayingVideo && movie.videoUrl ? (
-          isHls
-            ? <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
-            : <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} loop playsInline className="mdp-hero-video" />
-        ) : (
-          <img src={movie.backdropUrl || movie.thumbnailUrl} alt={movie.title} className="mdp-hero-video" />
+        {/* Backdrop banner — always mounted, fades in when video ends */}
+        <img
+          src={movie.backdropUrl || movie.thumbnailUrl}
+          alt={movie.title}
+          className={`mdp-hero-video mdp-hero-banner ${
+            previewPhase === 'banner' ? 'mdp-layer-visible' :
+            previewPhase === 'video' ? 'mdp-layer-hidden' :
+            'mdp-layer-visible'
+          }`}
+        />
+
+        {/* Video preview — mounts on 'video'/'fading', fades out on 'fading' */}
+        {(previewPhase === 'video' || previewPhase === 'fading') && movie.videoUrl && (
+          <div className={`mdp-hero-video mdp-video-wrap ${
+            previewPhase === 'fading' ? 'mdp-layer-hidden' : 'mdp-layer-visible'
+          }`}>
+            {isHls
+              ? <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
+              : <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} playsInline className="mdp-hero-video" />
+            }
+          </div>
         )}
+
         <div className="mdp-hero-overlay" />
 
         <button className="mdp-back-btn" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} /> Back
         </button>
 
-        {isPlayingVideo && (
+        {/* Mute — only during video */}
+        {(previewPhase === 'video' || previewPhase === 'fading') && (
           <button className="mdp-mute-btn" onClick={() => setIsMuted(m => !m)}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        )}
+
+        {/* Replay button — shown after preview ends */}
+        {previewPhase === 'done' && movie.videoUrl && (
+          <button className="mdp-replay-btn" onClick={replayPreview}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-4.5" />
+            </svg>
+            Preview
           </button>
         )}
 
