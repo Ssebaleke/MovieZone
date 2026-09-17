@@ -10,6 +10,7 @@ import VJsPage from './pages/VJsPage';
 import VJMoviesPage from './pages/VJMoviesPage';
 import AccountSettings from './pages/AccountSettings';
 import AdminDashboard from './pages/AdminDashboard';
+import MovieDetailPage from './pages/MovieDetailPage';
 import { api } from './utils/api';
 
 // Route protector for Authenticated users
@@ -107,6 +108,9 @@ export default function App() {
 
         {/* Core client browse dashboard — public, no auth required */}
         <Route path="/browse" element={<Browse />} />
+
+        {/* Movie detail page — public */}
+        <Route path="/movie/:id" element={<MovieDetailPage />} />
 
         {/* VJs Page */}
         <Route path="/vjs" element={

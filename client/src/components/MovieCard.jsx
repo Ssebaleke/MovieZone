@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Play, Plus, Check, ThumbsUp, ChevronDown, Star } from 'lucide-react';
 
 export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, onToggleWatchlist, isSubscribed }) {
   const [hovered, setHovered] = useState(false);
   const enterTimer = useRef(null);
   const cardRef = useRef(null);
+  const navigate = useNavigate();
 
   const cachedUser = localStorage.getItem('netflix_user');
   const user = cachedUser ? JSON.parse(cachedUser) : null;
@@ -36,7 +38,7 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
       className={`nf-card${hovered ? ' nf-card--hovered' : ''}`}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      onClick={() => { if (window.innerWidth <= 768) onOpenModal(movie); }}
+      onClick={() => { if (window.innerWidth <= 768) navigate(`/movie/${movie.id}`); }}
     >
       {/* Base poster — always visible */}
       <div className="nf-card-poster">
