@@ -297,12 +297,15 @@ function HlsModalPlayer({ src, videoRef, isMuted, poster }) {
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
+      video.load();
+      video.play().catch(() => {});
     } else {
       import('hls.js').then((Hls) => {
-        if (Hls.isSupported()) {
+        if (Hls.default.isSupported()) {
           hls = new Hls.default();
           hls.loadSource(src);
           hls.attachMedia(video);
+          hls.on(Hls.default.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
         }
       });
     }
@@ -320,7 +323,9 @@ function HlsModalPlayer({ src, videoRef, isMuted, poster }) {
       autoPlay
       muted={isMuted}
       loop
-      playsInline
+      playsInline={true}
+      webkit-playsinline="true"
+      x5-playsinline="true"
       poster={poster}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
     />

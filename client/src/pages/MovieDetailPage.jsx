@@ -377,17 +377,20 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     let hls = null;
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
+      video.load();
+      video.play().catch(() => {});
     } else {
       import('hls.js').then(Hls => {
         if (Hls.default.isSupported()) {
           hls = new Hls.default();
           hls.loadSource(src);
           hls.attachMedia(video);
+          hls.on(Hls.default.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
         }
       });
     }
     return () => { if (hls) hls.destroy(); };
   }, [src, videoRef]);
 
-  return <video ref={videoRef} autoPlay muted={isMuted} playsInline poster={poster} className="mdp-hero-video" />;
+  return <video ref={videoRef} autoPlay muted={isMuted} playsInline={true} webkit-playsinline="true" x5-playsinline="true" poster={poster} className="mdp-hero-video" />;
 }

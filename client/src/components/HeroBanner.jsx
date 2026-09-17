@@ -146,15 +146,18 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     let hls = null;
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native Apple HLS support
+      // Native Apple HLS support (iOS Safari & Chrome)
       video.src = src;
+      video.load();
+      video.play().catch(() => {});
     } else {
       // Use hls.js
       import('hls.js').then((Hls) => {
-        if (Hls.isSupported()) {
+        if (Hls.default.isSupported()) {
           hls = new Hls.default();
           hls.loadSource(src);
           hls.attachMedia(video);
+          hls.on(Hls.default.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
         }
       });
     }
@@ -172,7 +175,9 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
       autoPlay
       muted={isMuted}
       loop
-      playsInline
+      playsInline={true}
+      webkit-playsinline="true"
+      x5-playsinline="true"
       poster={poster}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
     />

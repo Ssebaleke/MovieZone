@@ -144,32 +144,82 @@ export default function VideoPlayer({ movie, onClose }) {
   // Video source setup
   const activeVideoUrl = currentMovie.videoUrl || movie.videoUrl || '';
   const activeEmbedUrl = currentMovie.embedUrl || movie.embedUrl || '';
+  const [needsUserGesture, setNeedsUserGesture] = useState(false);
+  const [showUnmuteHint, setShowUnmuteHint] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeVideoUrl) return;
     let hls = null;
-    if (activeVideoUrl.endsWith('.m3u8')) {
+
+    setNeedsUserGesture(false);
+    setShowUnmuteHint(false);
+
+    const attemptPlay = () => {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            setNeedsUserGesture(false);
+          })
+          .catch((err) => {
+            console.warn('Autoplay prevented on iOS WebKit:', err);
+            // Fallback 1: Try muted autoplay (iOS permits muted video playback programmatically)
+            video.muted = true;
+            setIsMuted(true);
+            video.play()
+              .then(() => {
+                setIsPlaying(true);
+                setNeedsUserGesture(false);
+                setShowUnmuteHint(true);
+              })
+              .catch(() => {
+                // Fallback 2: Requires explicit user touch gesture
+                setIsPlaying(false);
+                setNeedsUserGesture(true);
+              });
+          });
+      }
+    };
+
+    if (activeVideoUrl.includes('.m3u8') || activeVideoUrl.includes('m3u8')) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native Apple HLS (iOS Safari & Chrome on iPhone)
         video.src = activeVideoUrl;
+        video.load();
+        attemptPlay();
       } else {
+        // Desktop / Android via hls.js
         import('hls.js').then(({ default: Hls }) => {
           if (Hls.isSupported()) {
-            hls = new Hls();
+            hls = new Hls({ enableWorker: true, lowLatencyMode: true });
             hls.loadSource(activeVideoUrl);
             hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => attemptPlay());
+          } else {
+            video.src = activeVideoUrl;
+            video.load();
+            attemptPlay();
           }
         });
       }
     } else {
       video.src = activeVideoUrl;
+      video.load();
+      attemptPlay();
     }
+
     const onMeta = () => {
-      setDuration(video.duration);
-      video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      setDuration(video.duration || 0);
+      attemptPlay();
     };
+
     video.addEventListener('loadedmetadata', onMeta);
-    return () => { video.removeEventListener('loadedmetadata', onMeta); hls?.destroy(); };
+    return () => {
+      video.removeEventListener('loadedmetadata', onMeta);
+      if (hls) hls.destroy();
+    };
   }, [activeVideoUrl]);
 
   // Progress save
@@ -257,10 +307,93 @@ export default function VideoPlayer({ movie, onClose }) {
           ref={videoRef}
           className="vp-video"
           onTimeUpdate={() => videoRef.current && setCurrentTime(videoRef.current.currentTime)}
-          onError={() => activeEmbedUrl && setUseEmbedFallback(true)}
+          onError={(e) => {
+            console.warn('Video element error:', e);
+            if (activeEmbedUrl) setUseEmbedFallback(true);
+          }}
           onClick={!isMobile ? togglePlay : undefined}
-          autoPlay playsInline
+          autoPlay
+          playsInline={true}
+          webkit-playsinline="true"
+          x5-playsinline="true"
+          preload="auto"
         />
+      )}
+
+      {/* iOS / Mobile Unmute Hint Toast */}
+      {showUnmuteHint && isPlaying && (
+        <button
+          className="vp-unmute-hint"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              setIsMuted(false);
+              setShowUnmuteHint(false);
+            }
+          }}
+          style={{
+            position: 'absolute', top: '70px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 40, background: 'rgba(229, 9, 20, 0.9)', color: '#fff',
+            padding: '8px 18px', borderRadius: '20px', border: 'none',
+            fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '8px'
+          }}
+        >
+          <VolumeX size={18} /> Tap to Unmute Audio
+        </button>
+      )}
+
+      {/* iOS WebKit explicit User Gesture Play Overlay */}
+      {needsUserGesture && (
+        <div
+          className="vp-gesture-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              setIsMuted(false);
+              videoRef.current.play()
+                .then(() => {
+                  setIsPlaying(true);
+                  setNeedsUserGesture(false);
+                })
+                .catch(() => {
+                  // Fallback: play muted if unmuted gesture fails
+                  videoRef.current.muted = true;
+                  setIsMuted(true);
+                  videoRef.current.play().then(() => {
+                    setIsPlaying(true);
+                    setNeedsUserGesture(false);
+                    setShowUnmuteHint(true);
+                  });
+                });
+            }
+          }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 35,
+            background: 'rgba(0,0,0,0.75)', display: 'flex',
+            flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <div
+            style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: '#e50914', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', boxShadow: '0 0 30px rgba(229,9,20,0.6)',
+              marginBottom: '16px'
+            }}
+          >
+            <Play size={44} fill="#fff" color="#fff" style={{ marginLeft: '4px' }} />
+          </div>
+          <span style={{ color: '#fff', fontSize: '1.2rem', fontWeight: '700', letterSpacing: '0.5px' }}>
+            Tap Screen to Play
+          </span>
+          <span style={{ color: '#ccc', fontSize: '0.85rem', marginTop: '6px' }}>
+            iOS WebKit Media Interaction Required
+          </span>
+        </div>
       )}
 
       {/* Controls overlay */}
