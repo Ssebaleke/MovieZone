@@ -3,14 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio, Share2, Download, Headphones } from 'lucide-react';
 
 export default function Navbar({
-  onSearchChange,
-  searchQuery,
+  onSearchChange = () => {},
+  searchQuery = '',
   activeTab = 'home',
-  setActiveTab,
+  setActiveTab = () => {},
   activeVJ = '',
-  setActiveVJ,
+  setActiveVJ = () => {},
   activeRegion = '',
-  setActiveRegion
+  setActiveRegion = () => {}
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -329,10 +329,10 @@ export default function Navbar({
       {/* Mobile Bottom Navigation Bar */}
       <nav className="mobile-bottom-nav">
         <div
-          className={`mobile-bottom-tab ${activeTab === 'home' && !searchQuery ? 'active' : ''}`}
+          className={`mobile-bottom-tab ${location.pathname === '/browse' && activeTab === 'home' && !searchQuery ? 'active' : location.pathname === '/movie' || location.pathname.startsWith('/movie/') ? '' : ''}`}
           onClick={() => { setActiveTab('home'); setActiveVJ(''); setActiveRegion(''); onSearchChange(''); navigate('/browse'); }}
         >
-          <Home size={20} color={activeTab === 'home' && !searchQuery ? '#e50914' : '#aaaaaa'} />
+          <Home size={20} color={location.pathname === '/browse' && activeTab === 'home' && !searchQuery ? '#e50914' : '#aaaaaa'} />
           <span>Home</span>
         </div>
 

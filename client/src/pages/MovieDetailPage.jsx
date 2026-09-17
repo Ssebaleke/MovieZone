@@ -1,41 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, Plus, Check, ThumbsUp, ChevronLeft, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, ChevronLeft, Volume2, VolumeX, Mic, ChevronDown } from 'lucide-react';
 import { api } from '../utils/api';
 import Navbar from '../components/Navbar';
 import VideoPlayer from '../components/VideoPlayer';
 import UpgradeModal from '../components/UpgradeModal';
 import SignupModal from '../components/SignupModal';
 
+const PREVIEW_DURATION = 60000; // 60s
+const PREVIEW_DELAY    = 1200;  // start after 1.2s
+
 export default function MovieDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [movie, setMovie] = useState(null);
-  const [seasons, setSeasons] = useState([]);
+  const [movie, setMovie]                   = useState(null);
+  const [seasons, setSeasons]               = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [activeSeason, setActiveSeason] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [activeVJ, setActiveVJ] = useState('');
-  const [isMuted, setIsMuted] = useState(true);
-  const [previewPhase, setPreviewPhase] = useState('banner'); // 'banner' | 'video' | 'fading' | 'done'
-  const [watchlist, setWatchlist] = useState([]);
+  const [activeSeason, setActiveSeason]     = useState(0);
+  const [loading, setLoading]               = useState(true);
+  const [activeVJ, setActiveVJ]             = useState('');
+  const [isMuted, setIsMuted]               = useState(true);
+  const [previewPhase, setPreviewPhase]     = useState('banner'); // banner|video|fading|done
+  const [watchlist, setWatchlist]           = useState([]);
   const [activePlayMovie, setActivePlayMovie] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
-  const videoRef = useRef(null);
-  const timerRef = useRef(null);
-  const fadeTimer = useRef(null);
-  const doneTimer = useRef(null);
+  const [showSignupModal, setShowSignupModal]   = useState(false);
+  const [seasonOpen, setSeasonOpen]         = useState(false);
 
-  const cachedUser = localStorage.getItem('netflix_user');
-  const user = cachedUser ? JSON.parse(cachedUser) : null;
-  const isLoggedIn = !!localStorage.getItem('netflix_token');
-  const isSubscribed = user?.subscriptionStatus === 'ACTIVE' && (
+  const videoRef  = useRef(null);
+  const t1 = useRef(null); // delay before preview starts
+  const t2 = useRef(null); // preview duration
+  const t3 = useRef(null); // fade-out duration
+
+  const cachedUser    = localStorage.getItem('netflix_user');
+  const user          = cachedUser ? JSON.parse(cachedUser) : null;
+  const isLoggedIn    = !!localStorage.getItem('netflix_token');
+  const isSubscribed  = user?.subscriptionStatus === 'ACTIVE' && (
     user?.role === 'ADMIN' || !user?.subscriptionEnd || new Date(user.subscriptionEnd) > new Date()
   );
   const currentProfile = isLoggedIn ? JSON.parse(localStorage.getItem('netflix_profile') || 'null') : null;
-  const isInWatchlist = watchlist.some(m => m.id === movie?.id);
+  const isInWatchlist  = watchlist.some(m => m.id === movie?.id);
+
+  // ── scroll to top on every navigation ──
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [id]);
 
   useEffect(() => {
     if (isLoggedIn && currentProfile) {
@@ -43,14 +51,29 @@ export default function MovieDetailPage() {
     }
   }, []);
 
+  const clearTimers = () => {
+    clearTimeout(t1.current);
+    clearTimeout(t2.current);
+    clearTimeout(t3.current);
+  };
+
+  const startPreview = () => {
+    clearTimers();
+    t1.current = setTimeout(() => {
+      setPreviewPhase('video');
+      t2.current = setTimeout(() => {
+        setPreviewPhase('fading');
+        t3.current = setTimeout(() => setPreviewPhase('done'), 800);
+      }, PREVIEW_DURATION);
+    }, PREVIEW_DELAY);
+  };
+
   useEffect(() => {
     setLoading(true);
     setPreviewPhase('banner');
     setSeasons([]);
     setActiveSeason(0);
-    clearTimeout(timerRef.current);
-    clearTimeout(fadeTimer.current);
-    clearTimeout(doneTimer.current);
+    clearTimers();
 
     api.get(`/movies/${id}`)
       .then(data => {
@@ -59,26 +82,18 @@ export default function MovieDetailPage() {
         setActiveVJ(m.vj || 'VJ Junior');
         setSeasons(data.seasons || []);
         setRecommendations(data.recommendations || []);
-        // Start video preview after 1s delay, play for 10s, then fade back to banner
-        if (m.videoUrl) {
-          timerRef.current = setTimeout(() => {
-            setPreviewPhase('video');
-            fadeTimer.current = setTimeout(() => {
-              setPreviewPhase('fading');
-              doneTimer.current = setTimeout(() => setPreviewPhase('done'), 800);
-            }, 10000);
-          }, 1000);
-        }
+        if (m.videoUrl) startPreview();
       })
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    return () => {
-      clearTimeout(timerRef.current);
-      clearTimeout(fadeTimer.current);
-      clearTimeout(doneTimer.current);
-    };
+    return clearTimers;
   }, [id]);
+
+  const replayPreview = () => {
+    if (!movie?.videoUrl) return;
+    startPreview();
+  };
 
   const handlePlay = (episodeOverride = null) => {
     if (!isLoggedIn) { setShowSignupModal(true); return; }
@@ -104,17 +119,6 @@ export default function MovieDetailPage() {
     } catch {}
   };
 
-  const replayPreview = () => {
-    if (!movie?.videoUrl) return;
-    clearTimeout(fadeTimer.current);
-    clearTimeout(doneTimer.current);
-    setPreviewPhase('video');
-    fadeTimer.current = setTimeout(() => {
-      setPreviewPhase('fading');
-      doneTimer.current = setTimeout(() => setPreviewPhase('done'), 800);
-    }, 10000);
-  };
-
   const availableVJs = [
     { name: movie?.vj || 'VJ Junior' },
     { name: 'VJ Emmy' },
@@ -138,7 +142,7 @@ export default function MovieDetailPage() {
     );
   }
 
-  const isHls = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
+  const isHls    = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
   const isSeries = movie.type === 'SHOW';
   const matchPct = Math.floor(Math.random() * 15) + 85;
   const currentSeasonData = seasons[activeSeason];
@@ -147,24 +151,19 @@ export default function MovieDetailPage() {
     <div className="mdp-root">
       <Navbar />
 
-      {/* Hero */}
+      {/* ── HERO ── */}
       <div className="mdp-hero">
-        {/* Backdrop banner — always mounted, fades in when video ends */}
+
+        {/* Backdrop — always present */}
         <img
           src={movie.backdropUrl || movie.thumbnailUrl}
           alt={movie.title}
-          className={`mdp-hero-video mdp-hero-banner ${
-            previewPhase === 'banner' ? 'mdp-layer-visible' :
-            previewPhase === 'video' ? 'mdp-layer-hidden' :
-            'mdp-layer-visible'
-          }`}
+          className={`mdp-hero-video mdp-hero-banner ${previewPhase === 'video' ? 'mdp-layer-hidden' : 'mdp-layer-visible'}`}
         />
 
-        {/* Video preview — mounts on 'video'/'fading', fades out on 'fading' */}
+        {/* Video preview */}
         {(previewPhase === 'video' || previewPhase === 'fading') && movie.videoUrl && (
-          <div className={`mdp-hero-video mdp-video-wrap ${
-            previewPhase === 'fading' ? 'mdp-layer-hidden' : 'mdp-layer-visible'
-          }`}>
+          <div className={`mdp-hero-video mdp-video-wrap ${previewPhase === 'fading' ? 'mdp-layer-hidden' : 'mdp-layer-visible'}`}>
             {isHls
               ? <HlsPlayer src={movie.videoUrl} videoRef={videoRef} isMuted={isMuted} poster={movie.backdropUrl} />
               : <video ref={videoRef} src={movie.videoUrl} autoPlay muted={isMuted} playsInline className="mdp-hero-video" />
@@ -174,30 +173,32 @@ export default function MovieDetailPage() {
 
         <div className="mdp-hero-overlay" />
 
+        {/* Back */}
         <button className="mdp-back-btn" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} /> Back
         </button>
 
-        {/* Mute — only during video */}
+        {/* Mute — only while video plays */}
         {(previewPhase === 'video' || previewPhase === 'fading') && (
           <button className="mdp-mute-btn" onClick={() => setIsMuted(m => !m)}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         )}
 
-        {/* Replay button — shown after preview ends */}
+        {/* Replay — after preview ends */}
         {previewPhase === 'done' && movie.videoUrl && (
           <button className="mdp-replay-btn" onClick={replayPreview}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 .49-4.5" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.5" />
             </svg>
             Preview
           </button>
         )}
 
+        {/* Hero info */}
         <div className="mdp-hero-info">
           <h1 className="mdp-title">{movie.title}</h1>
+
           <div className="mdp-meta">
             <span className="mdp-meta-match">{matchPct}% Match</span>
             <span className="mdp-meta-year">{movie.releaseYear || movie.year}</span>
@@ -206,26 +207,53 @@ export default function MovieDetailPage() {
             {movie.duration && <span className="mdp-meta-dur">{movie.duration}</span>}
           </div>
 
+          {/* Season selector — right in the hero for series */}
+          {isSeries && seasons.length > 1 && (
+            <div className="mdp-season-selector">
+              <button className="mdp-season-dropdown-btn" onClick={() => setSeasonOpen(o => !o)}>
+                Season {seasons[activeSeason]?.season ?? activeSeason + 1}
+                <ChevronDown size={15} style={{ transition: 'transform 0.2s', transform: seasonOpen ? 'rotate(180deg)' : 'none' }} />
+              </button>
+              {seasonOpen && (
+                <div className="mdp-season-dropdown">
+                  {seasons.map((s, i) => (
+                    <button
+                      key={s.season}
+                      className={`mdp-season-option${activeSeason === i ? ' active' : ''}`}
+                      onClick={() => { setActiveSeason(i); setSeasonOpen(false); }}
+                    >
+                      Season {s.season}
+                      <span className="mdp-season-ep-count">{s.episodes.length} ep{s.episodes.length !== 1 ? 's' : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mdp-actions">
             <button className="mdp-play-btn" onClick={() => handlePlay()}>
               <Play size={18} fill="#000" color="#000" />
-              {isSubscribed ? (isSeries ? `Play S1 E1 · ${activeVJ}` : `Play · ${activeVJ}`) : '🔒 Subscribe to Watch'}
+              {isSubscribed
+                ? isSeries ? `Play S${seasons[activeSeason]?.season ?? 1} E1 · ${activeVJ}` : `Play · ${activeVJ}`
+                : '🔒 Subscribe to Watch'}
             </button>
-            <button className="mdp-icon-btn" onClick={handleToggleWatchlist}>
+            <button className="mdp-icon-btn" onClick={handleToggleWatchlist} title={isInWatchlist ? 'Remove from list' : 'Add to list'}>
               {isInWatchlist ? <Check size={20} color="#46d369" /> : <Plus size={20} color="#fff" />}
             </button>
-            <button className="mdp-icon-btn">
+            <button className="mdp-icon-btn" title="Like">
               <ThumbsUp size={20} color="#fff" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Body */}
+      {/* ── BODY ── */}
       <div className="mdp-body">
+
         <p className="mdp-desc">{movie.description}</p>
 
-        {/* VJ Selector */}
+        {/* VJ selector */}
         <div className="mdp-vj-section">
           <div className="mdp-section-label"><Mic size={13} color="#e50914" /> Audio Version</div>
           <div className="mdp-vj-pills">
@@ -247,11 +275,13 @@ export default function MovieDetailPage() {
           <span><strong>Audio:</strong> Luganda Voiceover</span>
         </div>
 
-        {/* ── EPISODES (series only) ── */}
+        {/* ── EPISODES ── */}
         {isSeries && seasons.length > 0 && (
           <div className="mdp-episodes">
             <div className="mdp-episodes-header">
               <h2 className="mdp-more-title">Episodes</h2>
+
+              {/* Season tabs — shown in body too for easy switching */}
               {seasons.length > 1 && (
                 <div className="mdp-season-tabs">
                   {seasons.map((s, i) => (
@@ -260,7 +290,8 @@ export default function MovieDetailPage() {
                       className={`mdp-season-tab${activeSeason === i ? ' active' : ''}`}
                       onClick={() => setActiveSeason(i)}
                     >
-                      Season {s.season}
+                      S{s.season}
+                      <span className="mdp-season-tab-count">{s.episodes.length}</span>
                     </button>
                   ))}
                 </div>
@@ -297,7 +328,11 @@ export default function MovieDetailPage() {
             <h2 className="mdp-more-title">More Like This</h2>
             <div className="mdp-recs-grid">
               {recommendations.map(rec => (
-                <div key={rec.id} className="mdp-rec-card" onClick={() => { navigate(`/movie/${rec.id}`); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                <div
+                  key={rec.id}
+                  className="mdp-rec-card"
+                  onClick={() => { navigate(`/movie/${rec.id}`); }}
+                >
                   <div className="mdp-rec-thumb">
                     <img src={rec.thumbnailUrl} alt={rec.title} />
                     <div className="mdp-rec-thumb-overlay" />
@@ -354,5 +389,5 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     return () => { if (hls) hls.destroy(); };
   }, [src, videoRef]);
 
-  return <video ref={videoRef} autoPlay muted={isMuted} loop playsInline poster={poster} className="mdp-hero-video" />;
+  return <video ref={videoRef} autoPlay muted={isMuted} playsInline poster={poster} className="mdp-hero-video" />;
 }
