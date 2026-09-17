@@ -1,10 +1,20 @@
 import express from 'express';
 import Stripe from 'stripe';
 import crypto from 'crypto';
+import https from 'https';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+const ipv4Agent = new https.Agent({ family: 4 });
+
+async function livepayFetch(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    agent: ipv4Agent
+  });
+}
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 let stripeInstance = null;
@@ -307,7 +317,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
         console.log(`Initiating LivePay Collection request to https://livepay.me/api/collect-money for ${pkg.name} (${pkg.price} ${pkg.currency})...`);
 
         try {
-          const lpResponse = await fetch('https://livepay.me/api/collect-money', {
+          const lpResponse = await livepayFetch('https://livepay.me/api/collect-money', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -359,7 +369,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
               }
             });
           } else {
-            // Mobile Money prompt sent to phone - awaiting PIN / Admin approval
+            // Mobile Money prompt sent to phone - awaiting PIN / LivePay callback / polling
             await safeUpdateTransaction(transaction.id, { livepayRef });
 
             return res.json({
@@ -373,7 +383,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
         } catch (lpErr) {
           console.error('Error connecting to LivePay API:', lpErr);
           await safeUpdateTransaction(transaction.id, { status: 'FAILED', errorMessage: 'Failed to reach LivePay server: ' + lpErr.message });
-          return res.status(502).json({ error: 'Failed to reach LivePay server: ' + lpErr.message });
+          return res.status(502).json({ error: 'Failed to reach LivePay server: ' + lpErr.message, reference });
         }
       } else {
         // LivePay credentials not configured, log as PENDING for admin review
@@ -408,7 +418,7 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
       };
 
       try {
-        const lpCardRes = await fetch('https://livepay.me/api/card-collection', {
+        const lpCardRes = await livepayFetch('https://livepay.me/api/card-collection', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -453,14 +463,78 @@ router.post('/subscribe-package', authenticateToken, async (req, res) => {
   }
 });
 
-// Check transaction status by reference
+// Check transaction status by reference (with live IPv4 LivePay API status polling)
 router.get('/transaction-status/:reference', authenticateToken, async (req, res) => {
   const { reference } = req.params;
   try {
-    const tx = await safeFindTransactionByRef(reference);
+    let tx = await safeFindTransactionByRef(reference);
 
     if (!tx) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // If transaction is still PENDING, query LivePay Status API directly over IPv4
+    if (tx.status === 'PENDING') {
+      try {
+        let livepayApiKey = '';
+        let livepayAccountNumber = '';
+
+        if (prisma.systemSetting) {
+          const settings = await prisma.systemSetting.findMany({
+            where: { key: { in: ['LIVEPAY_API_KEY', 'LIVEPAY_ACCOUNT_NUMBER'] } }
+          }).catch(() => []);
+          settings.forEach(s => {
+            if (s.key === 'LIVEPAY_API_KEY') livepayApiKey = s.value ? s.value.trim() : '';
+            if (s.key === 'LIVEPAY_ACCOUNT_NUMBER') livepayAccountNumber = s.value ? s.value.trim() : '';
+          });
+        }
+
+        if (livepayApiKey && livepayAccountNumber) {
+          const statusUrl = `https://livepay.me/api/transaction-status?accountNumber=${encodeURIComponent(livepayAccountNumber)}&currency=${encodeURIComponent(tx.currency || 'UGX')}&reference=${encodeURIComponent(reference)}`;
+          
+          const lpRes = await livepayFetch(statusUrl, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${livepayApiKey}` }
+          });
+
+          if (lpRes.ok) {
+            const lpData = await lpRes.json();
+            console.log('Polled LivePay Status API for ref', reference, ':', lpData);
+
+            const statusStr = String(lpData.status || lpData.payment_status || '').toUpperCase().trim();
+            const isSuccess = ['SUCCESS', 'COMPLETED', 'SUCCESSFUL', 'PAID', '00', '200', 'TRUE', '1', 'APPROVED'].includes(statusStr);
+            const isFailed = ['FAILED', 'CANCELLED', 'DECLINED', 'REJECTED', 'EXPIRED', 'ERROR'].includes(statusStr);
+
+            if (isSuccess) {
+              const livepayRef = lpData.provider_transaction_id || lpData.internal_reference || lpData.transactionId || tx.livepayRef;
+              await safeUpdateTransaction(tx.id, { status: 'SUCCESS', livepayRef });
+
+              if (tx.userId) {
+                let pkg = null;
+                if (tx.packageId) {
+                  pkg = await prisma.package.findFirst({
+                    where: { OR: [{ id: String(tx.packageId) }, { slug: String(tx.packageId) }] }
+                  }).catch(() => null);
+                }
+                const expiration = calculateExpirationDate(pkg?.interval || '30_DAYS');
+                await prisma.user.update({
+                  where: { id: tx.userId },
+                  data: { plan: tx.packageName, subscriptionStatus: 'ACTIVE', subscriptionEnd: expiration }
+                });
+                console.log(`[POLLED STATUS ACTIVATION SUCCESS] Activated user ${tx.userId} for plan ${tx.packageName}!`);
+              }
+              tx.status = 'SUCCESS';
+            } else if (isFailed) {
+              const errorMsg = lpData.message || lpData.error || 'Payment declined or failed on Mobile Money';
+              await safeUpdateTransaction(tx.id, { status: 'FAILED', errorMessage: errorMsg });
+              tx.status = 'FAILED';
+              tx.errorMessage = errorMsg;
+            }
+          }
+        }
+      } catch (lpErr) {
+        console.warn('Error polling LivePay status API:', lpErr.message);
+      }
     }
 
     // Fetch user current status
