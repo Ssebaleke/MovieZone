@@ -287,11 +287,15 @@ router.get('/', async (req, res) => {
       genreCategories.forEach(c => catMap.set(c.name, []));
       const placedIds = new Set();
 
-      // Each movie goes into the FIRST category it matches only
       for (const cat of genreCategories) {
+        const catList = catMap.get(cat.name);
         for (const movie of movies) {
-          if (!placedIds.has(movie.id) && cat.match(movie) && catMap.get(cat.name).length < 40) {
-            catMap.get(cat.name).push(movie);
+          if (cat.name === 'New & Uncategorised') {
+            if (!placedIds.has(movie.id)) {
+              catList.push(movie);
+            }
+          } else if (cat.match(movie)) {
+            catList.push(movie);
             placedIds.add(movie.id);
           }
         }
