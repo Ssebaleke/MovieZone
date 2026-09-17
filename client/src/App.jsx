@@ -11,6 +11,7 @@ import VJMoviesPage from './pages/VJMoviesPage';
 import AccountSettings from './pages/AccountSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import MovieDetailPage from './pages/MovieDetailPage';
+import WhatsAppSupport from './components/WhatsAppSupport';
 import { api } from './utils/api';
 
 // Route protector for Authenticated users
@@ -182,6 +183,7 @@ export default function App() {
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <WhatsAppSupport />
     </BrowserRouter>
   );
 }

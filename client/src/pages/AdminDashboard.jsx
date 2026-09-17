@@ -4,7 +4,7 @@ import {
   Plus, X, Edit, Trash2, Users, Key, Film, Activity,
   LogOut, BarChart3, Search, RefreshCw, CheckCircle2,
   AlertCircle, Clock, Package as PackageIcon, Check,
-  CreditCard, Smartphone, ShieldCheck, TrendingUp
+  CreditCard, Smartphone, ShieldCheck, TrendingUp, MessageSquare, Send
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -41,6 +41,10 @@ export default function AdminDashboard() {
   const [livepaySaveStatus, setLivepaySaveStatus] = useState('');
   const [livepayTestResult, setLivepayTestResult] = useState(null);
   const [testingLivepay, setTestingLivepay] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [whatsappMessage, setWhatsappMessage] = useState('Hello! I need assistance with MovieZone.');
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [whatsappSaveStatus, setWhatsappSaveStatus] = useState('');
   const [catalogStats, setCatalogStats] = useState(null);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -146,10 +150,27 @@ export default function AdminDashboard() {
       if (s?.settings?.LIVEPAY_ACCOUNT_NUMBER) setLivepayAccountNumber(s.settings.LIVEPAY_ACCOUNT_NUMBER);
       if (s?.settings?.LIVEPAY_WEBHOOK_SECRET) setLivepayWebhookSecret(s.settings.LIVEPAY_WEBHOOK_SECRET);
       if (s?.settings?.LIVEPAY_ENABLED !== undefined) setLivepayEnabled(s.settings.LIVEPAY_ENABLED !== 'false');
+      if (s?.settings?.SUPPORT_WHATSAPP_NUMBER !== undefined) setWhatsappNumber(s.settings.SUPPORT_WHATSAPP_NUMBER);
+      if (s?.settings?.SUPPORT_WHATSAPP_MESSAGE !== undefined) setWhatsappMessage(s.settings.SUPPORT_WHATSAPP_MESSAGE);
+      if (s?.settings?.SUPPORT_WHATSAPP_ENABLED !== undefined) setWhatsappEnabled(s.settings.SUPPORT_WHATSAPP_ENABLED !== 'false');
     } catch {}
     try { const d = await api.get('/admin/reelplexi/stats'); setReelplexiStats(d); } catch {}
     try { const d = await api.get('/admin/reelplexi/activity?limit=10'); setReelplexiActivity(Array.isArray(d) ? d : []); } catch { setReelplexiActivity([]); }
     try { const d = await api.get('/admin/reelplexi/top-movies'); setTopMovies(Array.isArray(d) ? d : []); } catch { setTopMovies([]); }
+  };
+
+  const handleSaveWhatsappSettings = async (e) => {
+    e.preventDefault(); setWhatsappSaveStatus('');
+    try {
+      await api.post('/admin/settings', {
+        settings: {
+          SUPPORT_WHATSAPP_NUMBER: whatsappNumber.trim(),
+          SUPPORT_WHATSAPP_MESSAGE: whatsappMessage.trim(),
+          SUPPORT_WHATSAPP_ENABLED: whatsappEnabled ? 'true' : 'false'
+        }
+      });
+      setWhatsappSaveStatus('WhatsApp support settings saved successfully!');
+    } catch (err) { setWhatsappSaveStatus('Error: ' + err.message); }
   };
 
   useEffect(() => {
@@ -303,12 +324,13 @@ export default function AdminDashboard() {
     { id: 'payments', label: 'Payments', icon: <CreditCard size={16} />, badge: txStats?.pendingCount > 0 ? txStats.pendingCount : undefined },
     { id: 'packages', label: 'Packages', icon: <PackageIcon size={16} />, badge: packagesList.length },
     { id: 'catalog', label: 'Catalog', icon: <Film size={16} />, badge: catalogStats?.reelplexiTotalContent || movies.length },
+    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={16} /> },
     { id: 'livepay', label: 'LivePay', icon: <CreditCard size={16} /> },
     { id: 'apikeys', label: 'API Key', icon: <Key size={16} /> },
     { id: 'analytics', label: 'Analytics', icon: <Activity size={16} /> },
   ];
 
-  const PAGE_TITLES = { overview: 'Overview', signups: 'Users', payments: 'Payments & Transactions Tracker', packages: 'Packages', livepay: 'LivePay', apikeys: 'API Key', catalog: 'Catalog', analytics: 'Analytics' };
+  const PAGE_TITLES = { overview: 'Overview', signups: 'Users', payments: 'Payments & Transactions Tracker', packages: 'Packages', catalog: 'Catalog', whatsapp: 'WhatsApp Support Settings', livepay: 'LivePay Gateway', apikeys: 'API Key', analytics: 'Analytics' };
 
   const inp = { background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)', padding: '11px 14px', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', width: '100%' };
   const sel = { ...inp, cursor: 'pointer' };
@@ -336,7 +358,7 @@ export default function AdminDashboard() {
                   if (item.id === 'packages') fetchPackages();
                   if (item.id === 'catalog') fetchMovies();
                   if (item.id === 'analytics') fetchAnalytics();
-                  if (['apikeys','livepay'].includes(item.id)) fetchSettingsAndStats();
+                  if (['apikeys','livepay','whatsapp'].includes(item.id)) fetchSettingsAndStats();
                 }}
               >
                 <span className="ad-nav-icon">{item.icon}</span>
@@ -802,6 +824,45 @@ export default function AdminDashboard() {
                     {filteredCatalogMovies.length === 0 && <tr><td colSpan="6" className="ad-empty">No matching items found in catalog.</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── WHATSAPP SUPPORT ── */}
+          {activeNav === 'whatsapp' && (
+            <div className="ad-section">
+              <div className="ad-card" style={{maxWidth:'680px'}}>
+                <div className="ad-card-header" style={{justifyContent:'space-between'}}>
+                  <span style={{display:'flex',alignItems:'center',gap:'8px'}}><MessageSquare size={18} color="#25D366"/> WhatsApp Support Settings</span>
+                  <label style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'0.82rem',fontWeight:700,color:whatsappEnabled?'#25D366':'#666'}}>
+                    <input type="checkbox" checked={whatsappEnabled} onChange={e=>setWhatsappEnabled(e.target.checked)} style={{accentColor:'#25D366',width:'16px',height:'16px'}}/>
+                    {whatsappEnabled ? 'WIDGET ENABLED' : 'WIDGET DISABLED'}
+                  </label>
+                </div>
+                {whatsappSaveStatus && <div className={`ad-alert ${whatsappSaveStatus.startsWith('Error')?'ad-alert--error':'ad-alert--success'}`}>{whatsappSaveStatus}</div>}
+                <form onSubmit={handleSaveWhatsappSettings} style={{display:'flex',flexDirection:'column',gap:'16px',marginTop:'8px'}}>
+                  <div>
+                    <label style={lbl}>Support WhatsApp Phone Number (International format)</label>
+                    <input style={inp} type="text" placeholder="e.g. 256770000000 or +256770000000" value={whatsappNumber} onChange={e=>setWhatsappNumber(e.target.value)} required/>
+                    <p style={{fontSize:'0.78rem',color:'#888',marginTop:'4px'}}>Enter the phone number where support messages will be sent (include country code, e.g. 256 for Uganda).</p>
+                  </div>
+                  <div>
+                    <label style={lbl}>Default Pre-filled Inbox Message</label>
+                    <textarea style={{...inp,minHeight:'80px',resize:'vertical'}} placeholder="Hello! I need assistance with MovieZone." value={whatsappMessage} onChange={e=>setWhatsappMessage(e.target.value)}/>
+                    <p style={{fontSize:'0.78rem',color:'#888',marginTop:'4px'}}>This text will automatically open in the user's WhatsApp input when they click support.</p>
+                  </div>
+                  <div style={{display:'flex',gap:'10px',justifyContent:'flex-end',marginTop:'8px'}}>
+                    <button type="button" className="ad-ghost-btn" disabled={!whatsappNumber} onClick={() => {
+                      const cleaned = whatsappNumber.replace(/\D/g, '');
+                      if (!cleaned) return alert('Please enter a valid phone number first.');
+                      const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(whatsappMessage || '')}`;
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }}>
+                      <Send size={13}/> Test Inbox Link
+                    </button>
+                    <button type="submit" className="ad-action-btn" style={{background:'#25D366'}}><Check size={14}/> Save WhatsApp Settings</button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

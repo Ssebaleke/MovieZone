@@ -17,6 +17,7 @@ import listRoutes from './routes/list.js';
 import historyRoutes from './routes/history.js';
 import vjRoutes from './routes/vj.js';
 import regionRoutes from './routes/regions.js';
+import settingsRoutes from './routes/settings.js';
 import prisma from './db.js';
 import bcrypt from 'bcryptjs';
 
@@ -52,6 +53,7 @@ app.use('/api/mylist', listRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/vj', vjRoutes);
 app.use('/api/regions', regionRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
