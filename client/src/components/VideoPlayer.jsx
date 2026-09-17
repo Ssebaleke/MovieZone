@@ -151,11 +151,15 @@ export default function VideoPlayer({ movie, onClose }) {
     const video = videoRef.current;
     if (!video || !activeVideoUrl) return;
     let hls = null;
+    let playTimer = null;
+    let hasAttempted = false;
 
     setNeedsUserGesture(false);
     setShowUnmuteHint(false);
 
     const attemptPlay = () => {
+      if (hasAttempted || !video) return;
+      hasAttempted = true;
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise
@@ -183,12 +187,16 @@ export default function VideoPlayer({ movie, onClose }) {
       }
     };
 
+    // Explicitly set DOM attributes for iOS Safari & Chrome WebKit
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('x5-playsinline', 'true');
+
     if (activeVideoUrl.includes('.m3u8') || activeVideoUrl.includes('m3u8')) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         // Native Apple HLS (iOS Safari & Chrome on iPhone)
         video.src = activeVideoUrl;
         video.load();
-        attemptPlay();
       } else {
         // Desktop / Android via hls.js
         import('hls.js').then(({ default: Hls }) => {
@@ -200,14 +208,12 @@ export default function VideoPlayer({ movie, onClose }) {
           } else {
             video.src = activeVideoUrl;
             video.load();
-            attemptPlay();
           }
         });
       }
     } else {
       video.src = activeVideoUrl;
       video.load();
-      attemptPlay();
     }
 
     const onMeta = () => {
@@ -215,9 +221,24 @@ export default function VideoPlayer({ movie, onClose }) {
       attemptPlay();
     };
 
+    const onCanPlay = () => {
+      attemptPlay();
+    };
+
     video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('canplay', onCanPlay);
+
+    // iOS Safety Timeout: If video has not played or prompted after 2.5s, trigger attemptPlay
+    playTimer = setTimeout(() => {
+      if (video && video.paused && !hasAttempted) {
+        attemptPlay();
+      }
+    }, 2500);
+
     return () => {
+      clearTimeout(playTimer);
       video.removeEventListener('loadedmetadata', onMeta);
+      video.removeEventListener('canplay', onCanPlay);
       if (hls) hls.destroy();
     };
   }, [activeVideoUrl]);
@@ -314,8 +335,8 @@ export default function VideoPlayer({ movie, onClose }) {
           onClick={!isMobile ? togglePlay : undefined}
           autoPlay
           playsInline={true}
-          webkit-playsinline="true"
-          x5-playsinline="true"
+          webkitPlaysInline={true}
+          x5PlaysInline={true}
           preload="auto"
         />
       )}
@@ -407,6 +428,19 @@ export default function VideoPlayer({ movie, onClose }) {
             {currentMovie.vj && <span className="vp-vj-tag">{currentMovie.vj}</span>}
           </div>
           <div className="vp-top-right">
+            {activeEmbedUrl && (
+              <button
+                className="vp-server-btn"
+                onClick={(e) => { e.stopPropagation(); setUseEmbedFallback(p => !p); }}
+                style={{
+                  background: useEmbedFallback ? '#e50914' : 'rgba(255,255,255,0.2)',
+                  color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px',
+                  fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer', marginRight: '8px'
+                }}
+              >
+                {useEmbedFallback ? 'Server 1 (Direct)' : 'Server 2 (Backup)'}
+              </button>
+            )}
             {isSeries && (
               <button className="vp-icon-btn" onClick={(e) => { e.stopPropagation(); setShowEpisodes(p => !p); }} title="Episodes">
                 <List size={20} />

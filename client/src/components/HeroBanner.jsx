@@ -144,6 +144,9 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     if (!video) return;
 
     let hls = null;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('x5-playsinline', 'true');
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native Apple HLS support (iOS Safari & Chrome)
@@ -176,8 +179,8 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
       muted={isMuted}
       loop
       playsInline={true}
-      webkit-playsinline="true"
-      x5-playsinline="true"
+      webkitPlaysInline={true}
+      x5PlaysInline={true}
       poster={poster}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
     />

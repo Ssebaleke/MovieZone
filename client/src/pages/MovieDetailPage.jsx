@@ -385,6 +385,9 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     const video = videoRef.current;
     if (!video) return;
     let hls = null;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('x5-playsinline', 'true');
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
       video.load();
@@ -402,5 +405,5 @@ function HlsPlayer({ src, videoRef, isMuted, poster }) {
     return () => { if (hls) hls.destroy(); };
   }, [src, videoRef]);
 
-  return <video ref={videoRef} autoPlay muted={isMuted} playsInline={true} webkit-playsinline="true" x5-playsinline="true" poster={poster} className="mdp-hero-video" />;
+  return <video ref={videoRef} autoPlay muted={isMuted} playsInline={true} webkitPlaysInline={true} x5PlaysInline={true} poster={poster} className="mdp-hero-video" />;
 }
