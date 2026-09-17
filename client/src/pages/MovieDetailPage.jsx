@@ -12,7 +12,9 @@ export default function MovieDetailPage() {
   const navigate = useNavigate();
 
   const [movie, setMovie] = useState(null);
+  const [seasons, setSeasons] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [activeSeason, setActiveSeason] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeVJ, setActiveVJ] = useState('');
   const [isMuted, setIsMuted] = useState(true);
@@ -22,6 +24,7 @@ export default function MovieDetailPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const videoRef = useRef(null);
+  const timerRef = useRef(null);
 
   const cachedUser = localStorage.getItem('netflix_user');
   const user = cachedUser ? JSON.parse(cachedUser) : null;
@@ -41,23 +44,33 @@ export default function MovieDetailPage() {
   useEffect(() => {
     setLoading(true);
     setIsPlayingVideo(false);
+    setSeasons([]);
+    setActiveSeason(0);
+    clearTimeout(timerRef.current);
+
     api.get(`/movies/${id}`)
       .then(data => {
         const m = data.movie || data;
         setMovie(m);
         setActiveVJ(m.vj || 'VJ Junior');
+        setSeasons(data.seasons || []);
         setRecommendations(data.recommendations || []);
-        const timer = setTimeout(() => setIsPlayingVideo(true), 1800);
-        return () => clearTimeout(timer);
+        timerRef.current = setTimeout(() => setIsPlayingVideo(true), 1800);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    return () => clearTimeout(timerRef.current);
   }, [id]);
 
-  const handlePlay = () => {
+  const handlePlay = (episodeOverride = null) => {
     if (!isLoggedIn) { setShowSignupModal(true); return; }
     if (!isSubscribed) { setShowUpgradeModal(true); return; }
-    setActivePlayMovie({ ...movie, activeVJ });
+    if (episodeOverride) {
+      setActivePlayMovie({ ...movie, activeVJ, videoUrl: episodeOverride.streamUrl || episodeOverride.embedUrl || movie.videoUrl, episodeTitle: episodeOverride.title });
+    } else {
+      setActivePlayMovie({ ...movie, activeVJ });
+    }
   };
 
   const handleToggleWatchlist = async () => {
@@ -72,11 +85,6 @@ export default function MovieDetailPage() {
         setWatchlist(prev => [added, ...prev]);
       }
     } catch {}
-  };
-
-  const handleRecClick = (rec) => {
-    navigate(`/movie/${rec.id}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const availableVJs = [
@@ -103,7 +111,9 @@ export default function MovieDetailPage() {
   }
 
   const isHls = movie.videoUrl && movie.videoUrl.endsWith('.m3u8');
+  const isSeries = movie.type === 'SHOW';
   const matchPct = Math.floor(Math.random() * 15) + 85;
+  const currentSeasonData = seasons[activeSeason];
 
   return (
     <div className="mdp-root">
@@ -120,33 +130,30 @@ export default function MovieDetailPage() {
         )}
         <div className="mdp-hero-overlay" />
 
-        {/* Back button */}
         <button className="mdp-back-btn" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} /> Back
         </button>
 
-        {/* Mute toggle */}
         {isPlayingVideo && (
           <button className="mdp-mute-btn" onClick={() => setIsMuted(m => !m)}>
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         )}
 
-        {/* Hero info */}
         <div className="mdp-hero-info">
           <h1 className="mdp-title">{movie.title}</h1>
           <div className="mdp-meta">
             <span className="mdp-meta-match">{matchPct}% Match</span>
             <span className="mdp-meta-year">{movie.releaseYear || movie.year}</span>
             {movie.rating && <span className="mdp-meta-badge">{movie.rating}</span>}
-            <span className="mdp-meta-type">{movie.type === 'SHOW' ? 'SERIES' : 'MOVIE'}</span>
+            <span className="mdp-meta-type">{isSeries ? 'SERIES' : 'MOVIE'}</span>
             {movie.duration && <span className="mdp-meta-dur">{movie.duration}</span>}
           </div>
 
           <div className="mdp-actions">
-            <button className="mdp-play-btn" onClick={handlePlay}>
+            <button className="mdp-play-btn" onClick={() => handlePlay()}>
               <Play size={18} fill="#000" color="#000" />
-              {isSubscribed ? `Play · ${activeVJ}` : '🔒 Subscribe to Watch'}
+              {isSubscribed ? (isSeries ? `Play S1 E1 · ${activeVJ}` : `Play · ${activeVJ}`) : '🔒 Subscribe to Watch'}
             </button>
             <button className="mdp-icon-btn" onClick={handleToggleWatchlist}>
               {isInWatchlist ? <Check size={20} color="#46d369" /> : <Plus size={20} color="#fff" />}
@@ -160,7 +167,6 @@ export default function MovieDetailPage() {
 
       {/* Body */}
       <div className="mdp-body">
-        {/* Description */}
         <p className="mdp-desc">{movie.description}</p>
 
         {/* VJ Selector */}
@@ -179,20 +185,63 @@ export default function MovieDetailPage() {
           </div>
         </div>
 
-        {/* Details row */}
         <div className="mdp-details-row">
           {movie.genres && <span><strong>Genres:</strong> {movie.genres}</span>}
           {movie.originCountry && <span><strong>Country:</strong> {movie.originCountry}</span>}
           <span><strong>Audio:</strong> Luganda Voiceover</span>
         </div>
 
-        {/* More Like This */}
+        {/* ── EPISODES (series only) ── */}
+        {isSeries && seasons.length > 0 && (
+          <div className="mdp-episodes">
+            <div className="mdp-episodes-header">
+              <h2 className="mdp-more-title">Episodes</h2>
+              {seasons.length > 1 && (
+                <div className="mdp-season-tabs">
+                  {seasons.map((s, i) => (
+                    <button
+                      key={s.season}
+                      className={`mdp-season-tab${activeSeason === i ? ' active' : ''}`}
+                      onClick={() => setActiveSeason(i)}
+                    >
+                      Season {s.season}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {currentSeasonData && (
+              <div className="mdp-ep-list">
+                {currentSeasonData.episodes.map((ep, idx) => (
+                  <div key={ep.id || idx} className="mdp-ep-row" onClick={() => handlePlay(ep)}>
+                    <div className="mdp-ep-num">{ep.episode || idx + 1}</div>
+                    <div className="mdp-ep-thumb">
+                      {ep.thumbnailUrl
+                        ? <img src={ep.thumbnailUrl} alt={ep.title} />
+                        : <div className="mdp-ep-thumb-placeholder"><Play size={20} color="#fff" /></div>
+                      }
+                      <div className="mdp-ep-play-overlay"><Play size={18} fill="#fff" color="#fff" /></div>
+                    </div>
+                    <div className="mdp-ep-info">
+                      <p className="mdp-ep-title">{ep.title}</p>
+                      {ep.duration && <span className="mdp-ep-dur">{ep.duration}</span>}
+                      {ep.description && <p className="mdp-ep-desc">{ep.description}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MORE LIKE THIS ── */}
         {recommendations.length > 0 && (
           <div className="mdp-more">
             <h2 className="mdp-more-title">More Like This</h2>
             <div className="mdp-recs-grid">
               {recommendations.map(rec => (
-                <div key={rec.id} className="mdp-rec-card" onClick={() => handleRecClick(rec)}>
+                <div key={rec.id} className="mdp-rec-card" onClick={() => { navigate(`/movie/${rec.id}`); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                   <div className="mdp-rec-thumb">
                     <img src={rec.thumbnailUrl} alt={rec.title} />
                     <div className="mdp-rec-thumb-overlay" />

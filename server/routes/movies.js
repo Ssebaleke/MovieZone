@@ -399,7 +399,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Get single movie or series details with exact ReelPlexi stream URL
+// Get single movie or series details with recommendations + episodes
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -420,7 +420,6 @@ router.get('/:id', async (req, res) => {
         detailRes = await reelplexiFetch(`/movies/${cleanId}`).catch(() => null);
         isSeries = false;
       } else {
-        // Smart lookup for legacy rp_ IDs: check series first, then movies
         detailRes = await reelplexiFetch(`/series/${cleanId}`).catch(() => null);
         const rawSeries = detailRes?.data || detailRes;
         if (rawSeries && rawSeries.id) {
@@ -433,6 +432,9 @@ router.get('/:id', async (req, res) => {
 
       const rawDetail = detailRes?.data || detailRes;
       if (rawDetail && rawDetail.id) {
+        const movie = mapReelplexiItem(rawDetail, isSeries ? 'SHOW' : 'MOVIE');
+
+        // Stream URL
         let streamRes = null;
         if (isSeries) {
           streamRes = await reelplexiFetch(`/series/${cleanId}/seasons/1/episodes/1/stream`).catch(() => null)
@@ -440,17 +442,81 @@ router.get('/:id', async (req, res) => {
         } else {
           streamRes = await reelplexiFetch(`/movies/${cleanId}/stream`).catch(() => null);
         }
-
-        const movie = mapReelplexiItem(rawDetail, isSeries ? 'SHOW' : 'MOVIE');
         if (streamRes) {
-          // Prioritize stream_url over remux_url (which returns 404 on ReelPlexi API)
           movie.videoUrl = streamRes.stream_url || streamRes.video_url || streamRes.remux_url || movie.videoUrl;
           const apiKey = process.env.REELPLEXI_API_KEY || (await prisma.systemSetting.findUnique({ where: { key: 'REELPLEXI_API_KEY' } }))?.value;
-          movie.embedUrl = isSeries 
+          movie.embedUrl = isSeries
             ? `https://api.reelplexi.com/v1/embed/tv/${cleanId}/1/1?api_key=${apiKey || ''}`
             : `https://api.reelplexi.com/v1/embed/movie/${cleanId}?api_key=${apiKey || ''}`;
         }
-        return res.json({ movie, recommendations: [] });
+
+        // Seasons + episodes for series
+        let seasons = [];
+        if (isSeries) {
+          const rawSeasons = rawDetail.seasons;
+          const seasonCount = Array.isArray(rawSeasons)
+            ? rawSeasons.length
+            : (typeof rawSeasons === 'number' ? rawSeasons : (rawDetail.no_of_seasons || 1));
+
+          const seasonNums = Array.isArray(rawSeasons) && rawSeasons[0]?.season_number
+            ? rawSeasons.map(s => s.season_number)
+            : Array.from({ length: seasonCount }, (_, i) => i + 1);
+
+          const seasonResults = await Promise.all(
+            seasonNums.map(sNum =>
+              reelplexiFetch(`/series/${cleanId}/seasons/${sNum}/episodes`)
+                .catch(() => reelplexiFetch(`/series/${cleanId}/episodes`, { season: sNum }).catch(() => null))
+            )
+          );
+
+          seasons = seasonNums.map((sNum, i) => {
+            const raw = seasonResults[i];
+            const eps = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+            return {
+              season: sNum,
+              episodes: eps.map(ep => ({
+                id: ep.id,
+                title: ep.title || ep.name || `Episode ${ep.episode_number || ep.number || ''}`,
+                episode: ep.episode_number || ep.number || ep.episode,
+                duration: ep.runtime ? `${ep.runtime}m` : null,
+                thumbnailUrl: ep.still_path
+                  ? (ep.still_path.startsWith('/') ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : ep.still_path)
+                  : (ep.thumbnail || ep.poster || null),
+                description: ep.overview || ep.description || '',
+                streamUrl: ep.stream_url || ep.video_url || ep.remux_url || '',
+                embedUrl: ep.embed_url || `https://api.reelplexi.com/v1/embed/tv/${cleanId}/${sNum}/${ep.episode_number || ep.number || 1}?api_key=${process.env.REELPLEXI_API_KEY || ''}`,
+              }))
+            };
+          }).filter(s => s.episodes.length > 0);
+        }
+
+        // Genre-based recommendations (same type, overlapping genres)
+        const movieGenres = (movie.genres || '').split(',').map(g => g.trim()).filter(Boolean);
+        const firstGenre = movieGenres[0] || '';
+        let recommendations = [];
+        if (firstGenre) {
+          const recEndpoint = isSeries ? '/series' : '/movies';
+          const recRes = await reelplexiFetch(recEndpoint, { genre: firstGenre, per_page: 20 }).catch(() => null);
+          if (recRes && Array.isArray(recRes.data)) {
+            recommendations = recRes.data
+              .filter(item => String(item.id) !== String(cleanId))
+              .slice(0, 12)
+              .map(item => mapReelplexiItem(item, isSeries ? 'SHOW' : 'MOVIE'));
+          }
+        }
+        // Fallback: fetch same-type page 1 if genre gave nothing
+        if (recommendations.length === 0) {
+          const fallbackEndpoint = isSeries ? '/series' : '/movies';
+          const fallbackRes = await reelplexiFetch(fallbackEndpoint, { per_page: 20 }).catch(() => null);
+          if (fallbackRes && Array.isArray(fallbackRes.data)) {
+            recommendations = fallbackRes.data
+              .filter(item => String(item.id) !== String(cleanId))
+              .slice(0, 12)
+              .map(item => mapReelplexiItem(item, isSeries ? 'SHOW' : 'MOVIE'));
+          }
+        }
+
+        return res.json({ movie, seasons, recommendations });
       }
     }
 
@@ -459,7 +525,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Movie or show not found' });
     }
 
-    res.json({ movie, recommendations: [] });
+    res.json({ movie, seasons: [], recommendations: [] });
   } catch (error) {
     console.error('Error fetching movie details:', error);
     res.status(500).json({ error: 'Server error fetching details' });
