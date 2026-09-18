@@ -87,8 +87,32 @@ export default function Browse() {
         reqs.push(api.get(`/history/${currentProfile.id}`));
       }
       const [catalog, list, history] = await Promise.all(reqs);
-      setCategories(catalog.categories || []);
-      setFeatured(catalog.featured);
+
+      // Shuffle each category's movies so order is different every visit
+      const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+      const shuffledCategories = (catalog.categories || []).map(cat => ({
+        ...cat,
+        movies: shuffle(cat.movies || cat.items || []),
+        items: shuffle(cat.items || cat.movies || [])
+      }));
+      setCategories(shuffledCategories);
+
+      // Pick a random featured movie from all available movies each session
+      const allMovies = shuffledCategories.flatMap(c => c.movies).filter(Boolean);
+      const sessionKey = 'mz_featured_' + activeTab + activeVJ + activeRegion + activeGenre;
+      let featuredMovie = catalog.featured;
+      if (allMovies.length > 0) {
+        const stored = sessionStorage.getItem(sessionKey);
+        const storedMovie = stored ? allMovies.find(m => m.id === stored) : null;
+        if (storedMovie) {
+          featuredMovie = storedMovie;
+        } else {
+          const pick = allMovies[Math.floor(Math.random() * allMovies.length)];
+          sessionStorage.setItem(sessionKey, pick.id);
+          featuredMovie = pick;
+        }
+      }
+      setFeatured(featuredMovie);
       if (list) setWatchlist(list);
       if (history) setContinueWatching(history);
     } catch (err) {
