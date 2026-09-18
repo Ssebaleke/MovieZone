@@ -53,7 +53,15 @@ export default function MovieCard({ movie, onPlay, onOpenModal, isInWatchlist, o
           alt={movie.title}
           className="nf-card-img"
           loading="lazy"
-          onError={e => { e.target.style.display = 'none'; e.target.parentElement.classList.add('nf-card-poster--broken'); }}
+          onError={e => {
+            // Try backdropUrl as second chance
+            if (e.target.src !== (movie.backdropUrl || '') && movie.backdropUrl) {
+              e.target.src = movie.backdropUrl;
+            } else {
+              e.target.style.display = 'none';
+              e.target.parentElement.classList.add('nf-card-poster--broken');
+            }
+          }}
         />
         {/* Broken poster fallback */}
         <div className="nf-card-broken-label">{movie.title}</div>

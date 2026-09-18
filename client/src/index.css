@@ -10311,3 +10311,43 @@ a {
     right: -8px;
   }
 }
+
+/* ── Broken Poster Fallback ─────────────────────────────────────────── */
+.nf-card-poster--broken {
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nf-card-poster--broken .nf-card-broken-label {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  gap: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.nf-card-poster--broken .nf-card-broken-label::before {
+  content: '🎬';
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.nf-card-broken-label {
+  display: none;
+  position: absolute;
+  inset: 0;
+  color: #ccc;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow: hidden;
+}
