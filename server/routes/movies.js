@@ -245,12 +245,8 @@ router.get('/', async (req, res) => {
     movies.sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
 
     // Apply client-side filters if specified
-    if (vj) {
-      movies = movies.filter(item => 
-        (item.vj && item.vj.toLowerCase().includes(vj.toLowerCase())) || 
-        item.title.toLowerCase().includes(vj.toLowerCase())
-      );
-    }
+    // NOTE: skip vj re-filter — already fetched with ?vj= param from Reelplexi
+    // Re-filtering by item.vj drops most results since Reelplexi often omits vj field
 
     if (region) {
       movies = movies.filter(item => item.region === region);
