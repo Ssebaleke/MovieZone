@@ -71,4 +71,13 @@ export const api = {
     });
     return handleResponse(response);
   },
+
+  patch: async (endpoint, data) => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return handleResponse(response);
+  },
 };

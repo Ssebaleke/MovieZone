@@ -20,6 +20,7 @@ model User {
   stripeSubId        String?
   profiles           Profile[]
   transactions       Transaction[]
+  notifications      Notification[]
 }
 
 model Transaction {
@@ -101,6 +102,17 @@ model SystemSetting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, PROMO
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Package {

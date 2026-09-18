@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, ChevronDown, User, LogOut, Settings, X, Mic, Globe, Menu, Home, Film, Tv, Flame, Sparkles, Check, ShieldCheck, Cast, LayoutGrid, Radio, Share2, Download, Headphones } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
 
 export default function Navbar({
   onSearchChange = () => {},
@@ -142,10 +143,7 @@ export default function Navbar({
 
             {/* Right: Bell + Avatar */}
             <div className="mobile-topbar-right">
-              <button className="mobile-header-icon-btn notification-badge-btn" aria-label="Notifications">
-                <Bell size={20} color="#fff" />
-                <span className="bell-badge-count">1</span>
-              </button>
+              <NotificationPanel />
               {currentProfile ? (
                 <div className="mobile-topbar-avatar" onClick={() => setIsMobileMenuOpen(true)}>
                   <img src={currentProfile.avatarUrl} alt={currentProfile.name} />
@@ -202,9 +200,7 @@ export default function Navbar({
               <button className="nav-icon-action-btn" onClick={() => alert('Share MovieZone & Earn Credits!')} title="Share & Earn" type="button">
                 <Share2 size={18} color="#fff" /><span className="share-orange-dot" />
               </button>
-              <button className="nav-icon-action-btn" type="button" title="Notifications">
-                <Bell size={18} color="#fff" /><span className="notification-badge-red">1</span>
-              </button>
+              <NotificationPanel />
               <button className="desktop-install-app-btn" onClick={() => alert('Install MovieZone App')} type="button">
                 <Download size={14} style={{ marginRight: '6px' }} /> INSTALL APP
               </button>
